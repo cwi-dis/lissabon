@@ -58,19 +58,19 @@ IotsaLedstripMod::handler() {
   // optionally stores a new name to greet the next time.
   bool anyChanged = false;
   if( server->hasArg("r")) {
-    r = server->arg("r").toInt();
+    r = int(server->arg("r").toFloat());
     anyChanged = true;
   }
   if( server->hasArg("g")) {
-    g = server->arg("g").toInt();
+    g = int(server->arg("g").toFloat());
     anyChanged = true;
   }
   if( server->hasArg("b")) {
-    b = server->arg("b").toInt();
+    b = int(server->arg("b").toFloat());
     anyChanged = true;
   }
   if( server->hasArg("intensity")) {
-    intensity = server->arg("intensity").toInt();
+    intensity = int(server->arg("intensity").toFloat());
     anyChanged = true;
   }
   if( server->hasArg("count")) {
