@@ -28,7 +28,7 @@ IotsaOtaMod otaMod(application);
 // LED module. 
 //
 
-#define NEOPIXEL_PIN 4  // "Normal" pin for NeoPixel
+#define NEOPIXEL_PIN 13  // "Normal" pin for NeoPixel
 #define NEOPIXEL_TYPE (NEO_GRB + NEO_KHZ800)
 
 class IotsaLedstripMod : public IotsaApiMod {
@@ -45,32 +45,91 @@ protected:
   bool putHandler(const char *path, const JsonVariant& request, JsonObject& reply);
 private:
   void handler();
+  void setRGBfromHSL(float h, float s, float l);
   Adafruit_NeoPixel *strip;
   int r, g, b;
-  int intensity;
   int count;
+  float gamma;
+  int interval;
 };
+
+void IotsaLedstripMod::setRGBfromHSL(float h, float s, float l) {
+      // Formulas from https://en.wikipedia.org/wiki/HSL_and_HSV#HSL_to_RGB
+      float chroma = (1 - abs(2*l - 1)) * s;
+      float hprime = h / 60;
+      float x = chroma * (1-abs(fmod(hprime, 2.0)-1));
+      float r1, g1, b1;
+      r1 = g1 = b1 = 0;
+      if (0 <= hprime && hprime <= 1) {
+          r1 = chroma;
+          g1 = x;
+          b1 = 0;
+      } else
+      if (1 <= hprime && hprime <= 2) {
+          r1 = x;
+          g1 = chroma;
+          b1 = 0;
+      } else
+      if (2 <= hprime && hprime <= 3) {
+          r1 = 0;
+          g1 = chroma;
+          b1 = x;
+      } else
+      if (3 <= hprime && hprime <= 4) {
+          r1 = 0;
+          g1 = x;
+          b1 = chroma;
+      } else
+      if (4 <= hprime && hprime <= 5) {
+          r1 = x;
+          g1 = 0;
+          b1 = chroma;
+      } else
+      if (5 <= hprime && hprime <= 6) {
+          r1 = chroma;
+          g1 = 0;
+          b1 = x;
+      }
+      float m = l - (chroma/2);
+      r = int(256 * (r1+m));
+      g = int(256 * (g1+m));
+      b = int(256 * (b1+m));
+}
 
 #ifdef IOTSA_WITH_WEB
 void
 IotsaLedstripMod::handler() {
   // Handles the page that is specific to the Led module, greets the user and
   // optionally stores a new name to greet the next time.
+  String error;
   bool anyChanged = false;
-  if( server->hasArg("r")) {
-    r = int(server->arg("r").toFloat());
-    anyChanged = true;
+  if (server->hasArg("hsl") && server->arg("hsl").toInt() != 0) {
+    // HLS color requested
+    if (!server->hasArg("h") || !server->hasArg("s") || !server->hasArg("l")) {
+      error = "All three of H, S, L must be specified";
+    } else {
+      float h = server->arg("h").toFloat();
+      float s = server->arg("s").toFloat();
+      float l = server->arg("l").toFloat();
+      setRGBfromHSL(h, s, l);
+      anyChanged = true;
+    }
+  } else {
+    if( server->hasArg("r")) {
+      r = int(server->arg("r").toFloat());
+      anyChanged = true;
+    }
+    if( server->hasArg("g")) {
+      g = int(server->arg("g").toFloat());
+      anyChanged = true;
+    }
+    if( server->hasArg("b")) {
+      b = int(server->arg("b").toFloat());
+      anyChanged = true;
+    }
   }
-  if( server->hasArg("g")) {
-    g = int(server->arg("g").toFloat());
-    anyChanged = true;
-  }
-  if( server->hasArg("b")) {
-    b = int(server->arg("b").toFloat());
-    anyChanged = true;
-  }
-  if( server->hasArg("intensity")) {
-    intensity = int(server->arg("intensity").toFloat());
+  if( server->hasArg("gamma")) {
+    gamma = int(server->arg("gamma").toFloat());
     anyChanged = true;
   }
   if( server->hasArg("count")) {
@@ -84,11 +143,37 @@ IotsaLedstripMod::handler() {
   }
   
   String message = "<html><head><title>Ledstrip Server</title></head><body><h1>Ledstrip Server</h1>";
+  if (error != "") {
+    message += "<p><em>" + error + "</em></p>";
+  }
   message += "<form method='get'>";
   message += "Red (0..255): <input type='text' name='r' value='" + String(r) +"' ><br>";
   message += "Green (0..255): <input type='text' name='g' value='" + String(g) +"' ><br>";
   message += "Blue (0..255): <input type='text' name='b' value='" + String(b) +"' ><br>";
-  message += "Intensity (0..100): <input type='text' name='intensity' value='" + String(intensity) +"' ><br>";
+  message += "<input type='checkbox' name='hsl' value='1'>Use HSL in stead of RGB:<br>";
+  float h=0, s, l;
+  float r1 = r/256.0, g1 = g/256.0, b1 = b/256.0;
+  float minChroma = fmin(fmin(r1, g1), b1);
+  float maxChroma = fmax(fmax(r1, g1), b1);
+  if (minChroma == maxChroma) {
+    h = 0;
+  } else if (maxChroma == r1) {
+    h = 60 * ( 0 + (g1-b1) / (maxChroma-minChroma));
+  } else if (maxChroma == g1) {
+    h = 60 * ( 2 + (b1-r1) / (maxChroma-minChroma));
+  } else if (maxChroma == b1) {
+    h = 60 * ( 4 + (r1-g1) / (maxChroma-minChroma));
+  }
+  if (h < 0) h += 360.0;
+  if (maxChroma == 0 || minChroma == 1) {
+    s = 0;
+  } else {
+    s = (maxChroma-minChroma) / (1 + fabs(maxChroma+minChroma-1));
+  }
+  l = (maxChroma + minChroma) / 2;
+  message += "Hue (0..360): <input type='text' name='h' value='" + String(h) +"'><br>";
+  message += "Saturation (0..1.0): <input type='text' name='s' value='" + String(s) +"'><br>";
+  message += "Lightness (0..1.0): <input type='text' name='l' value='" + String(l) +"'><br>";
   message += "Number of LEDs: <input type='text' name='count' value='" + String(count) +"' ><br>";
   message += "<input type='submit'></form></body></html>";
   server->send(200, "text/html", message);
@@ -105,20 +190,18 @@ bool IotsaLedstripMod::getHandler(const char *path, JsonObject& reply) {
   reply["r"] = r;
   reply["g"] = g;
   reply["b"] = b;
-  reply["intensity"] = intensity;
   reply["count"] = count;
   return true;
 }
 
 bool IotsaLedstripMod::putHandler(const char *path, const JsonVariant& request, JsonObject& reply) {
+  // xxxjack HSL to be done
   JsonVariant arg = request["r"]|0;
   r = arg.as<int>();
   arg = request["g"]|0;
   g = arg.as<int>();
   arg = request["b"]|0;
   b = arg.as<int>();
-  arg = request["intensity"]|0;
-  intensity = arg.as<int>();
   arg = request["count"]|0;
   count = arg.as<int>();
   configSave();
@@ -141,7 +224,6 @@ void IotsaLedstripMod::configLoad() {
   cf.get("r", r, 255);
   cf.get("g", g, 255);
   cf.get("b", b, 255);
-  cf.get("intensity", intensity, 10);
   cf.get("count", count, 1);
 }
 
@@ -150,7 +232,6 @@ void IotsaLedstripMod::configSave() {
   cf.put("r", r);
   cf.put("g", g);
   cf.put("b", b);
-  cf.put("intensity", intensity);
   cf.put("count", count);
 }
 
@@ -160,9 +241,9 @@ void IotsaLedstripMod::setup() {
   strip = new Adafruit_NeoPixel(count, NEOPIXEL_PIN, NEOPIXEL_TYPE);
 //  strip->clear();
 //  strip->show();
-  int _r = (r*intensity)/100;
-  int _g = (g*intensity)/100;
-  int _b = (b*intensity)/100;
+  int _r = r;
+  int _g = g;
+  int _b = b;
   IFDEBUG IotsaSerial.print("r=");
   IFDEBUG IotsaSerial.print(_r);
   IFDEBUG IotsaSerial.print(",g=");
