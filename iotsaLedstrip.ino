@@ -103,7 +103,8 @@ IotsaLedstripMod::handler() {
   // optionally stores a new name to greet the next time.
   String error;
   bool anyChanged = false;
-  if (server->hasArg("hsl") && server->arg("hsl").toInt() != 0) {
+  bool hsl = server->hasArg("hsl") && server->arg("hsl").toInt() != 0;
+  if (hsl) {
     // HLS color requested
     if (!server->hasArg("h") || !server->hasArg("s") || !server->hasArg("l")) {
       error = "All three of H, S, L must be specified";
@@ -150,7 +151,9 @@ IotsaLedstripMod::handler() {
   message += "Red (0..255): <input type='text' name='r' value='" + String(r) +"' ><br>";
   message += "Green (0..255): <input type='text' name='g' value='" + String(g) +"' ><br>";
   message += "Blue (0..255): <input type='text' name='b' value='" + String(b) +"' ><br>";
-  message += "<input type='checkbox' name='hsl' value='1'>Use HSL in stead of RGB:<br>";
+  String checked;
+  if (hsl) checked = " checked";
+  message += "<input type='checkbox' name='hsl' value='1'" + checked + ">Use HSL in stead of RGB:<br>";
   float h=0, s, l;
   float r1 = r/256.0, g1 = g/256.0, b1 = b/256.0;
   float minChroma = fmin(fmin(r1, g1), b1);
@@ -168,7 +171,7 @@ IotsaLedstripMod::handler() {
   if (maxChroma == 0 || minChroma == 1) {
     s = 0;
   } else {
-    s = (maxChroma-minChroma) / (1 + fabs(maxChroma+minChroma-1));
+    s = (maxChroma-minChroma) / (1 - fabs(maxChroma+minChroma-1));
   }
   l = (maxChroma + minChroma) / 2;
   message += "Hue (0..360): <input type='text' name='h' value='" + String(h) +"'><br>";
