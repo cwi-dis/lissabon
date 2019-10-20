@@ -7,10 +7,11 @@ You can control the number of LEDs in the strip
 and the interval between lit LEDs (to have for 
 example only 1 in every 3 LED light up).
 
-Light color can be set with either RGB values
-(numbers between 0.0 and 1.0) or HLS values
-(hue as an angle between 0 and 360, lightness and
-saturation numbers between 0.0 and 1.0).
+Light color can be set with either:
+
+- RGB values (numbers between 0.0 and 1.0),
+- HLS values (hue as an angle between 0 and 360, lightness and saturation numbers between 0.0 and 1.0) or
+-  Color temperature in Kelvin and lightness.
 
 Gamma correction can be applied (a value of 2.8 seems
 to be commonly suggested for NeoPixel LEDs).

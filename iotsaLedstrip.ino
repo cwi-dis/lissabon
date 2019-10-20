@@ -48,6 +48,7 @@ private:
   void handler();
   void setHSL(float h, float s, float l);
   void getHSL(float &h, float &s, float &l);
+  void setTempL(float t, float l);
   Adafruit_NeoPixel *strip;
   float r, g, b;
   int count;
@@ -128,6 +129,37 @@ void IotsaLedstripMod::getHSL(float &h, float &s, float &l)
   l = (maxChroma + minChroma) / 2;
 }
 
+void IotsaLedstripMod::setTempL(float t, float l) {
+  // Algorithm from http://www.tannerhelland.com/4435/convert-temperature-rgb-algorithm-code
+  // as adapted by Renaud Bédard for https://www.shadertoy.com/view/lsSXW1
+  if (t < 1000) t = 1000;
+  if (t > 40000) t = 40000;
+  t = t / 100;
+  if (t < 66) {
+    r = 1;
+    g = 0.39008157876901960784 * log(t) - 0.63184144378862745098;
+  } else {
+    r = 1.29293618606274509804 * pow(t-60, -0.1332047592);
+    g = 1.12989086089529411765 * pow(t-60, -0.0755148492);
+  }
+  if (t >= 66) {
+    b = 1;
+  } else if (t <= 19) {
+    b = 0;
+  } else {
+    b = 0.54320678911019607843 * log(t - 10.0) - 1.19625408914;
+  }
+  if (r < 0) r = 0;
+  if (r > 1) r = 1;
+  if (g < 0) g = 0;
+  if (g > 1) g = 1;
+  if (b < 0) b = 0;
+  if (b > 1) b = 1;
+  r *= l;
+  g *= l;
+  b *= l;
+}
+
 #ifdef IOTSA_WITH_WEB
 void
 IotsaLedstripMod::handler() {
@@ -135,8 +167,9 @@ IotsaLedstripMod::handler() {
   // optionally stores a new name to greet the next time.
   String error;
   bool anyChanged = false;
-  bool hsl = server->hasArg("hsl") && server->arg("hsl").toInt() != 0;
-  if (hsl) {
+  String set = "rgb";
+  if (server->hasArg("set")) set = server->arg("set");
+  if (set == "hsl") {
     // HLS color requested
     if (!server->hasArg("h") || !server->hasArg("s") || !server->hasArg("l")) {
       error = "All three of H, S, L must be specified";
@@ -147,6 +180,11 @@ IotsaLedstripMod::handler() {
       setHSL(h, s, l);
       anyChanged = true;
     }
+  } else if (set == "temp") {
+    float t = server->arg("temp").toFloat();
+    float l = server->arg("l").toFloat();
+    setTempL(t, l);
+    anyChanged = true;
   } else {
     if( server->hasArg("r")) {
       r = server->arg("r").toFloat();
@@ -184,17 +222,28 @@ IotsaLedstripMod::handler() {
     message += "<p><em>" + error + "</em></p>";
   }
   message += "<form method='get'>";
+
+  String checked = "";
+  if (set == "" || set == "rgb") checked = " checked";
+  message += "<input type='radio' name='set' value=''" + checked + ">Set RGB value:<br>";
   message += "Red (0..1): <input type='text' name='r' value='" + String(r) +"' ><br>";
   message += "Green (0..1): <input type='text' name='g' value='" + String(g) +"' ><br>";
   message += "Blue (0..1): <input type='text' name='b' value='" + String(b) +"' ><br>";
-  String checked;
-  if (hsl) checked = " checked";
-  message += "<input type='checkbox' name='hsl' value='1'" + checked + ">Use HSL in stead of RGB:<br>";
+
+  checked = "";
+  if (set == "hsl") checked = " checked";
+  message += "<input type='radio' name='set' value='hsl'" + checked + ">Use HSL value:<br>";
   float h, s, l;
   getHSL(h, s, l);
   message += "Hue (0..360): <input type='text' name='h' value='" + String(h) +"'><br>";
   message += "Saturation (0..1): <input type='text' name='s' value='" + String(s) +"'><br>";
   message += "Lightness (0..1): <input type='text' name='l' value='" + String(l) +"'><br>";
+
+  checked = "";
+  if (set == "temp") checked = " checked";
+  message += "<input type='radio' name='set' value='temp'" + checked + ">Set Temperature:<br>";
+  message += "Temperature (1000..40000): <input type='text' name='temp'><br>";
+  message += "(also set Lightness, above)<br>";
 
   message += "Gamma: <input type='text' name='gamma' value='" + String(gamma) +"' ><br>";
 
