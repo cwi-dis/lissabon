@@ -1,6 +1,7 @@
 //
-// A "Led" server, which allows control over a single NeoPixel (color,
-// duration, on/off pattern). The led can be controlled through a web UI or
+// A Neopixel strip server, which allows control over a strip of neopixels, intended
+// to be used as lighting. Color can be set as fraction RGB or HSL, gamma can be changed,
+// interval between lit pixels can be changed. Control is through a web UI or
 // through REST calls (and/or, depending on Iotsa compile time options, COAP calls).
 // The web interface can be disabled by building iotsa with IOTSA_WITHOUT_WEB.
 //
@@ -45,18 +46,19 @@ protected:
   bool putHandler(const char *path, const JsonVariant& request, JsonObject& reply);
 private:
   void handler();
-  void setRGBfromHSL(float h, float s, float l);
+  void setHSL(float h, float s, float l);
+  void getHSL(float &h, float &s, float &l);
   Adafruit_NeoPixel *strip;
-  int r, g, b;
+  float r, g, b;
   int count;
   float gamma;
   int interval;
 };
 
-void IotsaLedstripMod::setRGBfromHSL(float h, float s, float l) {
+void IotsaLedstripMod::setHSL(float h, float s, float l) {
       // Formulas from https://en.wikipedia.org/wiki/HSL_and_HSV#HSL_to_RGB
       float chroma = (1 - abs(2*l - 1)) * s;
-      float hprime = h / 60;
+      float hprime = fmod(h, 360.0) / 60;
       float x = chroma * (1-abs(fmod(hprime, 2.0)-1));
       float r1, g1, b1;
       r1 = g1 = b1 = 0;
@@ -91,71 +93,21 @@ void IotsaLedstripMod::setRGBfromHSL(float h, float s, float l) {
           b1 = x;
       }
       float m = l - (chroma/2);
-      r = int(256 * (r1+m));
-      g = int(256 * (g1+m));
-      b = int(256 * (b1+m));
+      r = r1+m;
+      g = g1+m;
+      b = b1+m;
+      if (r < 0) r = 0;
+      if (r >= 1) r = 1;
+      if (g < 0) g = 0;
+      if (g >= 1) g = 1;
+      if (b < 0) b = 0;
+      if (b >= 1) b = 1;
 }
 
-#ifdef IOTSA_WITH_WEB
-void
-IotsaLedstripMod::handler() {
-  // Handles the page that is specific to the Led module, greets the user and
-  // optionally stores a new name to greet the next time.
-  String error;
-  bool anyChanged = false;
-  bool hsl = server->hasArg("hsl") && server->arg("hsl").toInt() != 0;
-  if (hsl) {
-    // HLS color requested
-    if (!server->hasArg("h") || !server->hasArg("s") || !server->hasArg("l")) {
-      error = "All three of H, S, L must be specified";
-    } else {
-      float h = server->arg("h").toFloat();
-      float s = server->arg("s").toFloat();
-      float l = server->arg("l").toFloat();
-      setRGBfromHSL(h, s, l);
-      anyChanged = true;
-    }
-  } else {
-    if( server->hasArg("r")) {
-      r = int(server->arg("r").toFloat());
-      anyChanged = true;
-    }
-    if( server->hasArg("g")) {
-      g = int(server->arg("g").toFloat());
-      anyChanged = true;
-    }
-    if( server->hasArg("b")) {
-      b = int(server->arg("b").toFloat());
-      anyChanged = true;
-    }
-  }
-  if( server->hasArg("gamma")) {
-    gamma = int(server->arg("gamma").toFloat());
-    anyChanged = true;
-  }
-  if( server->hasArg("count")) {
-    count = server->arg("count").toInt();
-    anyChanged = true;
-  }
-
-  if (anyChanged) {
-    configSave();
-    setup();
-  }
-  
-  String message = "<html><head><title>Ledstrip Server</title></head><body><h1>Ledstrip Server</h1>";
-  if (error != "") {
-    message += "<p><em>" + error + "</em></p>";
-  }
-  message += "<form method='get'>";
-  message += "Red (0..255): <input type='text' name='r' value='" + String(r) +"' ><br>";
-  message += "Green (0..255): <input type='text' name='g' value='" + String(g) +"' ><br>";
-  message += "Blue (0..255): <input type='text' name='b' value='" + String(b) +"' ><br>";
-  String checked;
-  if (hsl) checked = " checked";
-  message += "<input type='checkbox' name='hsl' value='1'" + checked + ">Use HSL in stead of RGB:<br>";
-  float h=0, s, l;
-  float r1 = r/256.0, g1 = g/256.0, b1 = b/256.0;
+void IotsaLedstripMod::getHSL(float &h, float &s, float &l)
+{
+  h = 0;
+  float r1 = r, g1 = g, b1 = b;
   float minChroma = fmin(fmin(r1, g1), b1);
   float maxChroma = fmax(fmax(r1, g1), b1);
   if (minChroma == maxChroma) {
@@ -174,10 +126,80 @@ IotsaLedstripMod::handler() {
     s = (maxChroma-minChroma) / (1 - fabs(maxChroma+minChroma-1));
   }
   l = (maxChroma + minChroma) / 2;
+}
+
+#ifdef IOTSA_WITH_WEB
+void
+IotsaLedstripMod::handler() {
+  // Handles the page that is specific to the Led module, greets the user and
+  // optionally stores a new name to greet the next time.
+  String error;
+  bool anyChanged = false;
+  bool hsl = server->hasArg("hsl") && server->arg("hsl").toInt() != 0;
+  if (hsl) {
+    // HLS color requested
+    if (!server->hasArg("h") || !server->hasArg("s") || !server->hasArg("l")) {
+      error = "All three of H, S, L must be specified";
+    } else {
+      float h = server->arg("h").toFloat();
+      float s = server->arg("s").toFloat();
+      float l = server->arg("l").toFloat();
+      setHSL(h, s, l);
+      anyChanged = true;
+    }
+  } else {
+    if( server->hasArg("r")) {
+      r = server->arg("r").toFloat();
+      anyChanged = true;
+    }
+    if( server->hasArg("g")) {
+      g = server->arg("g").toFloat();
+      anyChanged = true;
+    }
+    if( server->hasArg("b")) {
+      b = server->arg("b").toFloat();
+      anyChanged = true;
+    }
+  }
+  if( server->hasArg("gamma")) {
+    gamma = server->arg("gamma").toFloat();
+    anyChanged = true;
+  }
+  if( server->hasArg("count")) {
+    count = server->arg("count").toInt();
+    anyChanged = true;
+  }
+  if( server->hasArg("interval")) {
+    interval = server->arg("interval").toInt();
+    anyChanged = true;
+  }
+
+  if (anyChanged) {
+    configSave();
+    setup();
+  }
+  
+  String message = "<html><head><title>Ledstrip Server</title></head><body><h1>Ledstrip Server</h1>";
+  if (error != "") {
+    message += "<p><em>" + error + "</em></p>";
+  }
+  message += "<form method='get'>";
+  message += "Red (0..1): <input type='text' name='r' value='" + String(r) +"' ><br>";
+  message += "Green (0..1): <input type='text' name='g' value='" + String(g) +"' ><br>";
+  message += "Blue (0..1): <input type='text' name='b' value='" + String(b) +"' ><br>";
+  String checked;
+  if (hsl) checked = " checked";
+  message += "<input type='checkbox' name='hsl' value='1'" + checked + ">Use HSL in stead of RGB:<br>";
+  float h, s, l;
+  getHSL(h, s, l);
   message += "Hue (0..360): <input type='text' name='h' value='" + String(h) +"'><br>";
-  message += "Saturation (0..1.0): <input type='text' name='s' value='" + String(s) +"'><br>";
-  message += "Lightness (0..1.0): <input type='text' name='l' value='" + String(l) +"'><br>";
+  message += "Saturation (0..1): <input type='text' name='s' value='" + String(s) +"'><br>";
+  message += "Lightness (0..1): <input type='text' name='l' value='" + String(l) +"'><br>";
+
+  message += "Gamma: <input type='text' name='gamma' value='" + String(gamma) +"' ><br>";
+
   message += "Number of LEDs: <input type='text' name='count' value='" + String(count) +"' ><br>";
+  message += "Dark interval: <input type='text' name='interval' value='" + String(interval) +"' ><br>";
   message += "<input type='submit'></form></body></html>";
   server->send(200, "text/html", message);
 }
@@ -193,7 +215,9 @@ bool IotsaLedstripMod::getHandler(const char *path, JsonObject& reply) {
   reply["r"] = r;
   reply["g"] = g;
   reply["b"] = b;
+  reply["gamma"] = gamma;
   reply["count"] = count;
+  reply["interval"] = interval;
   return true;
 }
 
@@ -205,8 +229,12 @@ bool IotsaLedstripMod::putHandler(const char *path, const JsonVariant& request, 
   g = arg.as<int>();
   arg = request["b"]|0;
   b = arg.as<int>();
+  arg = request["gamma"]|0;
+  gamma = arg.as<float>();
   arg = request["count"]|0;
   count = arg.as<int>();
+  arg = request["interval"]|0;
+  interval = arg.as<int>();
   configSave();
   setup();
   return true;
@@ -224,10 +252,12 @@ void IotsaLedstripMod::serverSetup() {
 
 void IotsaLedstripMod::configLoad() {
   IotsaConfigFileLoad cf("/config/ledstrip.cfg");
-  cf.get("r", r, 255);
-  cf.get("g", g, 255);
-  cf.get("b", b, 255);
+  cf.get("r", r, 1.0);
+  cf.get("g", g, 1.0);
+  cf.get("b", b, 1.0);
+  cf.get("gamma", gamma, 1.0);
   cf.get("count", count, 1);
+  cf.get("interval", interval, 0);
 }
 
 void IotsaLedstripMod::configSave() {
@@ -235,7 +265,9 @@ void IotsaLedstripMod::configSave() {
   cf.put("r", r);
   cf.put("g", g);
   cf.put("b", b);
+  cf.put("gamma", gamma);
   cf.put("count", count);
+  cf.put("interval", interval);
 }
 
 void IotsaLedstripMod::setup() {
@@ -244,9 +276,22 @@ void IotsaLedstripMod::setup() {
   strip = new Adafruit_NeoPixel(count, NEOPIXEL_PIN, NEOPIXEL_TYPE);
 //  strip->clear();
 //  strip->show();
-  int _r = r;
-  int _g = g;
-  int _b = b;
+  int _r = r*256;
+  int _g = g*256;
+  int _b = b*256;
+  if (gamma == 1.0) {
+    // gamma correction
+    _r = r*256;
+    _g = g*256;
+    _b = b*256;
+  } else {
+    _r = powf(r, gamma) * 256;
+    _g = powf(g, gamma) * 256;
+    _b = powf(b, gamma) * 256;
+  }
+  if (_r>255) _r = 255;
+  if (_g>255) _g = 255;
+  if (_b>255) _b = 255;
   IFDEBUG IotsaSerial.print("r=");
   IFDEBUG IotsaSerial.print(_r);
   IFDEBUG IotsaSerial.print(",g=");
@@ -256,8 +301,14 @@ void IotsaLedstripMod::setup() {
   IFDEBUG IotsaSerial.print(",count=");
   IFDEBUG IotsaSerial.println(count);
   strip->begin();
-  for(int i=0; i<count; i++) {
+  int i = 0;
+  while (i < count) {
     strip->setPixelColor(i, _r, _g, _b);
+    i++;
+    for (int j=0; j<interval; j++) {
+      strip->setPixelColor(i, 0, 0, 0);
+      i++;
+    }
   }
   strip->show();
 }
