@@ -31,6 +31,7 @@ IotsaOtaMod otaMod(application);
 
 #define NEOPIXEL_PIN 13  // "Normal" pin for NeoPixel
 #define NEOPIXEL_TYPE (NEO_GRB + NEO_KHZ800)
+#define NSTEP 100 // How many loop()s before we are at new rgb value.
 
 class IotsaLedstripMod : public IotsaApiMod {
 public:
@@ -48,12 +49,15 @@ private:
   void handler();
   void setHSL(float h, float s, float l);
   void getHSL(float &h, float &s, float &l);
-  void setTempL(float t, float l);
+  void setTI(float t, float i);
+  void getTI(float& t, float& i);
   Adafruit_NeoPixel *strip;
-  float r, g, b;
-  int count;
-  float gamma;
-  int interval;
+  float r, g, b;  // Wanted RGB color
+  int count;  // Number of LEDs
+  float gamma;  // Gamma correction
+  int interval; // Number of unlit pixels between lit pixels
+  int nStep;  // Number of steps to take between old and new color
+  float rPrev, gPrev, bPrev;
 };
 
 void IotsaLedstripMod::setHSL(float h, float s, float l) {
@@ -129,7 +133,7 @@ void IotsaLedstripMod::getHSL(float &h, float &s, float &l)
   l = (maxChroma + minChroma) / 2;
 }
 
-void IotsaLedstripMod::setTempL(float t, float l) {
+void IotsaLedstripMod::setTI(float t, float i) {
   // Algorithm from http://www.tannerhelland.com/4435/convert-temperature-rgb-algorithm-code
   // as adapted by Renaud Bédard for https://www.shadertoy.com/view/lsSXW1
   if (t < 1000) t = 1000;
@@ -155,9 +159,53 @@ void IotsaLedstripMod::setTempL(float t, float l) {
   if (g > 1) g = 1;
   if (b < 0) b = 0;
   if (b > 1) b = 1;
-  r *= l;
-  g *= l;
-  b *= l;
+  r *= i;
+  g *= i;
+  b *= i;
+}
+
+void IotsaLedstripMod::getTI(float& cct, float& y) {
+#if 0
+  // Formula from https://stackoverflow.com/questions/45433647/how-to-get-color-temperature-from-color-correction-gain
+  float x =(-0.14282)*r + (1.54924)*g + (-0.95641)*b;
+  i = (-0.32466)*r + (1.57837)*g + (-0.73191)*b; // Intensity
+  float z = (-0.68202)*r + (0.77073)*g + (0.56332)*b;
+  if (i == 0) {
+    t = 0;
+    return;
+  }
+  x = x / (x+i+z);
+  i = i / (x+i+z);
+  float n = (x-0.3320)/(0.1858-i);
+  t = 449*pow(n, 3) + 3525*pow(n, 2) + 6823.3*n + 5520.33;
+#else
+  float r1 = r; //(r > 0.04045) ? pow((r+0.055)/1.055, 2.4) : r / 12.92;
+  float g1 = g; //(g > 0.04045) ? pow((g+0.055)/1.055, 2.4) : g / 12.92;
+  float b1 = b; //(b > 0.04045) ? pow((b+0.055)/1.055, 2.4) : b / 12.92;
+  
+
+#if 0
+  float x = 0.412424  * r1 + 0.357579 * g1 + 0.180464  * b1;
+  y = 0.212656  * r1 + 0.715158 * g1 + 0.0721856 * b1;
+  float z = 0.0193324 * r1 + 0.119193 * g1 + 0.950444  * b1;
+#else
+  float x = 0.4360747  * r1 + 0.3850649 * g1 + 0.1430804  * b1;
+  y = 0.2225045  * r1 + 0.7168786 * g1 + 0.0606169 * b1;
+  float z = 0.0139322 * r1 + 0.0971045 * g1 + 0.7141733  * b1;
+#endif
+
+  if (y == 0) {
+    cct = 0;
+    return;
+  }
+  float xnorm = x / (x + y + z);
+  float ynorm = y / (x + y + z);
+
+  float n = (xnorm-0.3320)/(0.1858-ynorm);
+  cct = 449*pow(n, 3) + 3525*pow(n, 2) + 6823.3*n + 5520.33;
+  // Alternative, from https://stackoverflow.com/questions/6629798/whats-wrong-with-this-rgb-to-xyz-color-space-conversion-algorithm and http://www.vinland.com/Correlated_Color_Temperature.html
+  //cct = 437*pow(n, 3) + 3601*pow(n, 2) + 6831*n + 5517;
+#endif
 }
 
 #ifdef IOTSA_WITH_WEB
@@ -181,9 +229,9 @@ IotsaLedstripMod::handler() {
       anyChanged = true;
     }
   } else if (set == "temp") {
-    float t = server->arg("temp").toFloat();
-    float l = server->arg("l").toFloat();
-    setTempL(t, l);
+    float t = server->arg("temperature").toFloat();
+    float i = server->arg("illuminance").toFloat();
+    setTI(t, i);
     anyChanged = true;
   } else {
     if( server->hasArg("r")) {
@@ -214,7 +262,7 @@ IotsaLedstripMod::handler() {
 
   if (anyChanged) {
     configSave();
-    setup();
+    nStep = NSTEP;
   }
   
   String message = "<html><head><title>Ledstrip Server</title></head><body><h1>Ledstrip Server</h1>";
@@ -241,9 +289,11 @@ IotsaLedstripMod::handler() {
 
   checked = "";
   if (set == "temp") checked = " checked";
+  float temperature, illuminance;
+  getTI(temperature, illuminance);
   message += "<input type='radio' name='set' value='temp'" + checked + ">Set Temperature:<br>";
-  message += "Temperature (1000..40000): <input type='text' name='temp'><br>";
-  message += "(also set Lightness, above)<br>";
+  message += "Temperature (1000..40000): <input type='text' name='temperature' value='" + String(temperature) +"'><br>";
+  message += "Illuminance (0..1): <input type='text' name='illuminance' value='" + String(illuminance) +"'><br>";
 
   message += "Gamma: <input type='text' name='gamma' value='" + String(gamma) +"' ><br>";
 
@@ -285,7 +335,7 @@ bool IotsaLedstripMod::putHandler(const char *path, const JsonVariant& request, 
   arg = request["interval"]|0;
   interval = arg.as<int>();
   configSave();
-  setup();
+  nStep = NSTEP;
   return true;
 }
 
@@ -323,47 +373,59 @@ void IotsaLedstripMod::setup() {
   configLoad();
   if (strip) delete strip;
   strip = new Adafruit_NeoPixel(count, NEOPIXEL_PIN, NEOPIXEL_TYPE);
-//  strip->clear();
-//  strip->show();
-  int _r = r*256;
-  int _g = g*256;
-  int _b = b*256;
-  if (gamma == 1.0) {
-    // gamma correction
-    _r = r*256;
-    _g = g*256;
-    _b = b*256;
-  } else {
-    _r = powf(r, gamma) * 256;
-    _g = powf(g, gamma) * 256;
-    _b = powf(b, gamma) * 256;
-  }
-  if (_r>255) _r = 255;
-  if (_g>255) _g = 255;
-  if (_b>255) _b = 255;
-  IFDEBUG IotsaSerial.print("r=");
-  IFDEBUG IotsaSerial.print(_r);
-  IFDEBUG IotsaSerial.print(",g=");
-  IFDEBUG IotsaSerial.print(_g);
-  IFDEBUG IotsaSerial.print(",b=");
-  IFDEBUG IotsaSerial.print(_b);
-  IFDEBUG IotsaSerial.print(",count=");
-  IFDEBUG IotsaSerial.println(count);
-  strip->begin();
-  int i = 0;
-  while (i < count) {
-    strip->setPixelColor(i, _r, _g, _b);
-    i++;
-    for (int j=0; j<interval; j++) {
-      strip->setPixelColor(i, 0, 0, 0);
-      i++;
-    }
-  }
-  strip->show();
+  rPrev = gPrev = bPrev = 0;
+  nStep = NSTEP;
 }
 
 void IotsaLedstripMod::loop() {
-
+  if (nStep <= 0) {
+    nStep = 0;
+    rPrev = r;
+    gPrev = g;
+    bPrev = b;
+  } else {
+    nStep--;
+  //  strip->clear();
+  //  strip->show();
+    float curR = ((rPrev*nStep) + (r*(NSTEP-nStep)))/NSTEP;
+    float curG = ((gPrev*nStep) + (g*(NSTEP-nStep)))/NSTEP;
+    float curB = ((bPrev*nStep) + (b*(NSTEP-nStep)))/NSTEP;
+    int _r, _g, _b;
+    if (gamma == 1.0) {
+      // gamma correction
+      _r = curR*256;
+      _g = curG*256;
+      _b = curB*256;
+    } else {
+      _r = powf(curR, gamma) * 256;
+      _g = powf(curG, gamma) * 256;
+      _b = powf(curB, gamma) * 256;
+    }
+    if (_r>255) _r = 255;
+    if (_g>255) _g = 255;
+    if (_b>255) _b = 255;
+    IFDEBUG IotsaSerial.print("r=");
+    IFDEBUG IotsaSerial.print(_r);
+    IFDEBUG IotsaSerial.print(",g=");
+    IFDEBUG IotsaSerial.print(_g);
+    IFDEBUG IotsaSerial.print(",b=");
+    IFDEBUG IotsaSerial.print(_b);
+    IFDEBUG IotsaSerial.print(",count=");
+    IFDEBUG IotsaSerial.print(count);
+    IFDEBUG IotsaSerial.print(",nStep=");
+    IFDEBUG IotsaSerial.println(nStep);
+    strip->begin();
+    int i = 0;
+    while (i < count) {
+      strip->setPixelColor(i, _r, _g, _b);
+      i++;
+      for (int j=0; j<interval; j++) {
+        strip->setPixelColor(i, 0, 0, 0);
+        i++;
+      }
+    }
+    strip->show();
+  }
 }
 
 // Instantiate the Led module, and install it in the framework
