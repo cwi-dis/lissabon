@@ -29,7 +29,7 @@ IotsaOtaMod otaMod(application);
 // LED module. 
 //
 
-#define NEOPIXEL_PIN 13  // "Normal" pin for NeoPixel
+#define NEOPIXEL_PIN 4  // "Normal" pin for NeoPixel
 #define NEOPIXEL_TYPE (NEO_GRB + NEO_KHZ800)
 #define NSTEP 100 // How many loop()s before we are at new rgb value.
 
