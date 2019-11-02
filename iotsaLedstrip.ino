@@ -12,6 +12,7 @@
 #include "iotsaWifi.h"
 #include "iotsaLed.h"
 #include "iotsaConfigFile.h"
+#include "iotsaPixelStrip.h"
 
 // CHANGE: Add application includes and declarations here
 
@@ -25,15 +26,13 @@ IotsaWifiMod wifiMod(application);
 IotsaOtaMod otaMod(application);
 #endif
 
+IotsaPixelstripMod pixelstripMod(application);
 //
-// LED module. 
+// LED Lighting module. 
 //
+#define NSTEP 100
 
-#define NEOPIXEL_PIN 4  // "Normal" pin for NeoPixel
-#define NEOPIXEL_TYPE (NEO_GRB + NEO_KHZ800)
-#define NSTEP 100 // How many loop()s before we are at new rgb value.
-
-class IotsaLedstripMod : public IotsaApiMod {
+class IotsaLedstripMod : public IotsaApiMod, public IotsaPixelsource {
 public:
   using IotsaApiMod::IotsaApiMod;
   void setup();
@@ -42,6 +41,8 @@ public:
   void configLoad();
   void configSave();
   void loop();
+  void setHandler(uint8_t *_buffer, size_t _count, int bpp, IotsaPixelsourceHandler *handler);
+
 protected:
   bool getHandler(const char *path, JsonObject& reply);
   bool putHandler(const char *path, const JsonVariant& request, JsonObject& reply);
@@ -52,13 +53,23 @@ private:
   void setTI(float t, float i);
   void getTI(float& t, float& i);
   Adafruit_NeoPixel *strip;
-  float r, g, b;  // Wanted RGB color
+  float r, g, b, w;  // Wanted RGB color
+  uint8_t *buffer;
   int count;  // Number of LEDs
-  float gamma;  // Gamma correction
+  int bpp; // Number of colors per LED (3 or 4)
+  IotsaPixelsourceHandler *stripHandler;
   int interval; // Number of unlit pixels between lit pixels
   int nStep;  // Number of steps to take between old and new color
-  float rPrev, gPrev, bPrev;
+  float rPrev, gPrev, bPrev, wPrev;
 };
+
+void IotsaLedstripMod::setHandler(uint8_t *_buffer, size_t _count, int _bpp, IotsaPixelsourceHandler *_handler) {
+  buffer = _buffer;
+  count = _count;
+  bpp = _bpp;
+  stripHandler = _handler;
+  nStep = NSTEP;
+}
 
 void IotsaLedstripMod::setHSL(float h, float s, float l) {
       // Formulas from https://en.wikipedia.org/wiki/HSL_and_HSV#HSL_to_RGB
@@ -101,6 +112,15 @@ void IotsaLedstripMod::setHSL(float h, float s, float l) {
       r = r1+m;
       g = g1+m;
       b = b1+m;
+      if (bpp == 4) {
+        w = min(r, min(g, b));
+        r -= w;
+        g -= w;
+        b -= w;
+        if (w < 0) w = 0;
+        if (w > 1) w = 1;
+
+      }
       if (r < 0) r = 0;
       if (r >= 1) r = 1;
       if (g < 0) g = 0;
@@ -113,6 +133,11 @@ void IotsaLedstripMod::getHSL(float &h, float &s, float &l)
 {
   h = 0;
   float r1 = r, g1 = g, b1 = b;
+  if (bpp == 4) {
+    r1 += w;
+    g1 += w;
+    b1 += w;
+  }
   float minChroma = fmin(fmin(r1, g1), b1);
   float maxChroma = fmax(fmax(r1, g1), b1);
   if (minChroma == maxChroma) {
@@ -153,15 +178,26 @@ void IotsaLedstripMod::setTI(float t, float i) {
   } else {
     b = 0.54320678911019607843 * log(t - 10.0) - 1.19625408914;
   }
+  if (bpp == 4) {
+    w = min(r, min(g, b));
+    r -= w;
+    g -= w;
+    b -= w;
+  }
   if (r < 0) r = 0;
   if (r > 1) r = 1;
+  r *= i;
   if (g < 0) g = 0;
   if (g > 1) g = 1;
+  g *= i;
   if (b < 0) b = 0;
   if (b > 1) b = 1;
-  r *= i;
-  g *= i;
   b *= i;
+  if (bpp == 4) {
+    if (w < 0) w = 0;
+    if (w > 1) w = 1;
+    w *= i;
+  }
 }
 
 void IotsaLedstripMod::getTI(float& cct, float& y) {
@@ -182,6 +218,11 @@ void IotsaLedstripMod::getTI(float& cct, float& y) {
   float r1 = r; //(r > 0.04045) ? pow((r+0.055)/1.055, 2.4) : r / 12.92;
   float g1 = g; //(g > 0.04045) ? pow((g+0.055)/1.055, 2.4) : g / 12.92;
   float b1 = b; //(b > 0.04045) ? pow((b+0.055)/1.055, 2.4) : b / 12.92;
+  if (bpp == 4) {
+    r1 += w;
+    g1 += w;
+    b1 += w;
+  }
   
 
 #if 0
@@ -246,14 +287,10 @@ IotsaLedstripMod::handler() {
       b = server->arg("b").toFloat();
       anyChanged = true;
     }
-  }
-  if( server->hasArg("gamma")) {
-    gamma = server->arg("gamma").toFloat();
-    anyChanged = true;
-  }
-  if( server->hasArg("count")) {
-    count = server->arg("count").toInt();
-    anyChanged = true;
+    if( bpp == 4 && server->hasArg("w")) {
+      w = server->arg("w").toFloat();
+      anyChanged = true;
+    }
   }
   if( server->hasArg("interval")) {
     interval = server->arg("interval").toInt();
@@ -277,6 +314,8 @@ IotsaLedstripMod::handler() {
   message += "Red (0..1): <input type='text' name='r' value='" + String(r) +"' ><br>";
   message += "Green (0..1): <input type='text' name='g' value='" + String(g) +"' ><br>";
   message += "Blue (0..1): <input type='text' name='b' value='" + String(b) +"' ><br>";
+  if (bpp == 4) 
+    message += "White (0..1): <input type='text' name='w' value='" + String(w) +"' ><br>";
 
   checked = "";
   if (set == "hsl") checked = " checked";
@@ -295,9 +334,6 @@ IotsaLedstripMod::handler() {
   message += "Temperature (1000..40000): <input type='text' name='temperature' value='" + String(temperature) +"'><br>";
   message += "Illuminance (0..1): <input type='text' name='illuminance' value='" + String(illuminance) +"'><br>";
 
-  message += "Gamma: <input type='text' name='gamma' value='" + String(gamma) +"' ><br>";
-
-  message += "Number of LEDs: <input type='text' name='count' value='" + String(count) +"' ><br>";
   message += "Dark interval: <input type='text' name='interval' value='" + String(interval) +"' ><br>";
   message += "<input type='submit'></form></body></html>";
   server->send(200, "text/html", message);
@@ -314,8 +350,7 @@ bool IotsaLedstripMod::getHandler(const char *path, JsonObject& reply) {
   reply["r"] = r;
   reply["g"] = g;
   reply["b"] = b;
-  reply["gamma"] = gamma;
-  reply["count"] = count;
+  if (bpp == 4) reply["w"] = w;
   reply["interval"] = interval;
   return true;
 }
@@ -328,10 +363,10 @@ bool IotsaLedstripMod::putHandler(const char *path, const JsonVariant& request, 
   g = arg.as<int>();
   arg = request["b"]|0;
   b = arg.as<int>();
-  arg = request["gamma"]|0;
-  gamma = arg.as<float>();
-  arg = request["count"]|0;
-  count = arg.as<int>();
+  if (bpp == 4) {
+    arg = request["w"]|0;
+    w = arg.as<int>();
+  }
   arg = request["interval"]|0;
   interval = arg.as<int>();
   configSave();
@@ -351,11 +386,10 @@ void IotsaLedstripMod::serverSetup() {
 
 void IotsaLedstripMod::configLoad() {
   IotsaConfigFileLoad cf("/config/ledstrip.cfg");
-  cf.get("r", r, 1.0);
-  cf.get("g", g, 1.0);
-  cf.get("b", b, 1.0);
-  cf.get("gamma", gamma, 1.0);
-  cf.get("count", count, 1);
+  cf.get("r", r, 0.0);
+  cf.get("g", g, 0.0);
+  cf.get("b", b, 0.0);
+  cf.get("w", w, 0.0);
   cf.get("interval", interval, 0);
 }
 
@@ -364,15 +398,12 @@ void IotsaLedstripMod::configSave() {
   cf.put("r", r);
   cf.put("g", g);
   cf.put("b", b);
-  cf.put("gamma", gamma);
-  cf.put("count", count);
+  cf.put("w", w);
   cf.put("interval", interval);
 }
 
 void IotsaLedstripMod::setup() {
   configLoad();
-  if (strip) delete strip;
-  strip = new Adafruit_NeoPixel(count, NEOPIXEL_PIN, NEOPIXEL_TYPE);
   rPrev = gPrev = bPrev = 0;
   nStep = NSTEP;
 }
@@ -383,6 +414,7 @@ void IotsaLedstripMod::loop() {
     rPrev = r;
     gPrev = g;
     bPrev = b;
+    wPrev = w;
   } else {
     nStep--;
   //  strip->clear();
@@ -390,41 +422,76 @@ void IotsaLedstripMod::loop() {
     float curR = ((rPrev*nStep) + (r*(NSTEP-nStep)))/NSTEP;
     float curG = ((gPrev*nStep) + (g*(NSTEP-nStep)))/NSTEP;
     float curB = ((bPrev*nStep) + (b*(NSTEP-nStep)))/NSTEP;
-    int _r, _g, _b;
-    if (gamma == 1.0) {
-      // gamma correction
-      _r = curR*256;
-      _g = curG*256;
-      _b = curB*256;
-    } else {
-      _r = powf(curR, gamma) * 256;
-      _g = powf(curG, gamma) * 256;
-      _b = powf(curB, gamma) * 256;
-    }
+    float curW = ((wPrev*nStep) + (w*(NSTEP-nStep)))/NSTEP;
+    int _r, _g, _b, _w;
+    _r = curR*256;
+    _g = curG*256;
+    _b = curB*256;
+    _w = curW*256;
     if (_r>255) _r = 255;
     if (_g>255) _g = 255;
     if (_b>255) _b = 255;
+    if (_w>255) _w = 255;
     IFDEBUG IotsaSerial.print("r=");
     IFDEBUG IotsaSerial.print(_r);
     IFDEBUG IotsaSerial.print(",g=");
     IFDEBUG IotsaSerial.print(_g);
     IFDEBUG IotsaSerial.print(",b=");
     IFDEBUG IotsaSerial.print(_b);
+    IFDEBUG IotsaSerial.print(",w=");
+    IFDEBUG IotsaSerial.print(_w);
     IFDEBUG IotsaSerial.print(",count=");
     IFDEBUG IotsaSerial.print(count);
     IFDEBUG IotsaSerial.print(",nStep=");
     IFDEBUG IotsaSerial.println(nStep);
-    strip->begin();
-    int i = 0;
-    while (i < count) {
-      strip->setPixelColor(i, _r, _g, _b);
-      i++;
-      for (int j=0; j<interval; j++) {
-        strip->setPixelColor(i, 0, 0, 0);
-        i++;
+    if (buffer != NULL && count != 0 && stripHandler != NULL) {
+      bool change = false;
+      uint8_t *p = buffer;
+      for (int i=0; i<count; i++) {
+        int wtdR = _r;
+        int wtdG = _g;
+        int wtdB = _b;
+        int wtdW = _w;
+        if (interval > 1 && i % interval != 0) {
+          wtdR = wtdG = wtdB = wtdW = 0;
+        }
+#if 0
+        if (bpp == 4) {
+          wtdW = wtdR;
+          if (wtdG < wtdW) wtdW = wtdG;
+          if (wtdB < wtdW) wtdW = wtdB;
+          wtdR -= wtdW;
+          wtdG -= wtdW;
+          wtdB -= wtdW;
+        }
+#endif
+        if (*p != wtdR) {
+          *p = wtdR;
+          change = true;
+        }
+        p++;
+        if (*p != wtdG) {
+          *p = wtdG;
+          change = true;
+        }
+        p++;
+        if (*p != wtdB) {
+          *p = wtdB;
+          change = true;
+        }
+        p++;
+        if (bpp == 4) {
+          if (*p != wtdW) {
+            *p = wtdW;
+            change = true;
+          }
+          p++;
+        }
+      }
+      if (change) {
+        stripHandler->pixelSourceCallback();
       }
     }
-    strip->show();
   }
 }
 
@@ -433,6 +500,7 @@ IotsaLedstripMod ledstripMod(application);
 
 // Standard setup() method, hands off most work to the application framework
 void setup(void){
+  pixelstripMod.setPixelsource(&ledstripMod);
   application.setup();
   application.serverSetup();
 }
