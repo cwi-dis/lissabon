@@ -357,18 +357,13 @@ bool IotsaLedstripMod::getHandler(const char *path, JsonObject& reply) {
 
 bool IotsaLedstripMod::putHandler(const char *path, const JsonVariant& request, JsonObject& reply) {
   // xxxjack HSL to be done
-  JsonVariant arg = request["r"]|0;
-  r = arg.as<int>();
-  arg = request["g"]|0;
-  g = arg.as<int>();
-  arg = request["b"]|0;
-  b = arg.as<int>();
+  r = request["r"]|0;
+  g = request["g"]|0;
+  b = request["b"]|0;
   if (bpp == 4) {
-    arg = request["w"]|0;
-    w = arg.as<int>();
+    w = request["w"]|0;
   }
-  arg = request["interval"]|0;
-  interval = arg.as<int>();
+  interval = request["interval"]|0;
   configSave();
   nStep = NSTEP;
   return true;
