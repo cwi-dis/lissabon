@@ -153,20 +153,20 @@ void IotsaLedstripMod::setTI(float _temp, float _illum) {
   // as adapted by Renaud Bédard for https://www.shadertoy.com/view/lsSXW1
   if (temp < 1000) temp = 1000;
   if (temp > 40000) temp = 40000;
-  temp = temp / 100;
-  if (temp < 66) {
+  float t = temp / 100;
+  if (t < 66) {
     r = 1;
-    g = 0.39008157876901960784 * log(temp) - 0.63184144378862745098;
+    g = 0.39008157876901960784 * log(t) - 0.63184144378862745098;
   } else {
-    r = 1.29293618606274509804 * pow(temp-60, -0.1332047592);
-    g = 1.12989086089529411765 * pow(temp-60, -0.0755148492);
+    r = 1.29293618606274509804 * pow(t-60, -0.1332047592);
+    g = 1.12989086089529411765 * pow(t-60, -0.0755148492);
   }
-  if (temp >= 66) {
+  if (t >= 66) {
     b = 1;
-  } else if (temp <= 19) {
+  } else if (t <= 19) {
     b = 0;
   } else {
-    b = 0.54320678911019607843 * log(temp - 10.0) - 1.19625408914;
+    b = 0.54320678911019607843 * log(t - 10.0) - 1.19625408914;
   }
   if (bpp == 4) {
     w = min(r, min(g, b));
