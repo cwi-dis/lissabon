@@ -2,10 +2,6 @@
 #include "iotsaPixelstrip.h"
 #include "iotsaConfigFile.h"
 
-#define NEOPIXEL_PIN 4  // "Normal" pin for NeoPixel
-#define NEOPIXEL_TYPE (NEO_GRB + NEO_KHZ800)
-#define NEOPIXEL_COUNT 1 // Default number of pixels
-#define NEOPIXEL_BPP 3  // Default number of colors per pixel
 
 // Define TESTMODE_PIN if there is a test-mode switch attached
 // to that pin. The LEDs will show a looping pattern if that input is high.
@@ -19,13 +15,13 @@ IotsaPixelstripMod::handler() {
   if( server->hasArg("setIndex") && server->hasArg("setValue")) {
     int idx = server->arg("setIndex").toInt();
     int val = server->arg("setValue").toInt();
-    if (buffer && idx >= 0 && idx <= count*bpp) {
+    if (buffer && idx >= 0 && idx <= count*IOTSA_NPB_BPP) {
       buffer[idx] = val;
       pixelSourceCallback();
     }
   } else if (server->hasArg("clear")) {
     if (buffer) {
-      memset(buffer, 0, count*bpp);
+      memset(buffer, 0, count*IOTSA_NPB_BPP);
       pixelSourceCallback();
     }
   } else {
@@ -35,24 +31,16 @@ IotsaPixelstripMod::handler() {
       pin = server->arg("pin").toInt();
       anyChanged = true;
     }
-    if( server->hasArg("stripType")) {
-      if (needsAuthentication()) return;
-      stripType = server->arg("stripType").toInt();
-      anyChanged = true;
-    }
     if( server->hasArg("count")) {
       if (needsAuthentication()) return;
       count = server->arg("count").toInt();
       anyChanged = true;
     }
-    if( server->hasArg("bpp")) {
-      if (needsAuthentication()) return;
-      bpp = server->arg("bpp").toInt();
-      anyChanged = true;
-    }
     if( server->hasArg("gamma")) {
       if (needsAuthentication()) return;
       gamma = server->arg("gamma").toFloat();
+      if (gamma > 1.0) gamma = 2.2;
+      if (gamma < 1.0) gamma = 1.0;
       anyChanged = true;
     }
     if (anyChanged) {
@@ -63,9 +51,8 @@ IotsaPixelstripMod::handler() {
 
   String message = "<html><head><title>Pixelstrip module</title></head><body><h1>Pixelstrip module</h1>";
   message += "<h2>Configuration</h2><form method='get'>GPIO pin: <input name='pin' value='" + String(pin) + "'><br>";
-  message += "Neopixel type: <input name='stripType' value='" + String(stripType) + "'><br>";
   message += "Number of NeoPixels: <input name='count' value='" + String(count) + "'><br>";
-  message += "LEDs per NeoPixel: <input name='bpp' value='" + String(bpp) + "'><br>";
+  message += "LEDs per NeoPixel: " + String(IOTSA_NPB_BPP) + "<br>";
   message += "Gamma (1.0 neutral, 2.2 suggested): <input name='gamma' value='" + String(gamma) + "'><br>";
   message += "<input type='submit'></form>";
   message += "<h2>Set pixel</h2><form method='get'><br>Set pixel <input name='setIndex'> to <input name='setValue'><br>";
@@ -89,14 +76,23 @@ void IotsaPixelstripMod::setup() {
 }
 
 void IotsaPixelstripMod::setupStrip() {
-  IFDEBUG IotsaSerial.printf("setup count=%d bpp=%d pin=%d striptype=%d\n", count, bpp, pin, stripType);
+  IFDEBUG IotsaSerial.printf("setup count=%d bpp=%d pin=%d\n", count, IOTSA_NPB_BPP, pin);
   if (strip) delete strip;
+  strip = new IotsaNeoPixelBus(count, pin);
+  strip->Begin();
   if (buffer) free(buffer);
-  buffer = (uint8_t *)malloc(count*bpp);
+  buffer = (uint8_t *)malloc(count*IOTSA_NPB_BPP);
   if (buffer == NULL) {
     IotsaSerial.println("No memory");
   }
-  memset(buffer, 0, count*bpp);
+  memset(buffer, 0, count*IOTSA_NPB_BPP);
+#if 1
+  if (gammaConverter) delete gammaConverter;
+  if (gamma > 1) {
+    // Ignore gamma value, just use pre-defined 2.2 value from IotsaNeoPixelBus
+    gammaConverter = new NeoGamma<NeoGammaTableMethod>();
+  }
+#else
   if (gammaTable) free(gammaTable);
   gammaTable = NULL;
   if (gamma != 0 && gamma != 1) {
@@ -112,10 +108,10 @@ void IotsaPixelstripMod::setupStrip() {
       gammaTable[i] = ival;
     }
   }
-  strip = new Adafruit_NeoPixel(count, pin, stripType);
+#endif
   pixelSourceCallback();
   if (source) {
-    source->setHandler(buffer, count, bpp, this);
+    source->setHandler(buffer, count, IOTSA_NPB_BPP, this);
   }
 }
 
@@ -123,15 +119,14 @@ void IotsaPixelstripMod::setupStrip() {
 bool IotsaPixelstripMod::getHandler(const char *path, JsonObject& reply) {
   if (strcmp(path, "/api/pixelstrip") == 0) {
     reply["pin"] = pin;
-    reply["stripType"] = stripType;
     reply["count"] = count;
-    reply["bpp"] = bpp;
+    reply["bpp"] = IOTSA_NPB_BPP;
     reply["gamma"] = gamma;
     return true;
   } else if (strcmp(path, "/api/pixels") == 0) {
     JsonArray data = reply.createNestedArray("data");
     if (buffer) {
-      for(int i=0; i<count*bpp; i++) {
+      for(int i=0; i<count*IOTSA_NPB_BPP; i++) {
         data.add(buffer[i]);
       }
     }
@@ -148,20 +143,14 @@ bool IotsaPixelstripMod::putHandler(const char *path, const JsonVariant& request
       pin = reqObj["pin"];
       anyChanged = true;
     }
-    if (reqObj.containsKey("stripType")) {
-      stripType = reqObj["stripType"];
-      anyChanged = true;
-    }
     if (reqObj.containsKey("count")) {
       count = reqObj["count"];
       anyChanged = true;
     }
-    if (reqObj.containsKey("bpp")) {
-      bpp = reqObj["bpp"];
-      anyChanged = true;
-    }
     if (reqObj.containsKey("gamma")) {
       gamma = reqObj["gamma"];
+      if (gamma > 1.0) gamma = 2.2;
+      if (gamma < 1.0) gamma = 1.0;
       anyChanged = true;
     }
     if (anyChanged) {
@@ -172,7 +161,7 @@ bool IotsaPixelstripMod::putHandler(const char *path, const JsonVariant& request
   } else if (strcmp(path, "/api/pixels") == 0) {
     if (buffer == NULL) return false;
     if (reqObj.containsKey("clear") && reqObj["clear"]) {
-      memset(buffer, 0, count*bpp);
+      memset(buffer, 0, count*IOTSA_NPB_BPP);
     }
     int start = 0;
     if (reqObj.containsKey("start")) {
@@ -180,7 +169,7 @@ bool IotsaPixelstripMod::putHandler(const char *path, const JsonVariant& request
     }
     JsonArray data = reqObj["data"];
     for(JsonArray::iterator it=data.begin(); it!=data.end(); ++it) {
-      if (start >= count*bpp) return false;
+      if (start >= count*IOTSA_NPB_BPP) return false;
       int value = it->as<int>();
       buffer[start++] = value;
     }
@@ -197,19 +186,22 @@ void IotsaPixelstripMod::pixelSourceCallback() {
   }
   uint8_t *ptr = buffer;
   IFDEBUG IotsaSerial.println("Show ");
-  strip->begin();
   for (int i=0; i < count; i++) {
-    uint32_t color = 0;
-    for (int b=0; b<bpp; b++) {
-      int cval = *ptr++;
-      if (gammaTable) cval = gammaTable[cval];
-      color = color << 8 | cval;
-    }
-    IFDEBUG IotsaSerial.print(color, HEX);
-    IFDEBUG IotsaSerial.print(' ');
-    strip->setPixelColor(i, color);
+    uint8_t r = *ptr++;
+    uint8_t g = *ptr++;
+    uint8_t b = *ptr++;
+#if IOTSA_NPB_BPP == 4
+      uint8_t w = *ptr++;
+      RgbwColor color = RgbwColor(r, g, b, w);
+      if (gammaConverter) color = gammaConverter->Correct(color);
+      strip->SetPixelColor(i, color);
+#else
+      RgbColor color = RgbColor(r, g, b);
+      if (gammaConverter) color = gammaConverter->Correct(color);
+      strip->SetPixelColor(i, color);
+#endif
   }
-  strip->show();
+  strip->Show();
   IFDEBUG IotsaSerial.println(" called");
 }
 
@@ -226,19 +218,15 @@ void IotsaPixelstripMod::serverSetup() {
 
 void IotsaPixelstripMod::configLoad() {
   IotsaConfigFileLoad cf("/config/pixelstrip.cfg");
-  cf.get("pin", pin, NEOPIXEL_PIN);
-  cf.get("stripType", stripType, NEOPIXEL_TYPE);
-  cf.get("count", count, NEOPIXEL_COUNT);
-  cf.get("bpp", bpp, NEOPIXEL_BPP);
+  cf.get("pin", pin, IOTSA_NPB_DEFAULT_PIN);
+  cf.get("count", count, IOTSA_NPB_DEFAULT_COUNT);
   cf.get("gamma", gamma, 1.0);
 }
 
 void IotsaPixelstripMod::configSave() {
   IotsaConfigFileSave cf("/config/pixelstrip.cfg");
   cf.put("pin", pin);
-  cf.put("stripType", stripType);
   cf.put("count", count);
-  cf.put("bpp", bpp);
   cf.put("gamma", gamma);
 }
 
@@ -246,15 +234,15 @@ void IotsaPixelstripMod::loop() {
 #ifdef TESTMODE_PIN
   if (digitalRead(TESTMODE_PIN) && buffer != 0) {
     int value = (millis() >> 3) & 0xff;  // Loop intensities every 2 seconds, approximately
-    int bits = (millis() >> 11) % ((1 << bpp)-1); // Cycle over which colors to light
-    if (bits == 0) bits = ((1 << bpp)-1);
+    int bits = (millis() >> 11) % ((1 << IOTSA_NPB_BPP)-1); // Cycle over which colors to light
+    if (bits == 0) bits = ((1 << IOTSA_NPB_BPP)-1);
     for (int i=0; i < count; i++) {
-      for (int b=0; b < bpp; b++) {
+      for (int b=0; b < IOTSA_NPB_BPP; b++) {
         int thisValue = 0;
-        if (bits & (1<<((b+i) % bpp))) {
+        if (bits & (1<<((b+i) % IOTSA_NPB_BPP))) {
           thisValue = value;
         }
-        buffer[i*bpp+b] = thisValue;
+        buffer[i*IOTSA_NPB_BPP+b] = thisValue;
       }
     }
     pixelSourceCallback();

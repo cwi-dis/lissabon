@@ -2,13 +2,31 @@
 #define _IOTSAPIXELSTRIP_H_
 #include "iotsa.h"
 #include "iotsaApi.h"
-#include <Adafruit_NeoPixel.h>
+#include <NeoPixelBus.h>
 
 #ifdef IOTSA_WITH_API
 #define IotsaPixelstripModBaseMod IotsaApiMod
 #else
 #define IotsaPixelstripModBaseMod IotsaMod
 #endif
+
+#ifndef IOTSA_NPB_FEATURE
+#define IOTSA_NPB_FEATURE NeoGrbFeature
+#endif
+#ifndef IOTSA_NPB_BPP
+#define IOTSA_NPB_BPP 3
+#endif
+#ifndef IOTSA_NPB_METHOD
+#define IOTSA_NPB_METHOD Neo800KbpsMethod
+#endif
+#ifndef IOTSA_NPB_DEFAULT_PIN
+#define IOTSA_NPB_DEFAULT_PIN 4  // "Normal" pin for NeoPixel
+#endif
+#ifndef IOTSA_NPB_DEFAULT_COUNT
+#define IOTSA_NPB_DEFAULT_COUNT 1 // Default number of pixels
+#endif
+
+typedef NeoPixelBus<IOTSA_NPB_FEATURE,IOTSA_NPB_METHOD> IotsaNeoPixelBus;
 
 class IotsaPixelsourceHandler {
 public:
@@ -29,7 +47,7 @@ public:
   : IotsaPixelstripModBaseMod(app),
     source(NULL),
     strip(NULL),
-    gammaTable(NULL)
+    gammaConverter(NULL)
   {}
   using IotsaPixelstripModBaseMod::IotsaPixelstripModBaseMod;
   void setup();
@@ -46,14 +64,16 @@ protected:
   void setupStrip();
   void handler();
   IotsaPixelsource *source;
-  Adafruit_NeoPixel *strip;
+  IotsaNeoPixelBus *strip;
   uint8_t *buffer;
-  int bpp;
   int count;
-  int stripType;
   int pin;
   float gamma;
+#if 1
+  NeoGamma<NeoGammaTableMethod> *gammaConverter;
+#else
   uint8_t *gammaTable;
+#endif
 };
 
 #endif

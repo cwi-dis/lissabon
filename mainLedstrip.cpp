@@ -49,11 +49,16 @@ protected:
 private:
   void handler();
   void setHSL(float h, float s, float l);
+  bool hasHSL();
   void getHSL(float &h, float &s, float &l);
   void setTI(float t, float i);
-  void getTI(float& t, float& i);
+  bool hasTI();
   Adafruit_NeoPixel *strip;
   float r, g, b, w;  // Wanted RGB color
+  float h, s, l;
+  bool hslIsSet;
+  float t, i;
+  bool tiIsSet;
   uint8_t *buffer;
   int count;  // Number of LEDs
   int bpp; // Number of colors per LED (3 or 4)
@@ -71,8 +76,13 @@ void IotsaLedstripMod::setHandler(uint8_t *_buffer, size_t _count, int _bpp, Iot
   nStep = NSTEP;
 }
 
-void IotsaLedstripMod::setHSL(float h, float s, float l) {
+void IotsaLedstripMod::setHSL(float _h, float _s, float _l) {
       // Formulas from https://en.wikipedia.org/wiki/HSL_and_HSV#HSL_to_RGB
+      h = _h;
+      s = _s;
+      l = _l;
+      hslIsSet = true;
+      tiIsSet = false;
       float chroma = (1 - abs(2*l - 1)) * s;
       float hprime = fmod(h, 360.0) / 60;
       float x = chroma * (1-abs(fmod(hprime, 2.0)-1));
@@ -129,36 +139,16 @@ void IotsaLedstripMod::setHSL(float h, float s, float l) {
       if (b >= 1) b = 1;
 }
 
-void IotsaLedstripMod::getHSL(float &h, float &s, float &l)
+bool IotsaLedstripMod::hasHSL()
 {
-  h = 0;
-  float r1 = r, g1 = g, b1 = b;
-  if (bpp == 4) {
-    r1 += w;
-    g1 += w;
-    b1 += w;
-  }
-  float minChroma = fmin(fmin(r1, g1), b1);
-  float maxChroma = fmax(fmax(r1, g1), b1);
-  if (minChroma == maxChroma) {
-    h = 0;
-  } else if (maxChroma == r1) {
-    h = 60 * ( 0 + (g1-b1) / (maxChroma-minChroma));
-  } else if (maxChroma == g1) {
-    h = 60 * ( 2 + (b1-r1) / (maxChroma-minChroma));
-  } else if (maxChroma == b1) {
-    h = 60 * ( 4 + (r1-g1) / (maxChroma-minChroma));
-  }
-  if (h < 0) h += 360.0;
-  if (maxChroma == 0 || minChroma == 1) {
-    s = 0;
-  } else {
-    s = (maxChroma-minChroma) / (1 - fabs(maxChroma+minChroma-1));
-  }
-  l = (maxChroma + minChroma) / 2;
+  return hslIsSet;
 }
 
-void IotsaLedstripMod::setTI(float t, float i) {
+void IotsaLedstripMod::setTI(float _t, float _i) {
+  t = _t;
+  i = _i;
+  tiIsSet = true;
+  hslIsSet = false;
   // Algorithm from http://www.tannerhelland.com/4435/convert-temperature-rgb-algorithm-code
   // as adapted by Renaud Bédard for https://www.shadertoy.com/view/lsSXW1
   if (t < 1000) t = 1000;
@@ -200,54 +190,12 @@ void IotsaLedstripMod::setTI(float t, float i) {
   }
 }
 
-void IotsaLedstripMod::getTI(float& cct, float& y) {
-#if 0
-  // Formula from https://stackoverflow.com/questions/45433647/how-to-get-color-temperature-from-color-correction-gain
-  float x =(-0.14282)*r + (1.54924)*g + (-0.95641)*b;
-  i = (-0.32466)*r + (1.57837)*g + (-0.73191)*b; // Intensity
-  float z = (-0.68202)*r + (0.77073)*g + (0.56332)*b;
-  if (i == 0) {
-    t = 0;
-    return;
-  }
-  x = x / (x+i+z);
-  i = i / (x+i+z);
-  float n = (x-0.3320)/(0.1858-i);
-  t = 449*pow(n, 3) + 3525*pow(n, 2) + 6823.3*n + 5520.33;
-#else
-  float r1 = r; //(r > 0.04045) ? pow((r+0.055)/1.055, 2.4) : r / 12.92;
-  float g1 = g; //(g > 0.04045) ? pow((g+0.055)/1.055, 2.4) : g / 12.92;
-  float b1 = b; //(b > 0.04045) ? pow((b+0.055)/1.055, 2.4) : b / 12.92;
-  if (bpp == 4) {
-    r1 += w;
-    g1 += w;
-    b1 += w;
-  }
-  
 
-#if 0
-  float x = 0.412424  * r1 + 0.357579 * g1 + 0.180464  * b1;
-  y = 0.212656  * r1 + 0.715158 * g1 + 0.0721856 * b1;
-  float z = 0.0193324 * r1 + 0.119193 * g1 + 0.950444  * b1;
-#else
-  float x = 0.4360747  * r1 + 0.3850649 * g1 + 0.1430804  * b1;
-  y = 0.2225045  * r1 + 0.7168786 * g1 + 0.0606169 * b1;
-  float z = 0.0139322 * r1 + 0.0971045 * g1 + 0.7141733  * b1;
-#endif
-
-  if (y == 0) {
-    cct = 0;
-    return;
-  }
-  float xnorm = x / (x + y + z);
-  float ynorm = y / (x + y + z);
-
-  float n = (xnorm-0.3320)/(0.1858-ynorm);
-  cct = 449*pow(n, 3) + 3525*pow(n, 2) + 6823.3*n + 5520.33;
-  // Alternative, from https://stackoverflow.com/questions/6629798/whats-wrong-with-this-rgb-to-xyz-color-space-conversion-algorithm and http://www.vinland.com/Correlated_Color_Temperature.html
-  //cct = 437*pow(n, 3) + 3601*pow(n, 2) + 6831*n + 5517;
-#endif
+bool IotsaLedstripMod::hasTI()
+{
+  return tiIsSet;
 }
+
 
 #ifdef IOTSA_WITH_WEB
 void
@@ -309,7 +257,7 @@ IotsaLedstripMod::handler() {
   message += "<form method='get'>";
 
   String checked = "";
-  if (set == "" || set == "rgb") checked = " checked";
+  if (!hasHSL() && !hasTI()) checked = " checked";
   message += "<input type='radio' name='set' value=''" + checked + ">Set RGB value:<br>";
   message += "Red (0..1): <input type='text' name='r' value='" + String(r) +"' ><br>";
   message += "Green (0..1): <input type='text' name='g' value='" + String(g) +"' ><br>";
@@ -318,21 +266,28 @@ IotsaLedstripMod::handler() {
     message += "White (0..1): <input type='text' name='w' value='" + String(w) +"' ><br>";
 
   checked = "";
-  if (set == "hsl") checked = " checked";
+  if (hasHSL()) {
+    checked = " checked";
+  } else {
+    h = 0;
+    s = 0;
+    l = 0;
+  }
   message += "<input type='radio' name='set' value='hsl'" + checked + ">Use HSL value:<br>";
-  float h, s, l;
-  getHSL(h, s, l);
   message += "Hue (0..360): <input type='text' name='h' value='" + String(h) +"'><br>";
   message += "Saturation (0..1): <input type='text' name='s' value='" + String(s) +"'><br>";
   message += "Lightness (0..1): <input type='text' name='l' value='" + String(l) +"'><br>";
 
   checked = "";
-  if (set == "temp") checked = " checked";
-  float temperature, illuminance;
-  getTI(temperature, illuminance);
+  if (hasTI()) {
+    checked = " checked";
+  } else {
+    t = 0;
+    i = 0;
+  }
   message += "<input type='radio' name='set' value='temp'" + checked + ">Set Temperature:<br>";
-  message += "Temperature (1000..40000): <input type='text' name='temperature' value='" + String(temperature) +"'><br>";
-  message += "Illuminance (0..1): <input type='text' name='illuminance' value='" + String(illuminance) +"'><br>";
+  message += "Temperature (1000..40000): <input type='text' name='temperature' value='" + String(t) +"'><br>";
+  message += "Illuminance (0..1): <input type='text' name='illuminance' value='" + String(i) +"'><br>";
 
   message += "Dark interval: <input type='text' name='interval' value='" + String(interval) +"' ><br>";
   message += "<input type='submit'></form></body></html>";
@@ -385,6 +340,16 @@ void IotsaLedstripMod::configLoad() {
   cf.get("g", g, 0.0);
   cf.get("b", b, 0.0);
   cf.get("w", w, 0.0);
+
+  cf.get("h", h, 0.0);
+  cf.get("s", s, 0.0);
+  cf.get("l", l, 0.0);
+  if (h > 0 || s > 0 || l > 0) hslIsSet = true;
+
+  cf.get("t", w, 0.0);
+  cf.get("i", w, 0.0);
+  if (t > 0 || i > 0) tiIsSet = true;
+
   cf.get("interval", interval, 0);
 }
 
@@ -394,6 +359,16 @@ void IotsaLedstripMod::configSave() {
   cf.put("g", g);
   cf.put("b", b);
   cf.put("w", w);
+  
+  if (hslIsSet) {
+    cf.put("h", h);
+    cf.put("s", s);
+    cf.put("l", l);
+  }
+  if (tiIsSet) {
+    cf.put("t", t);
+    cf.put("i", i);
+  }
   cf.put("interval", interval);
 }
 
