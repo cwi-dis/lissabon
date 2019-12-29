@@ -30,6 +30,11 @@ IotsaOtaMod otaMod(application);
 IotsaBLEServerMod bleserverMod(application);
 #endif
 
+#include "iotsaBattery.h"
+#define PIN_DISABLESLEEP 0
+// #define PIN_VBAT 37
+IotsaBatteryMod batteryMod(application);
+
 #include "iotsaPixelStrip.h"
 IotsaPixelstripMod pixelstripMod(application);
 //
@@ -471,6 +476,12 @@ void IotsaLedstripMod::configSave() {
 }
 
 void IotsaLedstripMod::setup() {
+#ifdef PIN_VBAT
+  batteryMod.setPinVBat(PIN_VBAT);
+#endif
+#ifdef PIN_DISABLESLEEP
+  batteryMod.setPinDisableSleep(PIN_DISABLESLEEP);
+#endif
   configLoad();
   rPrev = gPrev = bPrev = 0;
   nStep = NSTEP;
