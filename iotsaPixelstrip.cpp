@@ -190,16 +190,16 @@ void IotsaPixelstripMod::pixelSourceCallback() {
     uint8_t r = *ptr++;
     uint8_t g = *ptr++;
     uint8_t b = *ptr++;
-#if IOTSA_NPB_BPP == 4
+    if (IOTSA_NPB_BPP == 4) {
       uint8_t w = *ptr++;
       RgbwColor color = RgbwColor(r, g, b, w);
       if (gammaConverter) color = gammaConverter->Correct(color);
       strip->SetPixelColor(i, color);
-#else
+    } else {
       RgbColor color = RgbColor(r, g, b);
       if (gammaConverter) color = gammaConverter->Correct(color);
       strip->SetPixelColor(i, color);
-#endif
+    }
   }
   strip->Show();
   IFDEBUG IotsaSerial.println(" called");

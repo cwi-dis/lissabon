@@ -13,15 +13,17 @@
 #ifndef IOTSA_NPB_FEATURE
 #define IOTSA_NPB_FEATURE NeoGrbFeature
 #endif
-#ifndef IOTSA_NPB_BPP
-#define IOTSA_NPB_BPP 3
-#endif
+
+const int IOTSA_NPB_BPP = (IOTSA_NPB_FEATURE::PixelSize);
+
 #ifndef IOTSA_NPB_METHOD
 #define IOTSA_NPB_METHOD Neo800KbpsMethod
 #endif
+
 #ifndef IOTSA_NPB_DEFAULT_PIN
 #define IOTSA_NPB_DEFAULT_PIN 4  // "Normal" pin for NeoPixel
 #endif
+
 #ifndef IOTSA_NPB_DEFAULT_COUNT
 #define IOTSA_NPB_DEFAULT_COUNT 1 // Default number of pixels
 #endif

@@ -12,7 +12,6 @@
 #include "iotsaWifi.h"
 #include "iotsaLed.h"
 #include "iotsaConfigFile.h"
-#include "iotsaPixelStrip.h"
 
 // CHANGE: Add application includes and declarations here
 
@@ -26,6 +25,7 @@ IotsaWifiMod wifiMod(application);
 IotsaOtaMod otaMod(application);
 #endif
 
+#include "iotsaPixelStrip.h"
 IotsaPixelstripMod pixelstripMod(application);
 //
 // LED Lighting module. 
