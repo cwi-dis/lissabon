@@ -25,6 +25,11 @@ IotsaWifiMod wifiMod(application);
 IotsaOtaMod otaMod(application);
 #endif
 
+#include "iotsaBLEServer.h"
+#ifdef IOTSA_WITH_BLE
+IotsaBLEServerMod bleserverMod(application);
+#endif
+
 #include "iotsaPixelStrip.h"
 IotsaPixelstripMod pixelstripMod(application);
 //
@@ -32,7 +37,7 @@ IotsaPixelstripMod pixelstripMod(application);
 //
 #define NSTEP 100
 
-class IotsaLedstripMod : public IotsaApiMod, public IotsaPixelsource {
+class IotsaLedstripMod : public IotsaApiMod, public IotsaPixelsource, public IotsaBLEApiProvider {
 public:
   using IotsaApiMod::IotsaApiMod;
   void setup();
@@ -46,6 +51,15 @@ public:
 protected:
   bool getHandler(const char *path, JsonObject& reply);
   bool putHandler(const char *path, const JsonVariant& request, JsonObject& reply);
+#ifdef IOTSA_WITH_BLE
+  IotsaBleApiService bleApi;
+  bool blePutHandler(UUIDstring charUUID);
+  bool bleGetHandler(UUIDstring charUUID);
+  static constexpr UUIDstring serviceUUID = "153C02D1-D28E-40B8-84EB-7F64B56D4E2E";
+  static constexpr UUIDstring tempUUID = "4EDE8982-63C1-4F53-BB65-9F05EF84B785";
+  static constexpr UUIDstring illumUUID = "7A63606E-6647-46B3-ACB5-2C0C05C00492";
+  static constexpr UUIDstring intervalUUID = "3FDC6DFE-0900-48DB-8D12-32569C96EFF4";
+#endif // IOTSA_WITH_BLE
 private:
   void handler();
   void setHSL(float h, float s, float l);
@@ -196,6 +210,57 @@ bool IotsaLedstripMod::hasTI()
   return tiIsSet;
 }
 
+#ifdef IOTSA_WITH_BLE
+bool IotsaLedstripMod::blePutHandler(UUIDstring charUUID) {
+  bool anyChanged = false;
+  if (charUUID == tempUUID) {
+      int _temp = bleApi.getAsInt(tempUUID);
+      setTI(_temp, illum);
+      IFDEBUG IotsaSerial.printf("xxxjack ble: wrote temp %s value %d\n", tempUUID, _temp);
+      anyChanged = true;
+  }
+  if (charUUID == illumUUID) {
+      int _illum = bleApi.getAsInt(illumUUID);
+      setTI(temp, float(illum)/100.0);
+      IFDEBUG IotsaSerial.printf("xxxjack ble: wrote illum %s value %d\n", illumUUID, _illum);
+      anyChanged = true;
+  }
+  if (charUUID == intervalUUID) {
+      interval = bleApi.getAsInt(intervalUUID);
+      IFDEBUG IotsaSerial.printf("xxxjack ble: wrote interval %s value %d\n", intervalUUID, interval);
+      anyChanged = true;
+  }
+  if (anyChanged) {
+    configSave();
+    nStep = NSTEP;
+    return true;
+  }
+  IotsaSerial.println("iotsaLedstripMod: ble: write unknown uuid");
+  return false;
+}
+
+bool IotsaLedstripMod::bleGetHandler(UUIDstring charUUID) {
+  if (charUUID == tempUUID) {
+      int _temp = int(temp);
+      IFDEBUG IotsaSerial.printf("xxxjack ble: read temp %s value %d\n", charUUID, _temp);
+      bleApi.set(tempUUID, (uint16_t)_temp);
+      return true;
+  }
+  if (charUUID == illumUUID) {
+      int _illum = int(illum*100);
+      IFDEBUG IotsaSerial.printf("xxxjack ble: read illum %s value %d\n", charUUID, _illum);
+      bleApi.set(illumUUID, (uint8_t)_illum);
+      return true;
+  }
+  if (charUUID == intervalUUID) {
+      IFDEBUG IotsaSerial.printf("xxxjack ble: read interval %s value %d\n", charUUID, interval);
+      bleApi.set(intervalUUID, (uint8_t)interval);
+      return true;
+  }
+  IotsaSerial.println("iotsaLedstripMod: ble: read unknown uuid");
+  return false;
+}
+#endif // IOTSA_WITH_BLE
 
 #ifdef IOTSA_WITH_WEB
 void
@@ -296,7 +361,14 @@ IotsaLedstripMod::handler() {
 
 String IotsaLedstripMod::info() {
   // Return some information about this module, for the main page of the web server.
-  String rv = "<p>See <a href=\"/ledstrip\">/led</a> for setting the color of the LEDs and their count.</p>";
+  String rv = "<p>See <a href=\"/ledstrip\">/led</a> for setting the color of the LEDs and their count.";
+#ifdef IOTSA_WITH_REST
+  rv += " Or use REST api at <a href='/api/ledstrip'>/api/ledstrip</a>.";
+#endif
+#ifdef IOTSA_WITH_BLE
+  rv += " Or use BLE service " + String(serviceUUID) + ".";
+#endif
+  rv += "</p>";
   return rv;
 }
 #endif // IOTSA_WITH_WEB
@@ -354,7 +426,7 @@ void IotsaLedstripMod::serverSetup() {
   server->on("/ledstrip", std::bind(&IotsaLedstripMod::handler, this));
 #endif // IOTSA_WITH_WEB
   api.setup("/api/ledstrip", true, true);
-  name = "led";
+  name = "ledstrip";
 }
 
 
@@ -368,11 +440,11 @@ void IotsaLedstripMod::configLoad() {
   cf.get("h", h, 0.0);
   cf.get("s", s, 0.0);
   cf.get("l", l, 0.0);
-  if (h > 0 || s > 0 || l > 0) hslIsSet = true;
+  if (h > 0 || s > 0 || l > 0) setHSL(h, s, l);
 
-  cf.get("temp", w, 0.0);
-  cf.get("illum", w, 0.0);
-  if (temp > 0 || illum > 0) tiIsSet = true;
+  cf.get("temp", temp, 0.0);
+  cf.get("illum", illum, 0.0);
+  if (temp > 0 || illum > 0) setTI(temp, illum);
 
   cf.get("interval", interval, 0);
 }
@@ -384,12 +456,14 @@ void IotsaLedstripMod::configSave() {
   cf.put("b", b);
   cf.put("w", w);
   
-  if (hslIsSet) {
+  if (hasHSL()) {
+    IotsaSerial.println("xxxjack saving hsl");
     cf.put("h", h);
     cf.put("s", s);
     cf.put("l", l);
   }
-  if (tiIsSet) {
+  if (hasTI()) {
+    IotsaSerial.println("xxxjack saving ti");
     cf.put("temp", temp);
     cf.put("illum", illum);
   }
@@ -400,6 +474,26 @@ void IotsaLedstripMod::setup() {
   configLoad();
   rPrev = gPrev = bPrev = 0;
   nStep = NSTEP;
+#ifdef IOTSA_WITH_BLE
+  bleApi.setup(serviceUUID, this);
+  static BLE2904 temp2904;
+  temp2904.setFormat(BLE2904::FORMAT_UINT16);
+  temp2904.setUnit(0x2700);
+  static BLE2901 temp2901("Color Temperature");
+  bleApi.addCharacteristic(tempUUID, BLE_READ|BLE_WRITE, &temp2904, &temp2901);
+
+  static BLE2904 illum2904;
+  illum2904.setFormat(BLE2904::FORMAT_UINT8);
+  illum2904.setUnit(0x27AD);
+  static BLE2901 illum2901("Illumination");
+  bleApi.addCharacteristic(illumUUID, BLE_READ|BLE_WRITE, &illum2904, &illum2901);
+
+  static BLE2904 interval2904;
+  interval2904.setFormat(BLE2904::FORMAT_UINT8);
+  interval2904.setUnit(0x2700);
+  static BLE2901 interval2901("Interval");
+  bleApi.addCharacteristic(intervalUUID, BLE_READ|BLE_WRITE, &interval2904, &interval2901);
+#endif
 }
 
 void IotsaLedstripMod::loop() {
@@ -426,6 +520,7 @@ void IotsaLedstripMod::loop() {
     if (_g>255) _g = 255;
     if (_b>255) _b = 255;
     if (_w>255) _w = 255;
+#if 0
     IFDEBUG IotsaSerial.print("r=");
     IFDEBUG IotsaSerial.print(_r);
     IFDEBUG IotsaSerial.print(",g=");
@@ -438,6 +533,7 @@ void IotsaLedstripMod::loop() {
     IFDEBUG IotsaSerial.print(count);
     IFDEBUG IotsaSerial.print(",nStep=");
     IFDEBUG IotsaSerial.println(nStep);
+#endif
     if (buffer != NULL && count != 0 && stripHandler != NULL) {
       bool change = false;
       uint8_t *p = buffer;

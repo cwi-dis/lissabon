@@ -185,7 +185,7 @@ void IotsaPixelstripMod::pixelSourceCallback() {
     return;
   }
   uint8_t *ptr = buffer;
-  IFDEBUG IotsaSerial.println("Show ");
+  // IFDEBUG IotsaSerial.println("Show ");
   for (int i=0; i < count; i++) {
     uint8_t r = *ptr++;
     uint8_t g = *ptr++;
@@ -202,7 +202,7 @@ void IotsaPixelstripMod::pixelSourceCallback() {
     }
   }
   strip->Show();
-  IFDEBUG IotsaSerial.println(" called");
+  // IFDEBUG IotsaSerial.println(" called");
 }
 
 void IotsaPixelstripMod::serverSetup() {
