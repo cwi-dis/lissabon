@@ -5,8 +5,6 @@
 // through REST calls (and/or, depending on Iotsa compile time options, COAP calls).
 // The web interface can be disabled by building iotsa with IOTSA_WITHOUT_WEB.
 //
-// This is the application that is usually shipped with new iotsa boards.
-//
 
 #include "iotsa.h"
 #include "iotsaWifi.h"
@@ -32,7 +30,8 @@ IotsaBLEServerMod bleserverMod(application);
 
 #include "iotsaBattery.h"
 #define PIN_DISABLESLEEP 0
-// #define PIN_VBAT 37
+#define PIN_VBAT 37
+#define VBAT_100_PERCENT 1.2
 IotsaBatteryMod batteryMod(application);
 
 #include "iotsaPixelStrip.h"
@@ -40,7 +39,7 @@ IotsaPixelstripMod pixelstripMod(application);
 //
 // LED Lighting module. 
 //
-#define NSTEP 100
+#define NSTEP 1000
 
 class IotsaLedstripMod : public IotsaApiMod, public IotsaPixelsource, public IotsaBLEApiProvider {
 public:
@@ -60,10 +59,10 @@ protected:
   IotsaBleApiService bleApi;
   bool blePutHandler(UUIDstring charUUID);
   bool bleGetHandler(UUIDstring charUUID);
-  static constexpr UUIDstring serviceUUID = "153C02D1-D28E-40B8-84EB-7F64B56D4E2E";
-  static constexpr UUIDstring tempUUID = "4EDE8982-63C1-4F53-BB65-9F05EF84B785";
-  static constexpr UUIDstring illumUUID = "7A63606E-6647-46B3-ACB5-2C0C05C00492";
-  static constexpr UUIDstring intervalUUID = "3FDC6DFE-0900-48DB-8D12-32569C96EFF4";
+  static constexpr UUIDstring serviceUUID = "153C0001-D28E-40B8-84EB-7F64B56D4E2E";
+  static constexpr UUIDstring tempUUID = "153C0002-D28E-40B8-84EB-7F64B56D4E2E";
+  static constexpr UUIDstring illumUUID = "153C0003-D28E-40B8-84EB-7F64B56D4E2E";
+  static constexpr UUIDstring intervalUUID = "153C0004-D28E-40B8-84EB-7F64B56D4E2E";
 #endif // IOTSA_WITH_BLE
 private:
   void handler();
@@ -221,13 +220,13 @@ bool IotsaLedstripMod::blePutHandler(UUIDstring charUUID) {
   if (charUUID == tempUUID) {
       int _temp = bleApi.getAsInt(tempUUID);
       setTI(_temp, illum);
-      IFDEBUG IotsaSerial.printf("xxxjack ble: wrote temp %s value %d\n", tempUUID, _temp);
+      IFDEBUG IotsaSerial.printf("xxxjack ble: wrote temp %s value %d %f\n", tempUUID, _temp, temp);
       anyChanged = true;
   }
   if (charUUID == illumUUID) {
       int _illum = bleApi.getAsInt(illumUUID);
-      setTI(temp, float(illum)/100.0);
-      IFDEBUG IotsaSerial.printf("xxxjack ble: wrote illum %s value %d\n", illumUUID, _illum);
+      setTI(temp, float(_illum)/100.0);
+      IFDEBUG IotsaSerial.printf("xxxjack ble: wrote illum %s value %d %f\n", illumUUID, _illum, illum);
       anyChanged = true;
   }
   if (charUUID == intervalUUID) {
@@ -477,7 +476,7 @@ void IotsaLedstripMod::configSave() {
 
 void IotsaLedstripMod::setup() {
 #ifdef PIN_VBAT
-  batteryMod.setPinVBat(PIN_VBAT);
+  batteryMod.setPinVBat(PIN_VBAT, VBAT_100_PERCENT);
 #endif
 #ifdef PIN_DISABLESLEEP
   batteryMod.setPinDisableSleep(PIN_DISABLESLEEP);
@@ -486,6 +485,9 @@ void IotsaLedstripMod::setup() {
   rPrev = gPrev = bPrev = 0;
   nStep = NSTEP;
 #ifdef IOTSA_WITH_BLE
+  // Set default advertising interval to be between 200ms and 600ms
+  IotsaBLEServerMod::setAdvertisingInterval(300, 900);
+
   bleApi.setup(serviceUUID, this);
   static BLE2904 temp2904;
   temp2904.setFormat(BLE2904::FORMAT_UINT16);
@@ -508,16 +510,15 @@ void IotsaLedstripMod::setup() {
 }
 
 void IotsaLedstripMod::loop() {
-  if (nStep <= 0) {
-    nStep = 0;
-    rPrev = r;
-    gPrev = g;
-    bPrev = b;
-    wPrev = w;
-  } else {
+  if (nStep > 0) {
     nStep--;
-  //  strip->clear();
-  //  strip->show();
+    if (nStep == 0) {
+      IFDEBUG IotsaSerial.println("IotsaLedstrip::loop: animation done");
+      rPrev = r;
+      gPrev = g;
+      bPrev = b;
+      wPrev = w;
+    }
     float curR = ((rPrev*nStep) + (r*(NSTEP-nStep)))/NSTEP;
     float curG = ((gPrev*nStep) + (g*(NSTEP-nStep)))/NSTEP;
     float curB = ((bPrev*nStep) + (b*(NSTEP-nStep)))/NSTEP;
@@ -531,19 +532,8 @@ void IotsaLedstripMod::loop() {
     if (_g>255) _g = 255;
     if (_b>255) _b = 255;
     if (_w>255) _w = 255;
-#if 0
-    IFDEBUG IotsaSerial.print("r=");
-    IFDEBUG IotsaSerial.print(_r);
-    IFDEBUG IotsaSerial.print(",g=");
-    IFDEBUG IotsaSerial.print(_g);
-    IFDEBUG IotsaSerial.print(",b=");
-    IFDEBUG IotsaSerial.print(_b);
-    IFDEBUG IotsaSerial.print(",w=");
-    IFDEBUG IotsaSerial.print(_w);
-    IFDEBUG IotsaSerial.print(",count=");
-    IFDEBUG IotsaSerial.print(count);
-    IFDEBUG IotsaSerial.print(",nStep=");
-    IFDEBUG IotsaSerial.println(nStep);
+#if 1
+    IFDEBUG IotsaSerial.printf("IotsaLedstrip::loop: r=%d, g=%d, b=%d, w=%d, count=%d, nStep=%d\n", _r, _g, _b, _w, count, nStep);
 #endif
     if (buffer != NULL && count != 0 && stripHandler != NULL) {
       bool change = false;
