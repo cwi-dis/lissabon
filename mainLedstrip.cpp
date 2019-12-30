@@ -73,7 +73,10 @@ private:
   bool hasTI();
   void startAnimation();
   Adafruit_NeoPixel *strip;
-  float r, g, b, w;  // Wanted RGB color
+  float r, g, b, w;  // Wanted RGB(W) color
+  float rPrev, gPrev, bPrev, wPrev; // Previous RGB(W) color
+  uint32_t millisStartAnimation;
+  uint32_t millisAnimationDuration = 1000;
   float h, s, l;
   bool hslIsSet;
   float temp, illum;
@@ -83,8 +86,6 @@ private:
   int bpp; // Number of colors per LED (3 or 4)
   IotsaPixelsourceHandler *stripHandler;
   int interval; // Number of unlit pixels between lit pixels
-  int nStep;  // Number of steps to take between old and new color
-  float rPrev, gPrev, bPrev, wPrev;
 };
 
 void IotsaLedstripMod::setHandler(uint8_t *_buffer, size_t _count, int _bpp, IotsaPixelsourceHandler *_handler) {
@@ -96,7 +97,7 @@ void IotsaLedstripMod::setHandler(uint8_t *_buffer, size_t _count, int _bpp, Iot
 }
 
 void IotsaLedstripMod::startAnimation() {
-  nStep = NSTEP;
+  millisStartAnimation = millis();
 }
 
 void IotsaLedstripMod::setHSL(float _h, float _s, float _l) {
@@ -515,78 +516,81 @@ void IotsaLedstripMod::setup() {
 }
 
 void IotsaLedstripMod::loop() {
-  if (nStep > 0) {
-    nStep--;
-    if (nStep == 0) {
-      IFDEBUG IotsaSerial.println("IotsaLedstrip::loop: animation done");
-      rPrev = r;
-      gPrev = g;
-      bPrev = b;
-      wPrev = w;
-    }
-    float curR = ((rPrev*nStep) + (r*(NSTEP-nStep)))/NSTEP;
-    float curG = ((gPrev*nStep) + (g*(NSTEP-nStep)))/NSTEP;
-    float curB = ((bPrev*nStep) + (b*(NSTEP-nStep)))/NSTEP;
-    float curW = ((wPrev*nStep) + (w*(NSTEP-nStep)))/NSTEP;
-    int _r, _g, _b, _w;
-    _r = curR*256;
-    _g = curG*256;
-    _b = curB*256;
-    _w = curW*256;
-    if (_r>255) _r = 255;
-    if (_g>255) _g = 255;
-    if (_b>255) _b = 255;
-    if (_w>255) _w = 255;
+  // Quick return if we have nothing to do
+  if (millisStartAnimation == 0) return;
+  // Determine how far along the animation we are, and terminate the animation when done (or if it looks preposterous)
+  float progress = float(millis()-millisStartAnimation) / float(millisAnimationDuration);
+  if (progress < 0 || progress > 1) {
+    progress = 1;
+    millisStartAnimation = 0;
+    rPrev = r;
+    gPrev = g;
+    bPrev = b;
+    wPrev = w;
+    IFDEBUG IotsaSerial.println("IotsaLedstrip::loop: animation done");
+  }
+  float curR = r*progress + rPrev*(1-progress);
+  float curG = g*progress + gPrev*(1-progress);
+  float curB = b*progress + bPrev*(1-progress);
+  float curW = w*progress + wPrev*(1-progress);
+  int _r, _g, _b, _w;
+  _r = curR*256;
+  _g = curG*256;
+  _b = curB*256;
+  _w = curW*256;
+  if (_r>255) _r = 255;
+  if (_g>255) _g = 255;
+  if (_b>255) _b = 255;
+  if (_w>255) _w = 255;
 #if 1
-    IFDEBUG IotsaSerial.printf("IotsaLedstrip::loop: r=%d, g=%d, b=%d, w=%d, count=%d, nStep=%d\n", _r, _g, _b, _w, count, nStep);
+  IFDEBUG IotsaSerial.printf("IotsaLedstrip::loop: r=%d, g=%d, b=%d, w=%d, count=%d, progress=%f\n", _r, _g, _b, _w, count, progress);
 #endif
-    if (buffer != NULL && count != 0 && stripHandler != NULL) {
-      bool change = false;
-      uint8_t *p = buffer;
-      for (int i=0; i<count; i++) {
-        int wtdR = _r;
-        int wtdG = _g;
-        int wtdB = _b;
-        int wtdW = _w;
-        if (interval > 1 && i % interval != 0) {
-          wtdR = wtdG = wtdB = wtdW = 0;
-        }
+  if (buffer != NULL && count != 0 && stripHandler != NULL) {
+    bool change = false;
+    uint8_t *p = buffer;
+    for (int i=0; i<count; i++) {
+      int wtdR = _r;
+      int wtdG = _g;
+      int wtdB = _b;
+      int wtdW = _w;
+      if (interval > 1 && i % interval != 0) {
+        wtdR = wtdG = wtdB = wtdW = 0;
+      }
 #if 0
-        if (bpp == 4) {
-          wtdW = wtdR;
-          if (wtdG < wtdW) wtdW = wtdG;
-          if (wtdB < wtdW) wtdW = wtdB;
-          wtdR -= wtdW;
-          wtdG -= wtdW;
-          wtdB -= wtdW;
-        }
+      if (bpp == 4) {
+        wtdW = wtdR;
+        if (wtdG < wtdW) wtdW = wtdG;
+        if (wtdB < wtdW) wtdW = wtdB;
+        wtdR -= wtdW;
+        wtdG -= wtdW;
+        wtdB -= wtdW;
+      }
 #endif
-        if (*p != wtdR) {
-          *p = wtdR;
-          change = true;
-        }
-        p++;
-        if (*p != wtdG) {
-          *p = wtdG;
-          change = true;
-        }
-        p++;
-        if (*p != wtdB) {
-          *p = wtdB;
-          change = true;
-        }
-        p++;
-        if (bpp == 4) {
-          if (*p != wtdW) {
-            *p = wtdW;
-            change = true;
-          }
-          p++;
-        }
+      if (*p != wtdR) {
+        *p = wtdR;
+        change = true;
       }
-      if (change) {
-        stripHandler->pixelSourceCallback();
+      p++;
+      if (*p != wtdG) {
+        *p = wtdG;
+        change = true;
       }
+      p++;
+      if (*p != wtdB) {
+        *p = wtdB;
+        change = true;
+      }
+      p++;
+      if (bpp == 4) {
+        if (*p != wtdW) {
+          *p = wtdW;
+          change = true;
+        }
+        p++;
+      }
+    }
+    if (change) {
+      stripHandler->pixelSourceCallback();
     }
   }
 }
