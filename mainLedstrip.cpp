@@ -80,6 +80,7 @@ private:
   float h, s, l;
   bool hslIsSet;
   float temp, illum;
+  float whiteTemperature = 4000;  // Color temperature of the white channel
   bool tiIsSet;
   uint8_t *buffer;
   int count;  // Number of LEDs
@@ -147,6 +148,8 @@ void IotsaLedstripMod::setHSL(float _h, float _s, float _l) {
       g = g1+m;
       b = b1+m;
       if (bpp == 4) {
+        // NOTE: this conversion assumes the W led is 6500K.
+        // May want to use the setTI converter.
         w = min(r, min(g, b));
         r -= w;
         g -= w;
@@ -208,17 +211,18 @@ void IotsaLedstripMod::setTI(float _temp, float _illum) {
   // NOTE: here we need to cater for the temperature of the white,
   // in case it isn't 6500K (which probably it isn't), which is the white
   // point of D65 RGB.
-  if (bpp == 4) {
-//    w = min(r, min(g, b));
+  w = 0;
+  if (bpp == 4 && whiteTemperature != 0) {
+    // Compute RGB value (in D65 space) of our white LED
     float rWhite, gWhite, bWhite;
-    _temp2rgb(4000, rWhite, gWhite, bWhite);
-    float maxW = max(rWhite, max(gWhite, bWhite));
+    _temp2rgb(whiteTemperature, rWhite, gWhite, bWhite);
+    // Determine how much we can maximally subtract from all R, G and B channels
     float maxRfactor = r / rWhite;
     float maxGfactor = g / gWhite;
     float maxBfactor = b / bWhite;
     float factor = min(maxRfactor, min(maxGfactor, maxBfactor));
+    // This is our white value, and we subtract the corresponding whiteness from R, G and B
     w = factor;
-//    IFDEBUG IotsaSerial.printf("setTI(correct=4000): w=%f maxRfactor=%f rW=%f gW=%f bW=%f\n", w, maxW, rWhite, gWhite, bWhite);
     r -= rWhite*factor;
     g -= gWhite*factor;
     b -= bWhite*factor;
@@ -232,7 +236,6 @@ void IotsaLedstripMod::setTI(float _temp, float _illum) {
   if (w < 0) w = 0;
   if (w > 1) w = 1;
 }
-
 
 bool IotsaLedstripMod::hasTI()
 {
@@ -350,6 +353,10 @@ IotsaLedstripMod::handler() {
     darkPixels = server->arg("darkPixels").toInt();
     anyChanged = true;
   }
+  if( server->hasArg("white")) {
+    whiteTemperature = server->arg("white").toFloat();
+    anyChanged = true;
+  }
 
   if (anyChanged) {
     configSave();
@@ -394,9 +401,12 @@ IotsaLedstripMod::handler() {
   message += "<input type='radio' name='set' value='temp'" + checked + ">Set Temperature:<br>";
   message += "Temperature (1000..40000): <input type='text' name='temperature' value='" + String(temp) +"'><br>";
   message += "Illuminance (0..1): <input type='text' name='illuminance' value='" + String(illum) +"'><br>";
-
+  message += "<br>";
   message += "Dark pixels between lit pixels: <input type='text' name='darkPixels' value='" + String(darkPixels) +"' ><br>";
   message += "Animation duration (ms): <input type='text' name='animation' value='" + String(millisAnimationDuration) +"' ><br>";
+  if (bpp == 4) {
+    message += "White LED temperature: <input type='text' name='white' value='" + String(whiteTemperature) +"' ><br>";
+  }
   message += "<input type='submit'></form></body></html>";
   server->send(200, "text/html", message);
 }
@@ -431,6 +441,7 @@ bool IotsaLedstripMod::getHandler(const char *path, JsonObject& reply) {
   }
   reply["darkPixels"] = darkPixels;
   reply["animation"] = millisAnimationDuration;
+  if (bpp == 4) reply["white"] = whiteTemperature;
   return true;
 }
 
@@ -459,6 +470,7 @@ bool IotsaLedstripMod::putHandler(const char *path, const JsonVariant& request, 
 
   darkPixels = request["darkPixels"]|darkPixels;
   millisAnimationDuration = request["animation"]|millisAnimationDuration;
+  whiteTemperature = request["white"]|whiteTemperature;
   configSave();
   startAnimation();
   return true;
@@ -492,6 +504,7 @@ void IotsaLedstripMod::configLoad() {
 
   cf.get("darkPixels", darkPixels, 0);
   cf.get("animation", millisAnimationDuration, 500);
+  cf.get("white", whiteTemperature, 4000);
 }
 
 void IotsaLedstripMod::configSave() {
@@ -514,6 +527,7 @@ void IotsaLedstripMod::configSave() {
   }
   cf.put("darkPixels", darkPixels);
   cf.put("animation", millisAnimationDuration);
+  cf.put("white", whiteTemperature);
 }
 
 void IotsaLedstripMod::setup() {
