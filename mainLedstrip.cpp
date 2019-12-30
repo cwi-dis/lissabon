@@ -71,6 +71,7 @@ private:
   void getHSL(float &h, float &s, float &l);
   void setTI(float temp, float illum);
   bool hasTI();
+  void startAnimation();
   Adafruit_NeoPixel *strip;
   float r, g, b, w;  // Wanted RGB color
   float h, s, l;
@@ -91,6 +92,10 @@ void IotsaLedstripMod::setHandler(uint8_t *_buffer, size_t _count, int _bpp, Iot
   count = _count;
   bpp = _bpp;
   stripHandler = _handler;
+  startAnimation();
+}
+
+void IotsaLedstripMod::startAnimation() {
   nStep = NSTEP;
 }
 
@@ -236,7 +241,7 @@ bool IotsaLedstripMod::blePutHandler(UUIDstring charUUID) {
   }
   if (anyChanged) {
     configSave();
-    nStep = NSTEP;
+    startAnimation();
     return true;
   }
   IotsaSerial.println("iotsaLedstripMod: ble: write unknown uuid");
@@ -316,7 +321,7 @@ IotsaLedstripMod::handler() {
 
   if (anyChanged) {
     configSave();
-    nStep = NSTEP;
+    startAnimation();
   }
   
   String message = "<html><head><title>Ledstrip Server</title></head><body><h1>Ledstrip Server</h1>";
@@ -420,7 +425,7 @@ bool IotsaLedstripMod::putHandler(const char *path, const JsonVariant& request, 
 
   interval = request["interval"]|interval;
   configSave();
-  nStep = NSTEP;
+  startAnimation();
   return true;
 }
 
@@ -483,7 +488,7 @@ void IotsaLedstripMod::setup() {
 #endif
   configLoad();
   rPrev = gPrev = bPrev = 0;
-  nStep = NSTEP;
+  startAnimation();
 #ifdef IOTSA_WITH_BLE
   // Set default advertising interval to be between 200ms and 600ms
   IotsaBLEServerMod::setAdvertisingInterval(300, 900);
