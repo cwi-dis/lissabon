@@ -298,6 +298,8 @@ IotsaLedstripMod::handler() {
     setTI(temp, illum);
     anyChanged = true;
   } else {
+    hslIsSet = false;
+    tiIsSet = false;
     if( server->hasArg("r")) {
       r = server->arg("r").toFloat();
       anyChanged = true;
