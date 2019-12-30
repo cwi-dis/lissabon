@@ -76,7 +76,7 @@ private:
   float r, g, b, w;  // Wanted RGB(W) color
   float rPrev, gPrev, bPrev, wPrev; // Previous RGB(W) color
   uint32_t millisStartAnimation;
-  uint32_t millisAnimationDuration = 1000;
+  int millisAnimationDuration;
   float h, s, l;
   bool hslIsSet;
   float temp, illum;
@@ -85,7 +85,7 @@ private:
   int count;  // Number of LEDs
   int bpp; // Number of colors per LED (3 or 4)
   IotsaPixelsourceHandler *stripHandler;
-  int interval; // Number of unlit pixels between lit pixels
+  int darkPixels; // Number of unlit pixels between lit pixels
 };
 
 void IotsaLedstripMod::setHandler(uint8_t *_buffer, size_t _count, int _bpp, IotsaPixelsourceHandler *_handler) {
@@ -236,8 +236,8 @@ bool IotsaLedstripMod::blePutHandler(UUIDstring charUUID) {
       anyChanged = true;
   }
   if (charUUID == intervalUUID) {
-      interval = bleApi.getAsInt(intervalUUID);
-      IFDEBUG IotsaSerial.printf("xxxjack ble: wrote interval %s value %d\n", intervalUUID, interval);
+      darkPixels = bleApi.getAsInt(intervalUUID);
+      IFDEBUG IotsaSerial.printf("xxxjack ble: wrote darkPixels %s value %d\n", intervalUUID, darkPixels);
       anyChanged = true;
   }
   if (anyChanged) {
@@ -263,8 +263,8 @@ bool IotsaLedstripMod::bleGetHandler(UUIDstring charUUID) {
       return true;
   }
   if (charUUID == intervalUUID) {
-      IFDEBUG IotsaSerial.printf("xxxjack ble: read interval %s value %d\n", charUUID, interval);
-      bleApi.set(intervalUUID, (uint8_t)interval);
+      IFDEBUG IotsaSerial.printf("xxxjack ble: read darkPixels %s value %d\n", charUUID, darkPixels);
+      bleApi.set(intervalUUID, (uint8_t)darkPixels);
       return true;
   }
   IotsaSerial.println("iotsaLedstripMod: ble: read unknown uuid");
@@ -315,8 +315,12 @@ IotsaLedstripMod::handler() {
       anyChanged = true;
     }
   }
-  if( server->hasArg("interval")) {
-    interval = server->arg("interval").toInt();
+  if( server->hasArg("animation")) {
+    millisAnimationDuration = server->arg("animation").toInt();
+    anyChanged = true;
+  }
+  if( server->hasArg("darkPixels")) {
+    darkPixels = server->arg("darkPixels").toInt();
     anyChanged = true;
   }
 
@@ -364,7 +368,8 @@ IotsaLedstripMod::handler() {
   message += "Temperature (1000..40000): <input type='text' name='temperature' value='" + String(temp) +"'><br>";
   message += "Illuminance (0..1): <input type='text' name='illuminance' value='" + String(illum) +"'><br>";
 
-  message += "Dark interval: <input type='text' name='interval' value='" + String(interval) +"' ><br>";
+  message += "Dark pixels between lit pixels: <input type='text' name='darkPixels' value='" + String(darkPixels) +"' ><br>";
+  message += "Animation duration (ms): <input type='text' name='animation' value='" + String(millisAnimationDuration) +"' ><br>";
   message += "<input type='submit'></form></body></html>";
   server->send(200, "text/html", message);
 }
@@ -397,7 +402,8 @@ bool IotsaLedstripMod::getHandler(const char *path, JsonObject& reply) {
     reply["temperature"] = temp;
     reply["illuminance"] = illum;
   }
-  reply["interval"] = interval;
+  reply["darkPixels"] = darkPixels;
+  reply["animation"] = millisAnimationDuration;
   return true;
 }
 
@@ -424,7 +430,8 @@ bool IotsaLedstripMod::putHandler(const char *path, const JsonVariant& request, 
     }
   }
 
-  interval = request["interval"]|interval;
+  darkPixels = request["darkPixels"]|darkPixels;
+  millisAnimationDuration = request["animation"]|millisAnimationDuration;
   configSave();
   startAnimation();
   return true;
@@ -456,7 +463,8 @@ void IotsaLedstripMod::configLoad() {
   cf.get("illum", illum, 0.0);
   if (temp > 0 || illum > 0) setTI(temp, illum);
 
-  cf.get("interval", interval, 0);
+  cf.get("darkPixels", darkPixels, 0);
+  cf.get("animation", millisAnimationDuration, 500);
 }
 
 void IotsaLedstripMod::configSave() {
@@ -477,7 +485,8 @@ void IotsaLedstripMod::configSave() {
     cf.put("temp", temp);
     cf.put("illum", illum);
   }
-  cf.put("interval", interval);
+  cf.put("darkPixels", darkPixels);
+  cf.put("animation", millisAnimationDuration);
 }
 
 void IotsaLedstripMod::setup() {
@@ -553,7 +562,7 @@ void IotsaLedstripMod::loop() {
       int wtdG = _g;
       int wtdB = _b;
       int wtdW = _w;
-      if (interval > 1 && i % interval != 0) {
+      if (darkPixels > 0 && i % (darkPixels+1) != 0) {
         wtdR = wtdG = wtdB = wtdW = 0;
       }
 #if 0
