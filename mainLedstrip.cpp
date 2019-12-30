@@ -168,11 +168,8 @@ bool IotsaLedstripMod::hasHSL()
   return hslIsSet;
 }
 
-void IotsaLedstripMod::setTI(float _temp, float _illum) {
-  temp = _temp;
-  illum = _illum;
-  tiIsSet = true;
-  hslIsSet = false;
+// Helper routine: convert a temperature to RGB
+static void _temp2rgb(float temp, float& r, float& g, float& b) {
   // Algorithm from http://www.tannerhelland.com/4435/convert-temperature-rgb-algorithm-code
   // as adapted by Renaud Bédard for https://www.shadertoy.com/view/lsSXW1
   if (temp < 1000) temp = 1000;
@@ -192,26 +189,48 @@ void IotsaLedstripMod::setTI(float _temp, float _illum) {
   } else {
     b = 0.54320678911019607843 * log(t - 10.0) - 1.19625408914;
   }
+}
+
+void IotsaLedstripMod::setTI(float _temp, float _illum) {
+  temp = _temp;
+  illum = _illum;
+  tiIsSet = true;
+  hslIsSet = false;
+  // Convert the temperature to RGB
+  IFDEBUG IotsaSerial.printf("setTI(%f, %f): r=%f g=%f b=%f\n", temp, illum, r, g, b);
+  _temp2rgb(temp, r, g, b);
+  // Multiply with illumination
+  r *= illum;
+  g *= illum;
+  b *= illum;
+
+  // Extract the white
+  // NOTE: here we need to cater for the temperature of the white,
+  // in case it isn't 6500K (which probably it isn't), which is the white
+  // point of D65 RGB.
   if (bpp == 4) {
-    w = min(r, min(g, b));
-    r -= w;
-    g -= w;
-    b -= w;
+//    w = min(r, min(g, b));
+    float rWhite, gWhite, bWhite;
+    _temp2rgb(4000, rWhite, gWhite, bWhite);
+    float maxW = max(rWhite, max(gWhite, bWhite));
+    float maxRfactor = r / rWhite;
+    float maxGfactor = g / gWhite;
+    float maxBfactor = b / bWhite;
+    float factor = min(maxRfactor, min(maxGfactor, maxBfactor));
+    w = factor;
+//    IFDEBUG IotsaSerial.printf("setTI(correct=4000): w=%f maxRfactor=%f rW=%f gW=%f bW=%f\n", w, maxW, rWhite, gWhite, bWhite);
+    r -= rWhite*factor;
+    g -= gWhite*factor;
+    b -= bWhite*factor;
   }
   if (r < 0) r = 0;
   if (r > 1) r = 1;
-  r *= illum;
   if (g < 0) g = 0;
   if (g > 1) g = 1;
-  g *= illum;
   if (b < 0) b = 0;
   if (b > 1) b = 1;
-  b *= illum;
-  if (bpp == 4) {
-    if (w < 0) w = 0;
-    if (w > 1) w = 1;
-    w *= illum;
-  }
+  if (w < 0) w = 0;
+  if (w > 1) w = 1;
 }
 
 
