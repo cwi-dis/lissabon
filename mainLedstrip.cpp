@@ -298,21 +298,27 @@ IotsaLedstripMod::handler() {
     setTI(temp, illum);
     anyChanged = true;
   } else {
-    hslIsSet = false;
-    tiIsSet = false;
     if( server->hasArg("r")) {
+      hslIsSet = false;
+      tiIsSet = false;
       r = server->arg("r").toFloat();
       anyChanged = true;
     }
     if( server->hasArg("g")) {
+      hslIsSet = false;
+      tiIsSet = false;
       g = server->arg("g").toFloat();
       anyChanged = true;
     }
     if( server->hasArg("b")) {
+      hslIsSet = false;
+      tiIsSet = false;
       b = server->arg("b").toFloat();
       anyChanged = true;
     }
     if( bpp == 4 && server->hasArg("w")) {
+      hslIsSet = false;
+      tiIsSet = false;
       w = server->arg("w").toFloat();
       anyChanged = true;
     }
