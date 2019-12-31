@@ -36,6 +36,15 @@ IotsaBatteryMod batteryMod(application);
 
 #include "iotsaPixelStrip.h"
 IotsaPixelstripMod pixelstripMod(application);
+
+#include "iotsaTouch.h"
+Touchpad pads[] = {
+  //Touchpad(32),
+  Touchpad(33)
+};
+
+IotsaTouchMod touchMod(application, pads, sizeof(pads)/sizeof(pads[0]));
+
 //
 // LED Lighting module. 
 //
