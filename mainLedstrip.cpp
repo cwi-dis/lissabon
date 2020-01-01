@@ -111,6 +111,7 @@ void IotsaLedstripMod::setHandler(uint8_t *_buffer, size_t _count, int _bpp, Iot
 
 void IotsaLedstripMod::startAnimation() {
   millisStartAnimation = millis();
+  iotsaConfig.postponeSleep(millisAnimationDuration+100);
 }
 
 void IotsaLedstripMod::setHSL(float _h, float _s, float _l) {
