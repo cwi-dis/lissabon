@@ -2,26 +2,36 @@
 #define _IOTSATOUCH_H_
 #include "iotsa.h"
 #include "iotsaApi.h"
+#include "iotsaRequest.h"
 
-class Touchpad {
+typedef std::function<bool(IotsaRequestContainer*)> ActivationCallbackType;
+
+class Touchpad : public IotsaRequestContainer {
   friend class IotsaTouchMod;
 public:
-  Touchpad(int _pin) : pin(_pin) {}
+  Touchpad(int _pin, bool _sendOnPress, bool _sendOnRelease, bool _wake) : pin(_pin), sendOnPress(_sendOnPress), sendOnRelease(_sendOnRelease), wakeOnPress(_wake), activationCallback(NULL) {}
 protected:
   int pin;
+  uint16_t thresholdLow = 20;
+  uint16_t thresholdHigh = 30;
+  bool sendOnPress;
+  bool sendOnRelease;
+  bool wakeOnPress;
+  ActivationCallbackType activationCallback;
+  bool buttonState;
 };
 
 class IotsaTouchMod : public IotsaMod {
 public:
-  IotsaTouchMod(IotsaApplication& app, Touchpad *_pads, int _nPad) : IotsaMod(app), pads(_pads), nPad(_nPad) {}
+  IotsaTouchMod(IotsaApplication& app, Touchpad *_buttons, int _nButton) : IotsaMod(app), buttons(_buttons), nButton(_nButton) {}
   using IotsaMod::IotsaMod;
   void setup();
   void serverSetup();
   void loop();
   String info() { return ""; }
 protected:
-  Touchpad *pads;
-  int nPad;
+  Touchpad *buttons;
+  int nButton;
 
 };
 

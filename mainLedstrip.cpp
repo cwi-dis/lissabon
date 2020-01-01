@@ -39,8 +39,7 @@ IotsaPixelstripMod pixelstripMod(application);
 
 #include "iotsaTouch.h"
 Touchpad pads[] = {
-  //Touchpad(32),
-  Touchpad(33)
+  Touchpad(13, true, false, true)
 };
 
 IotsaTouchMod touchMod(application, pads, sizeof(pads)/sizeof(pads[0]));
