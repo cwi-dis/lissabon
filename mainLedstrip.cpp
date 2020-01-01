@@ -106,6 +106,10 @@ void IotsaLedstripMod::setHandler(uint8_t *_buffer, size_t _count, int _bpp, Iot
   count = _count;
   bpp = _bpp;
   stripHandler = _handler;
+  if (bpp == 4) {
+    // If we have RGBW pixels we redo the TI calculation, to cater for white pixels
+    if (hasTI()) setTI(temp, illum);
+  }
   startAnimation();
 }
 
@@ -213,7 +217,6 @@ void IotsaLedstripMod::setTI(float _temp, float _illum) {
   tiIsSet = true;
   hslIsSet = false;
   // Convert the temperature to RGB
-  IFDEBUG IotsaSerial.printf("setTI(%f, %f): r=%f g=%f b=%f\n", temp, illum, r, g, b);
   _temp2rgb(temp, r, g, b);
   // Multiply with illumination
   r *= illum;
@@ -240,6 +243,7 @@ void IotsaLedstripMod::setTI(float _temp, float _illum) {
     g -= gWhite*factor;
     b -= bWhite*factor;
   }
+  IFDEBUG IotsaSerial.printf("setTI(%f, %f): r=%f g=%f b=%f w=%f\n", temp, illum, r, g, b, w);
   if (r < 0) r = 0;
   if (r > 1) r = 1;
   if (g < 0) g = 0;
@@ -314,6 +318,18 @@ IotsaLedstripMod::handler() {
   // optionally stores a new name to greet the next time.
   String error;
   bool anyChanged = false;
+  if( server->hasArg("animation")) {
+    millisAnimationDuration = server->arg("animation").toInt();
+    anyChanged = true;
+  }
+  if( server->hasArg("darkPixels")) {
+    darkPixels = server->arg("darkPixels").toInt();
+    anyChanged = true;
+  }
+  if( server->hasArg("white")) {
+    whiteTemperature = server->arg("white").toFloat();
+    anyChanged = true;
+  }
   String set = "rgb";
   if (server->hasArg("set")) set = server->arg("set");
   if (set == "hsl") {
@@ -357,18 +373,6 @@ IotsaLedstripMod::handler() {
       w = server->arg("w").toFloat();
       anyChanged = true;
     }
-  }
-  if( server->hasArg("animation")) {
-    millisAnimationDuration = server->arg("animation").toInt();
-    anyChanged = true;
-  }
-  if( server->hasArg("darkPixels")) {
-    darkPixels = server->arg("darkPixels").toInt();
-    anyChanged = true;
-  }
-  if( server->hasArg("white")) {
-    whiteTemperature = server->arg("white").toFloat();
-    anyChanged = true;
   }
 
   if (anyChanged) {
@@ -459,6 +463,9 @@ bool IotsaLedstripMod::getHandler(const char *path, JsonObject& reply) {
 }
 
 bool IotsaLedstripMod::putHandler(const char *path, const JsonVariant& request, JsonObject& reply) {
+  darkPixels = request["darkPixels"]|darkPixels;
+  millisAnimationDuration = request["animation"]|millisAnimationDuration;
+  whiteTemperature = request["white"]|whiteTemperature;
   hslIsSet = request.containsKey("h")||request.containsKey("s")||request.containsKey("l");
   tiIsSet = request.containsKey("temperature")||request.containsKey("illuminance");
   if (hslIsSet) {
@@ -481,9 +488,6 @@ bool IotsaLedstripMod::putHandler(const char *path, const JsonVariant& request, 
     }
   }
 
-  darkPixels = request["darkPixels"]|darkPixels;
-  millisAnimationDuration = request["animation"]|millisAnimationDuration;
-  whiteTemperature = request["white"]|whiteTemperature;
   configSave();
   startAnimation();
   return true;
@@ -501,6 +505,10 @@ void IotsaLedstripMod::serverSetup() {
 
 void IotsaLedstripMod::configLoad() {
   IotsaConfigFileLoad cf("/config/ledstrip.cfg");
+  cf.get("darkPixels", darkPixels, 0);
+  cf.get("animation", millisAnimationDuration, 500);
+  cf.get("white", whiteTemperature, 4000);
+
   cf.get("r", r, 0.0);
   cf.get("g", g, 0.0);
   cf.get("b", b, 0.0);
@@ -514,14 +522,14 @@ void IotsaLedstripMod::configLoad() {
   cf.get("temp", temp, 0.0);
   cf.get("illum", illum, 0.0);
   if (temp > 0 || illum > 0) setTI(temp, illum);
-
-  cf.get("darkPixels", darkPixels, 0);
-  cf.get("animation", millisAnimationDuration, 500);
-  cf.get("white", whiteTemperature, 4000);
 }
 
 void IotsaLedstripMod::configSave() {
   IotsaConfigFileSave cf("/config/ledstrip.cfg");
+  cf.put("darkPixels", darkPixels);
+  cf.put("animation", millisAnimationDuration);
+  cf.put("white", whiteTemperature);
+
   cf.put("r", r);
   cf.put("g", g);
   cf.put("b", b);
@@ -538,9 +546,6 @@ void IotsaLedstripMod::configSave() {
     cf.put("temp", temp);
     cf.put("illum", illum);
   }
-  cf.put("darkPixels", darkPixels);
-  cf.put("animation", millisAnimationDuration);
-  cf.put("white", whiteTemperature);
 }
 
 void IotsaLedstripMod::setup() {
