@@ -2,8 +2,20 @@
 #include "iotsaTouch.h"
 #include "iotsaConfigFile.h"
 
+static void dummyTouchCallback() {}
 
 void IotsaTouchMod::setup() {
+  bool anyWake;
+  for(int i=0; i<nButton; i++) {
+    if (buttons[i].wakeOnPress) {
+      anyWake = true;
+      touchAttachInterrupt(buttons[i].pin, dummyTouchCallback, buttons[i].threshold);
+    }
+  }
+  if (anyWake) {
+    IFDEBUG IotsaSerial.println("IotsaTouchMod: enable wake on touch");
+    esp_sleep_enable_touchpad_wakeup();
+  }
 }
 
 void IotsaTouchMod::serverSetup() {
