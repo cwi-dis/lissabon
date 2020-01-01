@@ -592,7 +592,7 @@ void IotsaLedstripMod::loop() {
     gPrev = g;
     bPrev = b;
     wPrev = w;
-    IFDEBUG IotsaSerial.println("IotsaLedstrip::loop: animation done");
+    IFDEBUG IotsaSerial.printf("IotsaLedstrip: r=%f, g=%f, b=%f, w=%f count=%d darkPixels=%d\n", r, g, b, w, count, darkPixels);
   }
   float curR = r*progress + rPrev*(1-progress);
   float curG = g*progress + gPrev*(1-progress);
@@ -607,7 +607,7 @@ void IotsaLedstripMod::loop() {
   if (_g>255) _g = 255;
   if (_b>255) _b = 255;
   if (_w>255) _w = 255;
-#if 1
+#if 0
   IFDEBUG IotsaSerial.printf("IotsaLedstrip::loop: r=%d, g=%d, b=%d, w=%d, count=%d, progress=%f\n", _r, _g, _b, _w, count, progress);
 #endif
   if (buffer != NULL && count != 0 && stripHandler != NULL) {
@@ -661,7 +661,7 @@ void IotsaLedstripMod::loop() {
 }
 
 bool IotsaLedstripMod::touchedOn() {
-  IFDEBUG IotsaSerial.println("touchedOn()");
+  IFDEBUG IotsaSerial.println("IotsaLedstrip: all on");
   if (buffer) {
     memset(buffer, 255, count*bpp);
     stripHandler->pixelSourceCallback();
@@ -670,7 +670,7 @@ bool IotsaLedstripMod::touchedOn() {
 }
 
 bool IotsaLedstripMod::touchedOff() {
-  IFDEBUG IotsaSerial.println("touchedOff()");
+  IFDEBUG IotsaSerial.println("IotsaLedstrip: all off");
   if (buffer) {
     memset(buffer, 0, count*bpp);
     stripHandler->pixelSourceCallback();
@@ -679,7 +679,7 @@ bool IotsaLedstripMod::touchedOff() {
 }
 
 bool IotsaLedstripMod::touchedProgram() {
-  IFDEBUG IotsaSerial.println("touchedProgram()");
+  IFDEBUG IotsaSerial.println("IotsaLedstrip: resume program");
   startAnimation();
   return true;
 }
