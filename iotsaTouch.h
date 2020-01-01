@@ -4,16 +4,16 @@
 #include "iotsaApi.h"
 #include "iotsaRequest.h"
 
-typedef std::function<bool(IotsaRequestContainer*)> ActivationCallbackType;
+typedef std::function<bool()> ActivationCallbackType;
 
 class Touchpad : public IotsaRequestContainer {
   friend class IotsaTouchMod;
 public:
   Touchpad(int _pin, bool _sendOnPress, bool _sendOnRelease, bool _wake) : pin(_pin), sendOnPress(_sendOnPress), sendOnRelease(_sendOnRelease), wakeOnPress(_wake), activationCallback(NULL) {}
+  void setCallback(ActivationCallbackType callback) { activationCallback = callback; }
 protected:
   int pin;
-  uint16_t thresholdLow = 20;
-  uint16_t thresholdHigh = 30;
+  uint16_t threshold = 20;
   bool sendOnPress;
   bool sendOnRelease;
   bool wakeOnPress;

@@ -39,7 +39,9 @@ IotsaPixelstripMod pixelstripMod(application);
 
 #include "iotsaTouch.h"
 Touchpad pads[] = {
-  Touchpad(13, true, false, true)
+  Touchpad(12, true, false, true),
+  Touchpad(13, true, false, true),
+  Touchpad(15, true, false, true)
 };
 
 IotsaTouchMod touchMod(application, pads, sizeof(pads)/sizeof(pads[0]));
@@ -47,7 +49,6 @@ IotsaTouchMod touchMod(application, pads, sizeof(pads)/sizeof(pads[0]));
 //
 // LED Lighting module. 
 //
-#define NSTEP 1000
 
 class IotsaLedstripMod : public IotsaApiMod, public IotsaPixelsource, public IotsaBLEApiProvider {
 public:
@@ -61,6 +62,9 @@ public:
   void setHandler(uint8_t *_buffer, size_t _count, int bpp, IotsaPixelsourceHandler *handler);
 
 protected:
+  bool touchedOn();
+  bool touchedOff();
+  bool touchedProgram();
   bool getHandler(const char *path, JsonObject& reply);
   bool putHandler(const char *path, const JsonVariant& request, JsonObject& reply);
 #ifdef IOTSA_WITH_BLE
@@ -539,6 +543,9 @@ void IotsaLedstripMod::configSave() {
 }
 
 void IotsaLedstripMod::setup() {
+  pads[0].setCallback(std::bind(&IotsaLedstripMod::touchedOn, this));
+  pads[1].setCallback(std::bind(&IotsaLedstripMod::touchedOff, this));
+  pads[2].setCallback(std::bind(&IotsaLedstripMod::touchedProgram, this));
 #ifdef PIN_VBAT
   batteryMod.setPinVBat(PIN_VBAT, VBAT_100_PERCENT);
 #endif
@@ -653,6 +660,29 @@ void IotsaLedstripMod::loop() {
   }
 }
 
+bool IotsaLedstripMod::touchedOn() {
+  IFDEBUG IotsaSerial.println("touchedOn()");
+  if (buffer) {
+    memset(buffer, 255, count*bpp);
+    stripHandler->pixelSourceCallback();
+  }
+  return true;
+}
+
+bool IotsaLedstripMod::touchedOff() {
+  IFDEBUG IotsaSerial.println("touchedOff()");
+  if (buffer) {
+    memset(buffer, 0, count*bpp);
+    stripHandler->pixelSourceCallback();
+  }
+  return true;
+}
+
+bool IotsaLedstripMod::touchedProgram() {
+  IFDEBUG IotsaSerial.println("touchedProgram()");
+  startAnimation();
+  return true;
+}
 // Instantiate the Led module, and install it in the framework
 IotsaLedstripMod ledstripMod(application);
 

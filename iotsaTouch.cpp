@@ -18,9 +18,9 @@ void IotsaTouchMod::loop() {
     if (state != buttons[i].buttonState) {
       buttons[i].buttonState = state;
       bool doSend = (buttons[i].buttonState && buttons[i].sendOnPress) || (!buttons[i].buttonState && buttons[i].sendOnRelease);
-      IFDEBUG IotsaSerial.printf("Touch callback for button %d pin %d state %d value %d\n", i, buttons[i].pin, state, value);
+      //IFDEBUG IotsaSerial.printf("Touch callback for button %d pin %d state %d value %d\n", i, buttons[i].pin, state, value);
       if (doSend && buttons[i].activationCallback) {
-        buttons[i].activationCallback(&buttons[i]);
+        buttons[i].activationCallback();
       }
     }
   }
