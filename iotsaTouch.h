@@ -17,6 +17,8 @@ protected:
   bool sendOnPress;
   bool sendOnRelease;
   bool wakeOnPress;
+  bool debounceState;
+  unsigned int debounceTime;
   ActivationCallbackType activationCallback;
   bool buttonState;
 };
