@@ -106,9 +106,13 @@ void IotsaLedstripMod::setHandler(uint8_t *_buffer, size_t _count, int _bpp, Iot
   count = _count;
   bpp = _bpp;
   stripHandler = _handler;
-  if (bpp == 4) {
+  if (bpp == 4 && hasTI()) {
     // If we have RGBW pixels we redo the TI calculation, to cater for white pixels
-    if (hasTI()) setTI(temp, illum);
+    setTI(temp, illum);
+    rPrev = r;
+    gPrev = g;
+    bPrev = b;
+    wPrev = w;
   }
   startAnimation();
 }
@@ -559,7 +563,10 @@ void IotsaLedstripMod::setup() {
   batteryMod.setPinDisableSleep(PIN_DISABLESLEEP);
 #endif
   configLoad();
-  rPrev = gPrev = bPrev = 0;
+  rPrev = r;
+  gPrev = g;
+  bPrev = b;
+  wPrev = w;
   startAnimation();
 #ifdef IOTSA_WITH_BLE
   // Set default advertising interval to be between 200ms and 600ms
