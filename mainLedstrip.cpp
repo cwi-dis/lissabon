@@ -248,6 +248,22 @@ void IotsaLedstripMod::setTI(float _temp, float _illum) {
     r -= rWhite*factor;
     g -= gWhite*factor;
     b -= bWhite*factor;
+    // Now we multiply everything by 2, because we want illum==1 to be the maximum amount of light possible
+    // (even if that means the color will be slightly off)
+    r *= 2;
+    g *= 2;
+    b *= 2;
+    w *= 2;
+    if (w > 1) {
+      // If we have too much white we use the RGB leds to give us as much as the extra white as possible
+      // If we go out of bounds the clamping (below) will fix that.
+      float excessWhite = w-1;
+      w = 1;
+      r += rWhite*excessWhite;
+      g += gWhite*excessWhite;
+      b += bWhite*excessWhite;
+
+    }
   }
   IFDEBUG IotsaSerial.printf("setTI(%f, %f): r=%f g=%f b=%f w=%f\n", temp, illum, r, g, b, w);
   if (r < 0) r = 0;
