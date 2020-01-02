@@ -75,6 +75,7 @@ protected:
   static constexpr UUIDstring tempUUID = "153C0002-D28E-40B8-84EB-7F64B56D4E2E";
   static constexpr UUIDstring illumUUID = "153C0003-D28E-40B8-84EB-7F64B56D4E2E";
   static constexpr UUIDstring intervalUUID = "153C0004-D28E-40B8-84EB-7F64B56D4E2E";
+  static constexpr UUIDstring identifyUUID = "153C0005-D28E-40B8-84EB-7F64B56D4E2E";
 #endif // IOTSA_WITH_BLE
 private:
   void handler();
@@ -84,6 +85,7 @@ private:
   void setTI(float temp, float illum);
   bool hasTI();
   void startAnimation();
+  void identify();
   Adafruit_NeoPixel *strip;
   float r, g, b, w;  // Wanted RGB(W) color
   float rPrev, gPrev, bPrev, wPrev; // Previous RGB(W) color
@@ -283,6 +285,10 @@ bool IotsaLedstripMod::blePutHandler(UUIDstring charUUID) {
       IFDEBUG IotsaSerial.printf("xxxjack ble: wrote darkPixels %s value %d\n", intervalUUID, darkPixels);
       anyChanged = true;
   }
+  if (charUUID == identifyUUID) {
+    int value = bleApi.getAsInt(identifyUUID);
+    if (value) identify();
+  }
   if (anyChanged) {
     configSave();
     startAnimation();
@@ -322,6 +328,7 @@ IotsaLedstripMod::handler() {
   // optionally stores a new name to greet the next time.
   String error;
   bool anyChanged = false;
+  if (server->hasArg("identify")) identify();
   if( server->hasArg("animation")) {
     millisAnimationDuration = server->arg("animation").toInt();
     anyChanged = true;
@@ -388,6 +395,7 @@ IotsaLedstripMod::handler() {
   if (error != "") {
     message += "<p><em>" + error + "</em></p>";
   }
+  message += "<form method='get'><input type='submit' name='identify' value='identify'></form>";
   message += "<form method='get'>";
 
   String checked = "";
@@ -467,6 +475,7 @@ bool IotsaLedstripMod::getHandler(const char *path, JsonObject& reply) {
 }
 
 bool IotsaLedstripMod::putHandler(const char *path, const JsonVariant& request, JsonObject& reply) {
+  if (request["identify"]|0) identify();
   darkPixels = request["darkPixels"]|darkPixels;
   millisAnimationDuration = request["animation"]|millisAnimationDuration;
   whiteTemperature = request["white"]|whiteTemperature;
@@ -590,6 +599,12 @@ void IotsaLedstripMod::setup() {
   interval2904.setUnit(0x2700);
   static BLE2901 interval2901("Interval");
   bleApi.addCharacteristic(intervalUUID, BLE_READ|BLE_WRITE, &interval2904, &interval2901);
+
+  static BLE2904 identify2904;
+  identify2904.setFormat(BLE2904::FORMAT_UINT8);
+  identify2904.setUnit(0x2700);
+  static BLE2901 identify2901("Identify");
+  bleApi.addCharacteristic(identifyUUID, BLE_WRITE, &identify2904, &identify2901);
 #endif
 }
 
@@ -695,6 +710,23 @@ bool IotsaLedstripMod::touchedProgram() {
   IFDEBUG IotsaSerial.println("IotsaLedstrip: resume program");
   startAnimation();
   return true;
+}
+
+void IotsaLedstripMod::identify() {
+  if (!buffer) return;
+    memset(buffer, 255, count*bpp);
+    stripHandler->pixelSourceCallback();
+    delay(100);
+    memset(buffer, 0, count*bpp);
+    stripHandler->pixelSourceCallback();
+    delay(100);
+    memset(buffer, 255, count*bpp);
+    stripHandler->pixelSourceCallback();
+    delay(100);
+    memset(buffer, 0, count*bpp);
+    stripHandler->pixelSourceCallback();
+    delay(100);
+    startAnimation();
 }
 // Instantiate the Led module, and install it in the framework
 IotsaLedstripMod ledstripMod(application);
