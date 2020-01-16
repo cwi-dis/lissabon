@@ -30,12 +30,23 @@ IotsaBLEServerMod bleserverMod(application);
 
 #include "iotsaBattery.h"
 #define PIN_DISABLESLEEP 0
-#define PIN_VBAT 37
+//#define PIN_VBAT 37
 #define VBAT_100_PERCENT (12.0/11.0) // 100K and 1M resistors divide by 11, not 10...
 IotsaBatteryMod batteryMod(application);
 
+#define PIN_OUTPUT 13
+#ifdef ESP32
+#define CHANNEL_OUTPUT 0
+#define FREQ_OUTPUT 5000
+#endif
+
 #include "iotsaInput.h"
+Button button(0, true, false, true);
+RotaryEncoder encoder(4, 2);
+
 Input* inputs[] = {
+  &button,
+  &encoder
 };
 
 IotsaInputMod inputMod(application, inputs, sizeof(inputs)/sizeof(inputs[0]));
@@ -149,7 +160,7 @@ IotsaDimmerMod::handler() {
     anyChanged = true;
   }
   if( server->hasArg("isOn")) {
-    isOn = server->arg("white").toInt();
+    isOn = server->arg("isOn").toInt();
     anyChanged = true;
   }
 
@@ -176,7 +187,7 @@ IotsaDimmerMod::handler() {
 
 String IotsaDimmerMod::info() {
   // Return some information about this module, for the main page of the web server.
-  String rv = "<p>See <a href=\"/dimmer\">/led</a> for setting the light level.";
+  String rv = "<p>See <a href=\"/dimmer\">/dimmer</a> for setting the light level.";
 #ifdef IOTSA_WITH_REST
   rv += " Or use REST api at <a href='/api/dimmer'>/api/dimmer</a>.";
 #endif
@@ -213,10 +224,10 @@ bool IotsaDimmerMod::putHandler(const char *path, const JsonVariant& request, Js
 void IotsaDimmerMod::serverSetup() {
   // Setup the web server hooks for this module.
 #ifdef IOTSA_WITH_WEB
-  server->on("/ledstrip", std::bind(&IotsaDimmerMod::handler, this));
+  server->on("/dimmer", std::bind(&IotsaDimmerMod::handler, this));
 #endif // IOTSA_WITH_WEB
-  api.setup("/api/ledstrip", true, true);
-  name = "ledstrip";
+  api.setup("/api/dimmer", true, true);
+  name = "dimmer";
 }
 
 
@@ -236,23 +247,24 @@ void IotsaDimmerMod::configSave() {
 }
 
 void IotsaDimmerMod::setup() {
-#if 0
-  pads[0].setCallback(std::bind(&IotsaDimmerMod::touchedOn, this));
-  pads[1].setCallback(std::bind(&IotsaDimmerMod::touchedOff, this));
-  pads[2].setCallback(std::bind(&IotsaDimmerMod::touchedProgram, this));
 #ifdef PIN_VBAT
   batteryMod.setPinVBat(PIN_VBAT, VBAT_100_PERCENT);
 #endif
 #ifdef PIN_DISABLESLEEP
   batteryMod.setPinDisableSleep(PIN_DISABLESLEEP);
 #endif
-  configLoad();
-  rPrev = r;
-  gPrev = g;
-  bPrev = b;
-  wPrev = w;
-  startAnimation();
+#ifdef ESP32
+  ledcSetup(CHANNEL_OUTPUT, FREQ_OUTPUT, 16);
+  ledcAttachPin(PIN_OUTPUT, CHANNEL_OUTPUT);
+#else
+  pinMode(PIN_OUTPUT, OUTPUT);
 #endif
+  configLoad();
+  illumPrev = illum;
+  startAnimation();
+  button.setCallback(std::bind(&IotsaDimmerMod::touchedOnOff, this));
+  encoder.setCallback(std::bind(&IotsaDimmerMod::changedValue, this));
+
 #ifdef IOTSA_WITH_BLE
   // Set default advertising interval to be between 200ms and 600ms
   IotsaBLEServerMod::setAdvertisingInterval(300, 900);
@@ -279,127 +291,69 @@ void IotsaDimmerMod::setup() {
 }
 
 void IotsaDimmerMod::loop() {
-#if 0
   // Quick return if we have nothing to do
   if (millisStartAnimation == 0) return;
   // Determine how far along the animation we are, and terminate the animation when done (or if it looks preposterous)
   float progress = float(millis()-millisStartAnimation) / float(millisAnimationDuration);
+  float wantedIllum = illum;
+  if (!isOn) wantedIllum = 0;
   if (progress < 0 || progress > 1) {
     progress = 1;
     millisStartAnimation = 0;
-    rPrev = r;
-    gPrev = g;
-    bPrev = b;
-    wPrev = w;
-    IFDEBUG IotsaSerial.printf("IotsaLedstrip: r=%f, g=%f, b=%f, w=%f count=%d darkPixels=%d\n", r, g, b, w, count, darkPixels);
+    illumPrev = wantedIllum;
+
+    IFDEBUG IotsaSerial.printf("IotsaDimer: wantedIllum=%f illum=%f\n", wantedIllum, illum);
   }
-  float curR = r*progress + rPrev*(1-progress);
-  float curG = g*progress + gPrev*(1-progress);
-  float curB = b*progress + bPrev*(1-progress);
-  float curW = w*progress + wPrev*(1-progress);
-  int _r, _g, _b, _w;
-  _r = curR*256;
-  _g = curG*256;
-  _b = curB*256;
-  _w = curW*256;
-  if (_r>255) _r = 255;
-  if (_g>255) _g = 255;
-  if (_b>255) _b = 255;
-  if (_w>255) _w = 255;
+  float curIllum = wantedIllum*progress + illumPrev*(1-progress);
 #if 0
-  IFDEBUG IotsaSerial.printf("IotsaLedstrip::loop: r=%d, g=%d, b=%d, w=%d, count=%d, progress=%f\n", _r, _g, _b, _w, count, progress);
+  if (gamma && gamma != 1.0) curIllum = compute_gamma(curIllum);
 #endif
-  if (buffer != NULL && count != 0 && stripHandler != NULL) {
-    bool change = false;
-    uint8_t *p = buffer;
-    for (int i=0; i<count; i++) {
-      int wtdR = _r;
-      int wtdG = _g;
-      int wtdB = _b;
-      int wtdW = _w;
-      if (darkPixels > 0 && i % (darkPixels+1) != 0) {
-        wtdR = wtdG = wtdB = wtdW = 0;
-      }
-#if 0
-      if (bpp == 4) {
-        wtdW = wtdR;
-        if (wtdG < wtdW) wtdW = wtdG;
-        if (wtdB < wtdW) wtdW = wtdB;
-        wtdR -= wtdW;
-        wtdG -= wtdW;
-        wtdB -= wtdW;
-      }
-#endif
-      if (*p != wtdR) {
-        *p = wtdR;
-        change = true;
-      }
-      p++;
-      if (*p != wtdG) {
-        *p = wtdG;
-        change = true;
-      }
-      p++;
-      if (*p != wtdB) {
-        *p = wtdB;
-        change = true;
-      }
-      p++;
-      if (bpp == 4) {
-        if (*p != wtdW) {
-          *p = wtdW;
-          change = true;
-        }
-        p++;
-      }
-    }
-    if (change) {
-      stripHandler->pixelSourceCallback();
-    }
-  }
+#ifdef ESP32
+  ledcWrite(CHANNEL_OUTPUT, int(65535.0*curIllum));
+#else
+  analogWrite(PIN_OUTPUT, int(255*curIllum));
 #endif
 }
 
 bool IotsaDimmerMod::touchedOnOff() {
-#if 0
-  IFDEBUG IotsaSerial.println("IotsaLedstrip: all on");
-  if (buffer) {
-    memset(buffer, 255, count*bpp);
-    stripHandler->pixelSourceCallback();
-  }
-#endif
+  isOn = !isOn;
+  startAnimation();
+
   return true;
 }
 
 bool IotsaDimmerMod::changedValue() {
-#if 0
-  IFDEBUG IotsaSerial.println("IotsaLedstrip: all off");
-  if (buffer) {
-    memset(buffer, 0, count*bpp);
-    stripHandler->pixelSourceCallback();
-  }
-#endif
+  isOn = true;
+  if (encoder.value < 1) encoder.value = 1;
+  if (encoder.value > 100) encoder.value = 100;
+  illum = float(encoder.value) / 100.0;
+  startAnimation();
   return true;
 }
 
 void IotsaDimmerMod::identify() {
-#if 0
-  if (!buffer) return;
-    memset(buffer, 255, count*bpp);
-    stripHandler->pixelSourceCallback();
-    delay(100);
-    memset(buffer, 0, count*bpp);
-    stripHandler->pixelSourceCallback();
-    delay(100);
-    memset(buffer, 255, count*bpp);
-    stripHandler->pixelSourceCallback();
-    delay(100);
-    memset(buffer, 0, count*bpp);
-    stripHandler->pixelSourceCallback();
-    delay(100);
-    startAnimation();
+#ifdef ESP32
+  ledcWrite(CHANNEL_OUTPUT, 32768);
+  delay(100);
+  ledcWrite(CHANNEL_OUTPUT, 0);
+  delay(100);
+  ledcWrite(CHANNEL_OUTPUT, 32768);
+  delay(100);
+  ledcWrite(CHANNEL_OUTPUT, 0);
+  delay(100);
+#else
+  analogWrite(PIN_OUTPUT, 128);
+  delay(100);
+  analogWrite(PIN_OUTPUT, 0);
+  delay(100);
+  analogWrite(PIN_OUTPUT, 128);
+  delay(100);
+  analogWrite(PIN_OUTPUT, 0);
+  delay(100);
 #endif
+  startAnimation();
 }
+
 // Instantiate the Led module, and install it in the framework
 IotsaDimmerMod dimmerMod(application);
 
