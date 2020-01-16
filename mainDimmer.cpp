@@ -88,6 +88,8 @@ private:
   bool isOn;
   float illum;
   float illumPrev;
+  float minLevel;
+  float gamma;
   uint32_t millisStartAnimation;
   int millisAnimationDuration;
 };
@@ -154,6 +156,14 @@ IotsaDimmerMod::handler() {
     millisAnimationDuration = server->arg("animation").toInt();
     anyChanged = true;
   }
+  if (server->hasArg("minLevel")) {
+    minLevel = server->arg("minLevel").toFloat();
+    anyChanged = true;
+  }
+  if (server->hasArg("gamma")) {
+    gamma = server->arg("gamma").toFloat();
+    anyChanged = true;
+  }
   if( server->hasArg("illuminance")) {
     illum = server->arg("illuminance").toFloat();
     isOn = (illum != 0);
@@ -181,6 +191,8 @@ IotsaDimmerMod::handler() {
   message += "<form method='get'>";
 
   message += "Illuminance (0..1): <input type='text' name='illuminance' value='" + String(illum) +"'><br>";
+  message += "Minimum level (0..1): <input type='text' name='minLevel' value='" + String(minLevel) +"'><br>";
+  message += "Gamma (1.0 or 2.2): <input type='text' name='gamma' value='" + String(gamma) +"'><br>";
   message += "<input type='submit' value='Set'></form></body></html>";
   server->send(200, "text/html", message);
 }
@@ -209,6 +221,13 @@ bool IotsaDimmerMod::getHandler(const char *path, JsonObject& reply) {
 bool IotsaDimmerMod::putHandler(const char *path, const JsonVariant& request, JsonObject& reply) {
   if (request["identify"]|0) identify();
   millisAnimationDuration = request["animation"]|millisAnimationDuration;
+  if (request.containsKey("minLevel")) {
+    minLevel = request["minLevel"];
+  }
+  if (request.containsKey("gamma")) {
+    gamma = request["gamma"];
+    isOn = true;
+  }
   if (request.containsKey("illum")) {
     illum = request["illum"];
     isOn = true;
@@ -237,6 +256,9 @@ void IotsaDimmerMod::configLoad() {
   cf.get("isOn", value, 0);
   isOn = value;
   cf.get("illum", illum, 0.0);
+  cf.get("animation", millisAnimationDuration, 500);
+  cf.get("minLevel", minLevel, 0.1);
+  cf.get("gamma", gamma, 1.0);
 }
 
 void IotsaDimmerMod::configSave() {
@@ -244,6 +266,9 @@ void IotsaDimmerMod::configSave() {
 
   cf.put("illum", illum);
   cf.put("isOn", isOn);
+  cf.put("animation", millisAnimationDuration);
+  cf.put("minLevel", minLevel);
+  cf.put("gamma", gamma);
 }
 
 void IotsaDimmerMod::setup() {
@@ -295,7 +320,7 @@ void IotsaDimmerMod::loop() {
   if (millisStartAnimation == 0) return;
   // Determine how far along the animation we are, and terminate the animation when done (or if it looks preposterous)
   float progress = millisAnimationDuration == 0 ? 1 : float(millis()-millisStartAnimation) / float(millisAnimationDuration);
-  float wantedIllum = illum;
+  float wantedIllum = illum + minLevel;
   if (!isOn) wantedIllum = 0;
   if (progress < 0 || progress >= 1) {
     progress = 1;
@@ -305,9 +330,7 @@ void IotsaDimmerMod::loop() {
     IFDEBUG IotsaSerial.printf("IotsaDimer: wantedIllum=%f illum=%f\n", wantedIllum, illum);
   }
   float curIllum = wantedIllum*progress + illumPrev*(1-progress);
-#if 0
-  if (gamma && gamma != 1.0) curIllum = compute_gamma(curIllum);
-#endif
+  if (gamma && gamma != 1.0) curIllum = powf(curIllum, gamma);
 #ifdef ESP32
   ledcWrite(CHANNEL_OUTPUT, int(255*curIllum));
   IotsaSerial.printf("xxxjack curIllum=%f progress=%f led=%d\n", curIllum, progress, int(255*curIllum));
