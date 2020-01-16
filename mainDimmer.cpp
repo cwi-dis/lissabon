@@ -254,7 +254,7 @@ void IotsaDimmerMod::setup() {
   batteryMod.setPinDisableSleep(PIN_DISABLESLEEP);
 #endif
 #ifdef ESP32
-  ledcSetup(CHANNEL_OUTPUT, FREQ_OUTPUT, 16);
+  ledcSetup(CHANNEL_OUTPUT, FREQ_OUTPUT, 8);
   ledcAttachPin(PIN_OUTPUT, CHANNEL_OUTPUT);
 #else
   pinMode(PIN_OUTPUT, OUTPUT);
@@ -294,10 +294,10 @@ void IotsaDimmerMod::loop() {
   // Quick return if we have nothing to do
   if (millisStartAnimation == 0) return;
   // Determine how far along the animation we are, and terminate the animation when done (or if it looks preposterous)
-  float progress = float(millis()-millisStartAnimation) / float(millisAnimationDuration);
+  float progress = millisAnimationDuration == 0 ? 1 : float(millis()-millisStartAnimation) / float(millisAnimationDuration);
   float wantedIllum = illum;
   if (!isOn) wantedIllum = 0;
-  if (progress < 0 || progress > 1) {
+  if (progress < 0 || progress >= 1) {
     progress = 1;
     millisStartAnimation = 0;
     illumPrev = wantedIllum;
@@ -309,7 +309,8 @@ void IotsaDimmerMod::loop() {
   if (gamma && gamma != 1.0) curIllum = compute_gamma(curIllum);
 #endif
 #ifdef ESP32
-  ledcWrite(CHANNEL_OUTPUT, int(65535.0*curIllum));
+  ledcWrite(CHANNEL_OUTPUT, int(255*curIllum));
+  IotsaSerial.printf("xxxjack curIllum=%f progress=%f led=%d\n", curIllum, progress, int(255*curIllum));
 #else
   analogWrite(PIN_OUTPUT, int(255*curIllum));
 #endif
@@ -333,11 +334,11 @@ bool IotsaDimmerMod::changedValue() {
 
 void IotsaDimmerMod::identify() {
 #ifdef ESP32
-  ledcWrite(CHANNEL_OUTPUT, 32768);
+  ledcWrite(CHANNEL_OUTPUT, 128);
   delay(100);
   ledcWrite(CHANNEL_OUTPUT, 0);
   delay(100);
-  ledcWrite(CHANNEL_OUTPUT, 32768);
+  ledcWrite(CHANNEL_OUTPUT, 128);
   delay(100);
   ledcWrite(CHANNEL_OUTPUT, 0);
   delay(100);
