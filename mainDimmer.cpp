@@ -90,12 +90,16 @@ private:
   float illumPrev;
   float minLevel;
   float gamma;
-  uint32_t millisStartAnimation;
+  uint32_t millisAnimationStart;
+  uint32_t millisAnimationEnd;
   int millisAnimationDuration;
 };
 
 void IotsaDimmerMod::startAnimation() {
-  millisStartAnimation = millis();
+  int thisDuration = int(millisAnimationDuration * fabs(illum-illumPrev));
+  IotsaSerial.printf("xxxjack millisAnimationDuration=%d thisDuration=%d\n", millisAnimationDuration, thisDuration);
+  millisAnimationStart = millis();
+  millisAnimationEnd = millis() + millisAnimationDuration;
   iotsaConfig.postponeSleep(millisAnimationDuration+100);
 }
 
@@ -191,7 +195,8 @@ IotsaDimmerMod::handler() {
   message += "<form method='get'>";
 
   message += "Illuminance (0..1): <input type='text' name='illuminance' value='" + String(illum) +"'><br>";
-  message += "Minimum level (0..1): <input type='text' name='minLevel' value='" + String(minLevel) +"'><br>";
+  message += "Dimmer minimum (0..1): <input type='text' name='minLevel' value='" + String(minLevel) +"'><br>";
+  message += "Animation duration (ms): <input type='text' name='animation' value='" + String(millisAnimationDuration) +"'><br>";
   message += "Gamma (1.0 or 2.2): <input type='text' name='gamma' value='" + String(gamma) +"'><br>";
   message += "<input type='submit' value='Set'></form></body></html>";
   server->send(200, "text/html", message);
@@ -317,23 +322,31 @@ void IotsaDimmerMod::setup() {
 
 void IotsaDimmerMod::loop() {
   // Quick return if we have nothing to do
-  if (millisStartAnimation == 0) return;
+  if (millisAnimationStart == 0 || millisAnimationEnd == 0) {
+    // The dimmer shouldn't sleep if it is controlling the PWM output
+    if (illum > 0 && isOn) iotsaConfig.postponeSleep(100);
+    return;
+  }
   // Determine how far along the animation we are, and terminate the animation when done (or if it looks preposterous)
-  float progress = millisAnimationDuration == 0 ? 1 : float(millis()-millisStartAnimation) / float(millisAnimationDuration);
-  float wantedIllum = illum + minLevel;
+  uint32_t thisDur = millisAnimationEnd - millisAnimationStart;
+  if (thisDur == 0) thisDur = 1;
+  float progress = float(millis() - millisAnimationStart) / float(thisDur);
+  float wantedIllum = illum;
   if (!isOn) wantedIllum = 0;
   if (progress < 0 || progress >= 1) {
     progress = 1;
-    millisStartAnimation = 0;
+    millisAnimationStart = 0;
     illumPrev = wantedIllum;
 
     IFDEBUG IotsaSerial.printf("IotsaDimer: wantedIllum=%f illum=%f\n", wantedIllum, illum);
   }
   float curIllum = wantedIllum*progress + illumPrev*(1-progress);
+  if (curIllum < 0) curIllum = 0;
+  if (curIllum > 1) curIllum = 1;
   if (gamma && gamma != 1.0) curIllum = powf(curIllum, gamma);
 #ifdef ESP32
   ledcWrite(CHANNEL_OUTPUT, int(255*curIllum));
-  IotsaSerial.printf("xxxjack curIllum=%f progress=%f led=%d\n", curIllum, progress, int(255*curIllum));
+  //IotsaSerial.printf("xxxjack curIllum=%f progress=%f led=%d\n", curIllum, progress, int(255*curIllum));
 #else
   analogWrite(PIN_OUTPUT, int(255*curIllum));
 #endif
@@ -341,6 +354,7 @@ void IotsaDimmerMod::loop() {
 
 bool IotsaDimmerMod::touchedOnOff() {
   isOn = !isOn;
+  if (isOn && illum < minLevel) illum = minLevel;
   startAnimation();
 
   return true;
@@ -348,7 +362,7 @@ bool IotsaDimmerMod::touchedOnOff() {
 
 bool IotsaDimmerMod::changedValue() {
   isOn = true;
-  if (encoder.value < 1) encoder.value = 1;
+  if (encoder.value <= int(100*minLevel)) encoder.value = int(100*minLevel);
   if (encoder.value > 100) encoder.value = 100;
   illum = float(encoder.value) / 100.0;
   startAnimation();
