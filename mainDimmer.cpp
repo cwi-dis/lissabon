@@ -34,15 +34,15 @@ IotsaBLEServerMod bleserverMod(application);
 #define VBAT_100_PERCENT (12.0/11.0) // 100K and 1M resistors divide by 11, not 10...
 IotsaBatteryMod batteryMod(application);
 
-#define PIN_OUTPUT 13
+#define PIN_OUTPUT 2
 #ifdef ESP32
 #define CHANNEL_OUTPUT 0
 #define FREQ_OUTPUT 5000
 #endif
 
 #include "iotsaInput.h"
-Button button(0, true, false, true);
-RotaryEncoder encoder(4, 2);
+Button button(4, true, false, true);
+RotaryEncoder encoder(16, 17);
 
 Input* inputs[] = {
   &button,
