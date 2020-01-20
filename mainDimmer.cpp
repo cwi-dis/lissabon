@@ -93,6 +93,7 @@ private:
   uint32_t millisAnimationStart;
   uint32_t millisAnimationEnd;
   int millisAnimationDuration;
+  uint32_t saveAtMillis;
 };
 
 void IotsaDimmerMod::startAnimation() {
@@ -290,10 +291,16 @@ void IotsaDimmerMod::setup() {
   pinMode(PIN_OUTPUT, OUTPUT);
 #endif
   configLoad();
-  illumPrev = illum;
+  illumPrev = isOn ? illum : 0;
   startAnimation();
   button.setCallback(std::bind(&IotsaDimmerMod::touchedOnOff, this));
   encoder.setCallback(std::bind(&IotsaDimmerMod::changedValue, this));
+  // Bind button to isOn (toggling it on every press)
+  button.bindVar(isOn, true);
+  // Bind rotary encoder to variable illum, ranging from minLevel to 1.0 in 100 steps
+  encoder.bindVar(illum, minLevel, 1.0, 0.01);
+  // And if the rotary encoder does more than 2 steps per second we speed up
+  encoder.setAcceleration(500);
 
 #ifdef IOTSA_WITH_BLE
   // Set default advertising interval to be between 200ms and 600ms
@@ -321,6 +328,11 @@ void IotsaDimmerMod::setup() {
 }
 
 void IotsaDimmerMod::loop() {
+  // See if we have a value to save (because the user has been turning the dimmer)
+  if (saveAtMillis > 0 && millis() > saveAtMillis) {
+    saveAtMillis = 0;
+    configSave();
+  }
   // Quick return if we have nothing to do
   if (millisAnimationStart == 0 || millisAnimationEnd == 0) {
     // The dimmer shouldn't sleep if it is controlling the PWM output
@@ -338,7 +350,7 @@ void IotsaDimmerMod::loop() {
     millisAnimationStart = 0;
     illumPrev = wantedIllum;
 
-    IFDEBUG IotsaSerial.printf("IotsaDimer: wantedIllum=%f illum=%f\n", wantedIllum, illum);
+    IFDEBUG IotsaSerial.printf("IotsaDimmer: wantedIllum=%f illum=%f\n", wantedIllum, illum);
   }
   float curIllum = wantedIllum*progress + illumPrev*(1-progress);
   if (curIllum < 0) curIllum = 0;
@@ -353,19 +365,22 @@ void IotsaDimmerMod::loop() {
 }
 
 bool IotsaDimmerMod::touchedOnOff() {
-  isOn = !isOn;
-  if (isOn && illum < minLevel) illum = minLevel;
+  // Start the animation to get to the wanted value
   startAnimation();
-
+  // And prepare for saving (because we don't want to wear out the Flash chip)
+  iotsaConfig.postponeSleep(2000);
+  saveAtMillis = millis() + 2000;
   return true;
 }
 
 bool IotsaDimmerMod::changedValue() {
+  // Changing the dimmer automatically turns on the lamp as well
   isOn = true;
-  if (encoder.value <= int(100*minLevel)) encoder.value = int(100*minLevel);
-  if (encoder.value > 100) encoder.value = 100;
-  illum = float(encoder.value) / 100.0;
+  // Start the animation to get to the wanted value
   startAnimation();
+  // And prepare for saving (because we don't want to wear out the Flash chip)
+  iotsaConfig.postponeSleep(2000);
+  saveAtMillis = millis() + 2000;
   return true;
 }
 
