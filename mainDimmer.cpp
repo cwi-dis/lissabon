@@ -42,22 +42,23 @@ IotsaBatteryMod batteryMod(application);
 
 #include "iotsaInput.h"
 #define WITH_TOUCHPADS
+
 #ifdef WITH_TOUCHPADS
-// Two touchpad pins. Short press turns off or on, long press will decrease/increase the values
-Touchpad touchoff(12, true, false, true);
-Touchpad touchon(13, true, false, true);
-UpDownButtons encoder(touchon, touchoff);
-Input* inputs[] = {
-  &encoder
-};
+// Three touchpad pins: on/off, decrement and increment.
+Touchpad button(27, true, false, true);
+Touchpad touchdown(12, true, false, true);
+Touchpad touchup(13, true, false, true);
+UpDownButtons encoder(touchdown, touchup);
 #else
+// A rotary encoder for increment/decrement and a button for on/off.
 Button button(4, true, false, true);
 RotaryEncoder encoder(16, 17);
+#endif
+
 Input* inputs[] = {
   &button,
   &encoder
 };
-#endif
 
 
 IotsaInputMod inputMod(application, inputs, sizeof(inputs)/sizeof(inputs[0]));
@@ -111,8 +112,8 @@ void IotsaDimmerMod::startAnimation() {
   int thisDuration = int(millisAnimationDuration * fabs(illum-illumPrev));
   IotsaSerial.printf("xxxjack millisAnimationDuration=%d thisDuration=%d\n", millisAnimationDuration, thisDuration);
   millisAnimationStart = millis();
-  millisAnimationEnd = millis() + millisAnimationDuration;
-  iotsaConfig.postponeSleep(millisAnimationDuration+100);
+  millisAnimationEnd = millis() + thisDuration;
+  iotsaConfig.postponeSleep(thisDuration+100);
 }
 
 
@@ -304,15 +305,18 @@ void IotsaDimmerMod::setup() {
   configLoad();
   illumPrev = isOn ? illum : 0;
   startAnimation();
-#ifndef WITH_TOUCHPADS
   button.setCallback(std::bind(&IotsaDimmerMod::touchedOnOff, this));
   // Bind button to isOn (toggling it on every press)
   button.bindVar(isOn, true);
-#endif
   encoder.setCallback(std::bind(&IotsaDimmerMod::changedValue, this));
+#ifdef WITH_TOUCHPADS
+  // Bind up/down buttons to variable illum, ranging from minLevel to 1.0 in 25 steps
+  encoder.bindVar(illum, minLevel, 1.0, 0.02);
+  touchup.setRepeat(500, 100);
+  touchdown.setRepeat(500, 100);
+#else
   // Bind rotary encoder to variable illum, ranging from minLevel to 1.0 in 100 steps
   encoder.bindVar(illum, minLevel, 1.0, 0.01);
-#ifndef WITH_TOUCHPADS
   // And if the rotary encoder does more than 2 steps per second we speed up
   encoder.setAcceleration(500);
 #endif
