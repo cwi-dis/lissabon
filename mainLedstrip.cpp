@@ -37,14 +37,17 @@ IotsaBatteryMod batteryMod(application);
 #include "iotsaPixelStrip.h"
 IotsaPixelstripMod pixelstripMod(application);
 
-#include "iotsaTouch.h"
-Touchpad pads[] = {
-  Touchpad(12, true, false, true),
-  Touchpad(13, true, false, true),
-  Touchpad(15, true, false, true)
+#include "iotsaInput.h"
+Touchpad upTouch(12, true, false, true);
+Touchpad downTouch(13, true, false, true);
+UpDownButtons levelDimmer(upTouch, downTouch, true);
+//Touchpad(15, true, false, true);
+
+Input* inputs[] = {
+  &levelDimmer
 };
 
-IotsaTouchMod touchMod(application, pads, sizeof(pads)/sizeof(pads[0]));
+IotsaInputMod inputMod(application, inputs, sizeof(inputs)/sizeof(inputs[0]));
 
 //
 // LED Lighting module. 
@@ -62,20 +65,20 @@ public:
   void setHandler(uint8_t *_buffer, size_t _count, int bpp, IotsaPixelsourceHandler *handler);
 
 protected:
-  bool touchedOn();
-  bool touchedOff();
-  bool touchedProgram();
+  bool changedIllum();
+  bool changedOnOff();
   bool getHandler(const char *path, JsonObject& reply);
   bool putHandler(const char *path, const JsonVariant& request, JsonObject& reply);
 #ifdef IOTSA_WITH_BLE
   IotsaBleApiService bleApi;
   bool blePutHandler(UUIDstring charUUID);
   bool bleGetHandler(UUIDstring charUUID);
-  static constexpr UUIDstring serviceUUID = "153C0001-D28E-40B8-84EB-7F64B56D4E2E";
-  static constexpr UUIDstring tempUUID = "153C0002-D28E-40B8-84EB-7F64B56D4E2E";
-  static constexpr UUIDstring illumUUID = "153C0003-D28E-40B8-84EB-7F64B56D4E2E";
-  static constexpr UUIDstring intervalUUID = "153C0004-D28E-40B8-84EB-7F64B56D4E2E";
-  static constexpr UUIDstring identifyUUID = "153C0005-D28E-40B8-84EB-7F64B56D4E2E";
+  static constexpr UUIDstring serviceUUID = "F3390001-F793-4D0C-91BB-C91EEB92A1A4";
+  static constexpr UUIDstring isOnUUID = "F3390002-F793-4D0C-91BB-C91EEB92A1A4";
+  static constexpr UUIDstring identifyUUID = "F3390003-F793-4D0C-91BB-C91EEB92A1A4";
+  static constexpr UUIDstring illumUUID = "F3390004-F793-4D0C-91BB-C91EEB92A1A4";
+  static constexpr UUIDstring tempUUID = "F3390005-F793-4D0C-91BB-C91EEB92A1A4";
+  static constexpr UUIDstring intervalUUID = "F3390006-F793-4D0C-91BB-C91EEB92A1A4";
 #endif // IOTSA_WITH_BLE
 private:
   void handler();
@@ -84,13 +87,15 @@ private:
   void getHSL(float &h, float &s, float &l);
   void setTI(float temp, float illum);
   bool hasTI();
-  void startAnimation();
+  void startAnimation(bool quick=false);
   void identify();
   Adafruit_NeoPixel *strip;
+  bool isOn;  // Master boolean: if false there is no light.
   float r, g, b, w;  // Wanted RGB(W) color
   float rPrev, gPrev, bPrev, wPrev; // Previous RGB(W) color
   uint32_t millisStartAnimation;
   int millisAnimationDuration;
+  int millisThisAnimationDuration;
   float h, s, l;
   bool hslIsSet;
   float temp, illum;
@@ -101,6 +106,7 @@ private:
   int bpp; // Number of colors per LED (3 or 4)
   IotsaPixelsourceHandler *stripHandler;
   int darkPixels; // Number of unlit pixels between lit pixels
+  uint32_t saveAtMillis;
 };
 
 void IotsaLedstripMod::setHandler(uint8_t *_buffer, size_t _count, int _bpp, IotsaPixelsourceHandler *_handler) {
@@ -119,9 +125,10 @@ void IotsaLedstripMod::setHandler(uint8_t *_buffer, size_t _count, int _bpp, Iot
   startAnimation();
 }
 
-void IotsaLedstripMod::startAnimation() {
+void IotsaLedstripMod::startAnimation(bool quick) {
   millisStartAnimation = millis();
-  iotsaConfig.postponeSleep(millisAnimationDuration+100);
+  millisThisAnimationDuration = quick ? 1 : millisAnimationDuration;
+  iotsaConfig.postponeSleep(millisThisAnimationDuration+100);
 }
 
 void IotsaLedstripMod::setHSL(float _h, float _s, float _l) {
@@ -219,6 +226,7 @@ static void _temp2rgb(float temp, float& r, float& g, float& b) {
 
 void IotsaLedstripMod::setTI(float _temp, float _illum) {
   temp = _temp;
+  if (temp < 1000 || temp > 10000) temp = whiteTemperature; // Cater for coming from RGB or HLS value
   illum = _illum;
   tiIsSet = true;
   hslIsSet = false;
@@ -301,6 +309,11 @@ bool IotsaLedstripMod::blePutHandler(UUIDstring charUUID) {
       IFDEBUG IotsaSerial.printf("xxxjack ble: wrote darkPixels %s value %d\n", intervalUUID, darkPixels);
       anyChanged = true;
   }
+  if (charUUID == isOnUUID) {
+    int value = bleApi.getAsInt(isOnUUID);
+    isOn = (bool)value;
+    anyChanged = true;
+  }
   if (charUUID == identifyUUID) {
     int value = bleApi.getAsInt(identifyUUID);
     if (value) identify();
@@ -330,6 +343,11 @@ bool IotsaLedstripMod::bleGetHandler(UUIDstring charUUID) {
   if (charUUID == intervalUUID) {
       IFDEBUG IotsaSerial.printf("xxxjack ble: read darkPixels %s value %d\n", charUUID, darkPixels);
       bleApi.set(intervalUUID, (uint8_t)darkPixels);
+      return true;
+  }
+  if (charUUID == isOnUUID) {
+      IFDEBUG IotsaSerial.printf("xxxjack ble: read isOn %s value %d\n", charUUID, isOn);
+      bleApi.set(isOnUUID, (uint8_t)isOn);
       return true;
   }
   IotsaSerial.println("iotsaLedstripMod: ble: read unknown uuid");
@@ -401,6 +419,12 @@ IotsaLedstripMod::handler() {
       anyChanged = true;
     }
   }
+  isOn = true;
+  if( server->hasArg("isOn")) {
+    isOn = server->arg("isOn").toInt();
+    anyChanged = true;
+  }
+
 
   if (anyChanged) {
     configSave();
@@ -412,6 +436,10 @@ IotsaLedstripMod::handler() {
     message += "<p><em>" + error + "</em></p>";
   }
   message += "<form method='get'><input type='submit' name='identify' value='identify'></form>";
+  message += "<form method='get'>";
+  message += "<form method='get'><input type='hidden' name='isOn' value='1'><input type='submit' value='Turn On'></form>";
+  message += "<form method='get'>";
+  message += "<form method='get'><input type='hidden' name='isOn' value='0'><input type='submit' value='Turn Off'></form>";
   message += "<form method='get'>";
 
   String checked = "";
@@ -485,6 +513,7 @@ bool IotsaLedstripMod::getHandler(const char *path, JsonObject& reply) {
     reply["illuminance"] = illum;
   }
   reply["darkPixels"] = darkPixels;
+  reply["isOn"] = isOn;
   reply["animation"] = millisAnimationDuration;
   if (bpp == 4) reply["white"] = whiteTemperature;
   return true;
@@ -498,23 +527,29 @@ bool IotsaLedstripMod::putHandler(const char *path, const JsonVariant& request, 
   hslIsSet = request.containsKey("h")||request.containsKey("s")||request.containsKey("l");
   tiIsSet = request.containsKey("temperature")||request.containsKey("illuminance");
   if (hslIsSet) {
+    isOn = true;
     h = request["h"]|0;
     s = request["s"]|0;
     l = request["l"]|0;
     setHSL(h, s, l);
   } else
   if (tiIsSet) {
+    isOn = true;
     temp = request["temp"]|0;
     illum = request["illum"]|0;
     setTI(temp, illum);
   } else {
     // By default look at RGB values (using current values as default)
+    isOn = true;
     r = request["r"]|r;
     g = request["g"]|g;
     b = request["b"]|b;
     if (bpp == 4) {
       w = request["w"]|w;
     }
+  }
+  if (request.containsKey("isOn")) {
+    isOn = request["isOn"];
   }
 
   configSave();
@@ -534,6 +569,9 @@ void IotsaLedstripMod::serverSetup() {
 
 void IotsaLedstripMod::configLoad() {
   IotsaConfigFileLoad cf("/config/ledstrip.cfg");
+  int value;
+  cf.get("isOn", value, 1);
+  isOn = value;
   cf.get("darkPixels", darkPixels, 0);
   cf.get("animation", millisAnimationDuration, 500);
   cf.get("white", whiteTemperature, 4000);
@@ -555,6 +593,7 @@ void IotsaLedstripMod::configLoad() {
 
 void IotsaLedstripMod::configSave() {
   IotsaConfigFileSave cf("/config/ledstrip.cfg");
+  cf.put("isOn", isOn);
   cf.put("darkPixels", darkPixels);
   cf.put("animation", millisAnimationDuration);
   cf.put("white", whiteTemperature);
@@ -578,9 +617,6 @@ void IotsaLedstripMod::configSave() {
 }
 
 void IotsaLedstripMod::setup() {
-  pads[0].setCallback(std::bind(&IotsaLedstripMod::touchedOn, this));
-  pads[1].setCallback(std::bind(&IotsaLedstripMod::touchedOff, this));
-  pads[2].setCallback(std::bind(&IotsaLedstripMod::touchedProgram, this));
 #ifdef PIN_VBAT
   batteryMod.setPinVBat(PIN_VBAT, VBAT_100_PERCENT);
 #endif
@@ -593,11 +629,22 @@ void IotsaLedstripMod::setup() {
   bPrev = b;
   wPrev = w;
   startAnimation();
+  levelDimmer.bindVar(illum, 0.0, 1.0, 0.01);
+  levelDimmer.setCallback(std::bind(&IotsaLedstripMod::changedIllum, this));
+  levelDimmer.bindStateVar(isOn);
+  levelDimmer.setStateCallback(std::bind(&IotsaLedstripMod::changedOnOff, this));
 #ifdef IOTSA_WITH_BLE
   // Set default advertising interval to be between 200ms and 600ms
   IotsaBLEServerMod::setAdvertisingInterval(300, 900);
 
   bleApi.setup(serviceUUID, this);
+  
+  static BLE2904 isOn2904;
+  isOn2904.setFormat(BLE2904::FORMAT_UINT8);
+  isOn2904.setUnit(0x2700);
+  static BLE2901 isOn2901("On/Off");
+  bleApi.addCharacteristic(isOnUUID, BLE_READ|BLE_WRITE, &isOn2904, &isOn2901);
+
   static BLE2904 temp2904;
   temp2904.setFormat(BLE2904::FORMAT_UINT16);
   temp2904.setUnit(0x2700);
@@ -625,23 +672,32 @@ void IotsaLedstripMod::setup() {
 }
 
 void IotsaLedstripMod::loop() {
+  // See if we have a value to save (because the user has been turning the dimmer)
+  if (saveAtMillis > 0 && millis() > saveAtMillis) {
+    saveAtMillis = 0;
+    configSave();
+  }
   // Quick return if we have nothing to do
   if (millisStartAnimation == 0) return;
   // Determine how far along the animation we are, and terminate the animation when done (or if it looks preposterous)
-  float progress = float(millis()-millisStartAnimation) / float(millisAnimationDuration);
+  float progress = float(millis()-millisStartAnimation) / float(millisThisAnimationDuration);
+  float wtdR = isOn ? r : 0;
+  float wtdG = isOn ? g : 0;
+  float wtdB = isOn ? b : 0;
+  float wtdW = isOn ? w : 0;
   if (progress < 0 || progress > 1) {
     progress = 1;
     millisStartAnimation = 0;
-    rPrev = r;
-    gPrev = g;
-    bPrev = b;
-    wPrev = w;
+    rPrev = wtdR;
+    gPrev = wtdG;
+    bPrev = wtdB;
+    wPrev = wtdW;
     IFDEBUG IotsaSerial.printf("IotsaLedstrip: r=%f, g=%f, b=%f, w=%f count=%d darkPixels=%d\n", r, g, b, w, count, darkPixels);
   }
-  float curR = r*progress + rPrev*(1-progress);
-  float curG = g*progress + gPrev*(1-progress);
-  float curB = b*progress + bPrev*(1-progress);
-  float curW = w*progress + wPrev*(1-progress);
+  float curR = wtdR*progress + rPrev*(1-progress);
+  float curG = wtdG*progress + gPrev*(1-progress);
+  float curB = wtdB*progress + bPrev*(1-progress);
+  float curW = wtdW*progress + wPrev*(1-progress);
   int _r, _g, _b, _w;
   _r = curR*256;
   _g = curG*256;
@@ -704,27 +760,22 @@ void IotsaLedstripMod::loop() {
   }
 }
 
-bool IotsaLedstripMod::touchedOn() {
-  IFDEBUG IotsaSerial.println("IotsaLedstrip: all on");
-  if (buffer) {
-    memset(buffer, 255, count*bpp);
-    stripHandler->pixelSourceCallback();
-  }
+bool IotsaLedstripMod::changedIllum() {
+  isOn = true;
+  setTI(temp, illum);
+  startAnimation(true);
+  // And prepare for saving (because we don't want to wear out the Flash chip)
+  iotsaConfig.postponeSleep(2000);
+  saveAtMillis = millis() + 2000;
   return true;
 }
 
-bool IotsaLedstripMod::touchedOff() {
-  IFDEBUG IotsaSerial.println("IotsaLedstrip: all off");
-  if (buffer) {
-    memset(buffer, 0, count*bpp);
-    stripHandler->pixelSourceCallback();
-  }
-  return true;
-}
-
-bool IotsaLedstripMod::touchedProgram() {
-  IFDEBUG IotsaSerial.println("IotsaLedstrip: resume program");
+bool IotsaLedstripMod::changedOnOff() {
+  // Start the animation to get to the wanted value
   startAnimation();
+  // And prepare for saving (because we don't want to wear out the Flash chip)
+  iotsaConfig.postponeSleep(2000);
+  saveAtMillis = millis() + 2000;
   return true;
 }
 
