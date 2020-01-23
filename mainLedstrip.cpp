@@ -37,9 +37,13 @@ IotsaBatteryMod batteryMod(application);
 #include "iotsaPixelStrip.h"
 IotsaPixelstripMod pixelstripMod(application);
 
+// Define this to enable support for touchpads to control the led strip (otherwise only BLE/REST/WEB control)
+#define WITH_TOUCHPADS
+
+#ifdef WITH_TOUCHPADS
 #include "iotsaInput.h"
-Touchpad upTouch(12, true, false, true);
-Touchpad downTouch(13, true, false, true);
+Touchpad upTouch(12, true, true, true);
+Touchpad downTouch(13, true, true, true);
 UpDownButtons levelDimmer(upTouch, downTouch, true);
 //Touchpad(15, true, false, true);
 
@@ -48,6 +52,7 @@ Input* inputs[] = {
 };
 
 IotsaInputMod inputMod(application, inputs, sizeof(inputs)/sizeof(inputs[0]));
+#endif // WITH_TOUCHPADS
 
 //
 // LED Lighting module. 
@@ -629,10 +634,12 @@ void IotsaLedstripMod::setup() {
   bPrev = b;
   wPrev = w;
   startAnimation();
+#ifdef WITH_TOUCHPADS
   levelDimmer.bindVar(illum, 0.0, 1.0, 0.01);
   levelDimmer.setCallback(std::bind(&IotsaLedstripMod::changedIllum, this));
   levelDimmer.bindStateVar(isOn);
   levelDimmer.setStateCallback(std::bind(&IotsaLedstripMod::changedOnOff, this));
+#endif
 #ifdef IOTSA_WITH_BLE
   // Set default advertising interval to be between 200ms and 600ms
   IotsaBLEServerMod::setAdvertisingInterval(300, 900);
@@ -692,7 +699,7 @@ void IotsaLedstripMod::loop() {
     gPrev = wtdG;
     bPrev = wtdB;
     wPrev = wtdW;
-    IFDEBUG IotsaSerial.printf("IotsaLedstrip: r=%f, g=%f, b=%f, w=%f count=%d darkPixels=%d\n", r, g, b, w, count, darkPixels);
+    IFDEBUG IotsaSerial.printf("IotsaLedstrip: isOn=%d r=%f, g=%f, b=%f, w=%f count=%d darkPixels=%d\n", isOn, r, g, b, w, count, darkPixels);
   }
   float curR = wtdR*progress + rPrev*(1-progress);
   float curG = wtdG*progress + gPrev*(1-progress);
@@ -772,6 +779,7 @@ bool IotsaLedstripMod::changedIllum() {
 
 bool IotsaLedstripMod::changedOnOff() {
   // Start the animation to get to the wanted value
+  IotsaSerial.printf("xxxjack changedOnOff %d\n", isOn);
   startAnimation();
   // And prepare for saving (because we don't want to wear out the Flash chip)
   iotsaConfig.postponeSleep(2000);
