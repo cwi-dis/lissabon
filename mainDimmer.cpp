@@ -44,11 +44,10 @@ IotsaBatteryMod batteryMod(application);
 #define WITH_TOUCHPADS
 
 #ifdef WITH_TOUCHPADS
-// Three touchpad pins: on/off, decrement and increment.
-Touchpad button(27, true, false, true);
-Touchpad touchdown(12, true, false, true);
-Touchpad touchup(13, true, false, true);
-UpDownButtons encoder(touchdown, touchup);
+// Two touchpad pins: off/decrement (long press), on/increment (long press)
+Touchpad touchdown(12, true, true, true);
+Touchpad touchup(13, true, true, true);
+UpDownButtons encoder(touchdown, touchup, true);
 #else
 // A rotary encoder for increment/decrement and a button for on/off.
 Button button(4, true, false, true);
@@ -56,7 +55,6 @@ RotaryEncoder encoder(16, 17);
 #endif
 
 Input* inputs[] = {
-  &button,
   &encoder
 };
 
@@ -110,7 +108,6 @@ private:
 
 void IotsaDimmerMod::startAnimation() {
   int thisDuration = int(millisAnimationDuration * fabs(illum-illumPrev));
-  IotsaSerial.printf("xxxjack millisAnimationDuration=%d thisDuration=%d\n", millisAnimationDuration, thisDuration);
   millisAnimationStart = millis();
   millisAnimationEnd = millis() + thisDuration;
   iotsaConfig.postponeSleep(thisDuration+100);
@@ -305,16 +302,16 @@ void IotsaDimmerMod::setup() {
   configLoad();
   illumPrev = isOn ? illum : 0;
   startAnimation();
-  button.setCallback(std::bind(&IotsaDimmerMod::touchedOnOff, this));
-  // Bind button to isOn (toggling it on every press)
-  button.bindVar(isOn, true);
   encoder.setCallback(std::bind(&IotsaDimmerMod::changedValue, this));
 #ifdef WITH_TOUCHPADS
   // Bind up/down buttons to variable illum, ranging from minLevel to 1.0 in 25 steps
   encoder.bindVar(illum, minLevel, 1.0, 0.02);
-  touchup.setRepeat(500, 100);
-  touchdown.setRepeat(500, 100);
+  encoder.bindStateVar(isOn);
+  encoder.setStateCallback(std::bind(&IotsaDimmerMod::touchedOnOff, this));
 #else
+  button.setCallback(std::bind(&IotsaDimmerMod::touchedOnOff, this));
+  // Bind button to isOn (toggling it on every press)
+  button.bindVar(isOn, true);
   // Bind rotary encoder to variable illum, ranging from minLevel to 1.0 in 100 steps
   encoder.bindVar(illum, minLevel, 1.0, 0.01);
   // And if the rotary encoder does more than 2 steps per second we speed up
@@ -377,7 +374,6 @@ void IotsaDimmerMod::loop() {
   if (gamma && gamma != 1.0) curIllum = powf(curIllum, gamma);
 #ifdef ESP32
   ledcWrite(CHANNEL_OUTPUT, int(255*curIllum));
-  //IotsaSerial.printf("xxxjack curIllum=%f progress=%f led=%d\n", curIllum, progress, int(255*curIllum));
 #else
   analogWrite(PIN_OUTPUT, int(255*curIllum));
 #endif
