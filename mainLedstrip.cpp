@@ -37,6 +37,8 @@ IotsaBatteryMod batteryMod(application);
 #include "iotsaPixelStrip.h"
 IotsaPixelstripMod pixelstripMod(application);
 
+#include "NPBColorLib.h"
+
 // Define this to enable support for touchpads to control the led strip (otherwise only BLE/REST/WEB control)
 #define WITH_TOUCHPADS
 
@@ -96,8 +98,12 @@ private:
   void identify();
   Adafruit_NeoPixel *strip;
   bool isOn;  // Master boolean: if false there is no light.
+  RgbwFColor color;
+  RgbwFColor prevColor;
+#if 0
   float r, g, b, w;  // Wanted RGB(W) color
   float rPrev, gPrev, bPrev, wPrev; // Previous RGB(W) color
+#endif
   uint32_t millisStartAnimation;
   int millisAnimationDuration;
   int millisThisAnimationDuration;
@@ -122,10 +128,7 @@ void IotsaLedstripMod::setHandler(uint8_t *_buffer, size_t _count, int _bpp, Iot
   if (bpp == 4 && hasTI()) {
     // If we have RGBW pixels we redo the TI calculation, to cater for white pixels
     setTI(temp, illum);
-    rPrev = r;
-    gPrev = g;
-    bPrev = b;
-    wPrev = w;
+    prevColor = color;
   }
   startAnimation();
 }
@@ -179,26 +182,7 @@ void IotsaLedstripMod::setHSL(float _h, float _s, float _l) {
           b1 = x;
       }
       float m = l - (chroma/2);
-      r = r1+m;
-      g = g1+m;
-      b = b1+m;
-      if (bpp == 4) {
-        // NOTE: this conversion assumes the W led is 6500K.
-        // May want to use the setTI converter.
-        w = min(r, min(g, b));
-        r -= w;
-        g -= w;
-        b -= w;
-        if (w < 0) w = 0;
-        if (w > 1) w = 1;
-
-      }
-      if (r < 0) r = 0;
-      if (r >= 1) r = 1;
-      if (g < 0) g = 0;
-      if (g >= 1) g = 1;
-      if (b < 0) b = 0;
-      if (b >= 1) b = 1;
+      color = RgbFColor(r1+m, g1+m, b1+m);
 }
 
 bool IotsaLedstripMod::hasHSL()
@@ -236,6 +220,7 @@ void IotsaLedstripMod::setTI(float _temp, float _illum) {
   tiIsSet = true;
   hslIsSet = false;
   // Convert the temperature to RGB
+  float r, g, b;
   _temp2rgb(temp, r, g, b);
   // Multiply with illumination
   r *= illum;
@@ -246,7 +231,7 @@ void IotsaLedstripMod::setTI(float _temp, float _illum) {
   // NOTE: here we need to cater for the temperature of the white,
   // in case it isn't 6500K (which probably it isn't), which is the white
   // point of D65 RGB.
-  w = 0;
+  float w = 0;
   if (bpp == 4 && whiteTemperature != 0) {
     // Compute RGB value (in D65 space) of our white LED
     float rWhite, gWhite, bWhite;
@@ -287,6 +272,7 @@ void IotsaLedstripMod::setTI(float _temp, float _illum) {
   if (b > 1) b = 1;
   if (w < 0) w = 0;
   if (w > 1) w = 1;
+  color = RgbwFColor(r, g, b, w);
 }
 
 bool IotsaLedstripMod::hasTI()
@@ -399,6 +385,10 @@ IotsaLedstripMod::handler() {
     setTI(temp, illum);
     anyChanged = true;
   } else {
+    float r=color.R;
+    float g=color.G;
+    float b=color.B;
+    float w=color.W;
     if( server->hasArg("r")) {
       hslIsSet = false;
       tiIsSet = false;
@@ -423,6 +413,7 @@ IotsaLedstripMod::handler() {
       w = server->arg("w").toFloat();
       anyChanged = true;
     }
+    color = RgbwColor(r, g, b, w);
   }
   isOn = true;
   if( server->hasArg("isOn")) {
@@ -450,11 +441,11 @@ IotsaLedstripMod::handler() {
   String checked = "";
   if (!hasHSL() && !hasTI()) checked = " checked";
   message += "<input type='radio' name='set' value=''" + checked + ">Set RGB value:<br>";
-  message += "Red (0..1): <input type='text' name='r' value='" + String(r) +"' ><br>";
-  message += "Green (0..1): <input type='text' name='g' value='" + String(g) +"' ><br>";
-  message += "Blue (0..1): <input type='text' name='b' value='" + String(b) +"' ><br>";
+  message += "Red (0..1): <input type='text' name='r' value='" + String(color.R) +"' ><br>";
+  message += "Green (0..1): <input type='text' name='g' value='" + String(color.G) +"' ><br>";
+  message += "Blue (0..1): <input type='text' name='b' value='" + String(color.B) +"' ><br>";
   if (bpp == 4) 
-    message += "White (0..1): <input type='text' name='w' value='" + String(w) +"' ><br>";
+    message += "White (0..1): <input type='text' name='w' value='" + String(color.W) +"' ><br>";
 
   checked = "";
   if (hasHSL()) {
@@ -504,10 +495,10 @@ String IotsaLedstripMod::info() {
 #endif // IOTSA_WITH_WEB
 
 bool IotsaLedstripMod::getHandler(const char *path, JsonObject& reply) {
-  reply["r"] = r;
-  reply["g"] = g;
-  reply["b"] = b;
-  if (bpp == 4) reply["w"] = w;
+  reply["r"] = color.R;
+  reply["g"] = color.G;
+  reply["b"] = color.B;
+  if (bpp == 4) reply["w"] = color.W;
   if (hasHSL()) {
     reply["h"] = h;
     reply["s"] = s;
@@ -546,12 +537,17 @@ bool IotsaLedstripMod::putHandler(const char *path, const JsonVariant& request, 
   } else {
     // By default look at RGB values (using current values as default)
     isOn = true;
+    float r = color.R;
+    float g = color.G;
+    float b = color.B;
+    float w = color.W;
     r = request["r"]|r;
     g = request["g"]|g;
     b = request["b"]|b;
     if (bpp == 4) {
       w = request["w"]|w;
     }
+    color = RgbwColor(r, g, b, w);
   }
   if (request.containsKey("isOn")) {
     isOn = request["isOn"];
@@ -580,11 +576,12 @@ void IotsaLedstripMod::configLoad() {
   cf.get("darkPixels", darkPixels, 0);
   cf.get("animation", millisAnimationDuration, 500);
   cf.get("white", whiteTemperature, 4000);
-
+  float r, g, b, w;
   cf.get("r", r, 0.0);
   cf.get("g", g, 0.0);
   cf.get("b", b, 0.0);
   cf.get("w", w, 0.0);
+  color = RgbwFColor(r, g, b, w);
 
   cf.get("h", h, 0.0);
   cf.get("s", s, 0.0);
@@ -603,10 +600,10 @@ void IotsaLedstripMod::configSave() {
   cf.put("animation", millisAnimationDuration);
   cf.put("white", whiteTemperature);
 
-  cf.put("r", r);
-  cf.put("g", g);
-  cf.put("b", b);
-  cf.put("w", w);
+  cf.put("r", color.R);
+  cf.put("g", color.G);
+  cf.put("b", color.B);
+  cf.put("w", color.W);
   
   if (hasHSL()) {
     IotsaSerial.println("xxxjack saving hsl");
@@ -629,10 +626,7 @@ void IotsaLedstripMod::setup() {
   batteryMod.setPinDisableSleep(PIN_DISABLESLEEP);
 #endif
   configLoad();
-  rPrev = r;
-  gPrev = g;
-  bPrev = b;
-  wPrev = w;
+  prevColor = color;
   startAnimation();
 #ifdef WITH_TOUCHPADS
   levelDimmer.bindVar(illum, 0.0, 1.0, 0.01);
@@ -688,32 +682,18 @@ void IotsaLedstripMod::loop() {
   if (millisStartAnimation == 0) return;
   // Determine how far along the animation we are, and terminate the animation when done (or if it looks preposterous)
   float progress = float(millis()-millisStartAnimation) / float(millisThisAnimationDuration);
-  float wtdR = isOn ? r : 0;
-  float wtdG = isOn ? g : 0;
-  float wtdB = isOn ? b : 0;
-  float wtdW = isOn ? w : 0;
+  RgbwFColor wanted = RgbwFColor(0);
+  if (isOn) wanted = color;
+
   if (progress < 0 || progress > 1) {
     progress = 1;
     millisStartAnimation = 0;
-    rPrev = wtdR;
-    gPrev = wtdG;
-    bPrev = wtdB;
-    wPrev = wtdW;
-    IFDEBUG IotsaSerial.printf("IotsaLedstrip: isOn=%d r=%f, g=%f, b=%f, w=%f count=%d darkPixels=%d\n", isOn, r, g, b, w, count, darkPixels);
+    prevColor = wanted;
+    IFDEBUG IotsaSerial.printf("IotsaLedstrip: isOn=%d r=%f, g=%f, b=%f, w=%f count=%d darkPixels=%d\n", isOn, color.R, color.G, color.B, color.W, count, darkPixels);
   }
-  float curR = wtdR*progress + rPrev*(1-progress);
-  float curG = wtdG*progress + gPrev*(1-progress);
-  float curB = wtdB*progress + bPrev*(1-progress);
-  float curW = wtdW*progress + wPrev*(1-progress);
-  int _r, _g, _b, _w;
-  _r = curR*256;
-  _g = curG*256;
-  _b = curB*256;
-  _w = curW*256;
-  if (_r>255) _r = 255;
-  if (_g>255) _g = 255;
-  if (_b>255) _b = 255;
-  if (_w>255) _w = 255;
+  RgbwFColor cur = RgbwFColor::LinearBlend(wanted, prevColor, progress);
+  RgbwColor pixelColor(cur);
+
 #if 0
   IFDEBUG IotsaSerial.printf("IotsaLedstrip::loop: r=%d, g=%d, b=%d, w=%d, count=%d, progress=%f\n", _r, _g, _b, _w, count, progress);
 #endif
@@ -721,41 +701,28 @@ void IotsaLedstripMod::loop() {
     bool change = false;
     uint8_t *p = buffer;
     for (int i=0; i<count; i++) {
-      int wtdR = _r;
-      int wtdG = _g;
-      int wtdB = _b;
-      int wtdW = _w;
+      RgbwColor thisPixelColor = pixelColor;
       if (darkPixels > 0 && i % (darkPixels+1) != 0) {
-        wtdR = wtdG = wtdB = wtdW = 0;
+        thisPixelColor = RgbwColor(0);
       }
-#if 0
-      if (bpp == 4) {
-        wtdW = wtdR;
-        if (wtdG < wtdW) wtdW = wtdG;
-        if (wtdB < wtdW) wtdW = wtdB;
-        wtdR -= wtdW;
-        wtdG -= wtdW;
-        wtdB -= wtdW;
-      }
-#endif
-      if (*p != wtdR) {
-        *p = wtdR;
+      if (*p != thisPixelColor.R) {
+        *p = thisPixelColor.R;
         change = true;
       }
       p++;
-      if (*p != wtdG) {
-        *p = wtdG;
+      if (*p != thisPixelColor.G) {
+        *p = thisPixelColor.G;
         change = true;
       }
       p++;
-      if (*p != wtdB) {
-        *p = wtdB;
+      if (*p != thisPixelColor.B) {
+        *p = thisPixelColor.B;
         change = true;
       }
       p++;
       if (bpp == 4) {
-        if (*p != wtdW) {
-          *p = wtdW;
+        if (*p != thisPixelColor.W) {
+          *p = thisPixelColor.W;
           change = true;
         }
         p++;
