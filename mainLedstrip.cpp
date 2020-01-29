@@ -90,10 +90,8 @@ protected:
 private:
   void handler();
   void setHSL(float h, float s, float l);
-  bool hasHSL();
   void getHSL(float &h, float &s, float &l);
   void setTI(float temp, float brightness);
-  bool hasTI();
   void startAnimation(bool quick=false);
   void identify();
   Adafruit_NeoPixel *strip;
@@ -101,7 +99,9 @@ private:
   RgbwFColor color;
   RgbwFColor prevColor;
   HslFColor hslColor;
+  bool hslColorIsValid;
   TempFColor tempColor;
+  bool tempColorIsValid;
 #if 0
   float r, g, b, w;  // Wanted RGB(W) color
   float rPrev, gPrev, bPrev, wPrev; // Previous RGB(W) color
@@ -110,10 +110,8 @@ private:
   int millisAnimationDuration;
   int millisThisAnimationDuration;
 //  float h, s, l;
-  bool hslIsSet;
 //  float temp, brightness;
   float whiteTemperature = 4000;  // Color temperature of the white channel
-  bool tiIsSet;
   uint8_t *buffer;
   int count;  // Number of LEDs
   int bpp; // Number of colors per LED (3 or 4)
@@ -127,7 +125,7 @@ void IotsaLedstripMod::setHandler(uint8_t *_buffer, size_t _count, int _bpp, Iot
   count = _count;
   bpp = _bpp;
   stripHandler = _handler;
-  if (bpp == 4 && hasTI()) {
+  if (bpp == 4 && tempColorIsValid) {
     // If we have RGBW pixels we redo the TI calculation, to cater for white pixels
     setTI(tempColor.Temperature, tempColor.Brightness);
     prevColor = color;
@@ -143,21 +141,16 @@ void IotsaLedstripMod::startAnimation(bool quick) {
 
 void IotsaLedstripMod::setHSL(float _h, float _s, float _l) {
   hslColor = HslFColor(_h, _s, _l);
-  hslIsSet = true;
-  tiIsSet = false;
+  hslColorIsValid = true;
+  tempColorIsValid = false;
   color = (RgbFColor)hslColor;
-}
-
-bool IotsaLedstripMod::hasHSL()
-{
-  return hslIsSet;
 }
 
 void IotsaLedstripMod::setTI(float _temp, float _brightness) {
   if (_temp < 1000 || _temp > 10000) _temp = whiteTemperature; // Cater for coming from RGB or HLS value
   tempColor = TempFColor(_temp, _brightness);
-  tiIsSet = true;
-  hslIsSet = false;
+  tempColorIsValid = true;
+  hslColorIsValid = false;
   // Extract the white, if we have a 4-channel led strip
   RgbFColor colorRGB = tempColor;
   float r = colorRGB.R;
@@ -209,11 +202,6 @@ void IotsaLedstripMod::setTI(float _temp, float _brightness) {
   if (w < 0) w = 0;
   if (w > 1) w = 1;
   color = RgbwFColor(r, g, b, w);
-}
-
-bool IotsaLedstripMod::hasTI()
-{
-  return tiIsSet;
 }
 
 #ifdef IOTSA_WITH_BLE
@@ -326,26 +314,26 @@ IotsaLedstripMod::handler() {
     float b=color.B;
     float w=color.W;
     if( server->hasArg("r")) {
-      hslIsSet = false;
-      tiIsSet = false;
+      hslColorIsValid = false;
+      tempColorIsValid = false;
       r = server->arg("r").toFloat();
       anyChanged = true;
     }
     if( server->hasArg("g")) {
-      hslIsSet = false;
-      tiIsSet = false;
+      hslColorIsValid = false;
+      tempColorIsValid = false;
       g = server->arg("g").toFloat();
       anyChanged = true;
     }
     if( server->hasArg("b")) {
-      hslIsSet = false;
-      tiIsSet = false;
+      hslColorIsValid = false;
+      tempColorIsValid = false;
       b = server->arg("b").toFloat();
       anyChanged = true;
     }
     if( bpp == 4 && server->hasArg("w")) {
-      hslIsSet = false;
-      tiIsSet = false;
+      hslColorIsValid = false;
+      tempColorIsValid = false;
       w = server->arg("w").toFloat();
       anyChanged = true;
     }
@@ -375,7 +363,7 @@ IotsaLedstripMod::handler() {
   message += "<form method='get'>";
 
   String checked = "";
-  if (!hasHSL() && !hasTI()) checked = " checked";
+  if (!hslColorIsValid && !tempColorIsValid) checked = " checked";
   message += "<input type='radio' name='set' value=''" + checked + ">Set RGB value:<br>";
   message += "Red (0..1): <input type='text' name='r' value='" + String(color.R) +"' ><br>";
   message += "Green (0..1): <input type='text' name='g' value='" + String(color.G) +"' ><br>";
@@ -384,7 +372,7 @@ IotsaLedstripMod::handler() {
     message += "White (0..1): <input type='text' name='w' value='" + String(color.W) +"' ><br>";
 
   checked = "";
-  if (hasHSL()) {
+  if (hslColorIsValid) {
     checked = " checked";
   }
   message += "<input type='radio' name='set' value='hsl'" + checked + ">Use HSL value:<br>";
@@ -393,7 +381,7 @@ IotsaLedstripMod::handler() {
   message += "Lightness (0..1): <input type='text' name='l' value='" + String(hslColor.L) +"'><br>";
 
   checked = "";
-  if (hasTI()) {
+  if (tempColorIsValid) {
     checked = " checked";
   }
   message += "<input type='radio' name='set' value='temp'" + checked + ">Set Temperature:<br>";
@@ -428,12 +416,12 @@ bool IotsaLedstripMod::getHandler(const char *path, JsonObject& reply) {
   reply["g"] = color.G;
   reply["b"] = color.B;
   if (bpp == 4) reply["w"] = color.W;
-  if (hasHSL()) {
+  if (hslColorIsValid) {
     reply["h"] = hslColor.H;
     reply["s"] = hslColor.S;
     reply["l"] = hslColor.L;
   }
-  if (hasTI()) {
+  if (tempColorIsValid) {
     reply["temperature"] = tempColor.Temperature;
     reply["brightness"] = tempColor.Brightness;
   }
@@ -449,16 +437,16 @@ bool IotsaLedstripMod::putHandler(const char *path, const JsonVariant& request, 
   darkPixels = request["darkPixels"]|darkPixels;
   millisAnimationDuration = request["animation"]|millisAnimationDuration;
   whiteTemperature = request["white"]|whiteTemperature;
-  hslIsSet = request.containsKey("h")||request.containsKey("s")||request.containsKey("l");
-  tiIsSet = request.containsKey("temperature")||request.containsKey("brightness");
-  if (hslIsSet) {
+  hslColorIsValid = request.containsKey("h")||request.containsKey("s")||request.containsKey("l");
+  tempColorIsValid = request.containsKey("temperature")||request.containsKey("brightness");
+  if (hslColorIsValid) {
     isOn = true;
     float h = request["h"]|0;
     float s = request["s"]|0;
     float l = request["l"]|0;
     setHSL(h, s, l);
   } else
-  if (tiIsSet) {
+  if (tempColorIsValid) {
     isOn = true;
     float temp = request["temp"]|0;
     float brightness = request["brightness"]|0;
@@ -536,13 +524,13 @@ void IotsaLedstripMod::configSave() {
   cf.put("b", color.B);
   cf.put("w", color.W);
   
-  if (hasHSL()) {
+  if (hslColorIsValid) {
     IotsaSerial.println("xxxjack saving hsl");
     cf.put("h", hslColor.H);
     cf.put("s", hslColor.S);
     cf.put("l", hslColor.L);
   }
-  if (hasTI()) {
+  if (tempColorIsValid) {
     IotsaSerial.println("xxxjack saving ti");
     cf.put("temp", tempColor.Temperature);
     cf.put("brightness", tempColor.Brightness);
