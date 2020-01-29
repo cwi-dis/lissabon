@@ -90,28 +90,26 @@ protected:
 private:
   void handler();
   void setHSL(float h, float s, float l);
-  void getHSL(float &h, float &s, float &l);
   void setTI(float temp, float brightness);
   void startAnimation(bool quick=false);
   void identify();
   Adafruit_NeoPixel *strip;
   bool isOn;  // Master boolean: if false there is no light.
-  RgbwFColor color;
-  RgbwFColor prevColor;
+
+  RgbwColor color;
+  RgbwColor prevColor;
+
+  Colorspace rgbwSpace;
+
   HslFColor hslColor;
   bool hslColorIsValid;
   TempFColor tempColor;
   bool tempColorIsValid;
-#if 0
-  float r, g, b, w;  // Wanted RGB(W) color
-  float rPrev, gPrev, bPrev, wPrev; // Previous RGB(W) color
-#endif
+
   uint32_t millisStartAnimation;
   int millisAnimationDuration;
   int millisThisAnimationDuration;
-//  float h, s, l;
-//  float temp, brightness;
-  float whiteTemperature = 4000;  // Color temperature of the white channel
+//  float whiteTemperature = 4000;  // Color temperature of the white channel
   uint8_t *buffer;
   int count;  // Number of LEDs
   int bpp; // Number of colors per LED (3 or 4)
@@ -143,65 +141,17 @@ void IotsaLedstripMod::setHSL(float _h, float _s, float _l) {
   hslColor = HslFColor(_h, _s, _l);
   hslColorIsValid = true;
   tempColorIsValid = false;
-  color = (RgbFColor)hslColor;
+  color = rgbwSpace.toRgbw(hslColor);
 }
 
 void IotsaLedstripMod::setTI(float _temp, float _brightness) {
-  if (_temp < 1000 || _temp > 10000) _temp = whiteTemperature; // Cater for coming from RGB or HLS value
+  if (_temp < 1000 || _temp > 10000) _temp = rgbwSpace.WTemperature; // Cater for coming from RGB or HLS value
   tempColor = TempFColor(_temp, _brightness);
   tempColorIsValid = true;
   hslColorIsValid = false;
-  // Extract the white, if we have a 4-channel led strip
-  RgbFColor colorRGB = tempColor;
-  float r = colorRGB.R;
-  float g = colorRGB.G;
-  float b = colorRGB.B;
-  float w = 0;
-  // NOTE: here we need to cater for the temperature of the white,
-  // in case it isn't 6500K (which probably it isn't), which is the white
-  // point of D65 RGB.
-  if (bpp == 4 && whiteTemperature != 0) {
-    // Compute RGB value (in D65 space) of our white LED
-    RgbFColor whiteRGB = TempFColor(whiteTemperature, 1.0);
-    float rWhite = whiteRGB.R;
-    float gWhite = whiteRGB.G;
-    float bWhite = whiteRGB.B;
-    float maxRfactor = r / rWhite;
-    float maxGfactor = g / gWhite;
-    float maxBfactor = b / bWhite;
-    float factor = min(maxRfactor, min(maxGfactor, maxBfactor));
-    // This is our white value, and we subtract the corresponding whiteness from R, G and B
-    w = factor;
-    r -= rWhite*factor;
-    g -= gWhite*factor;
-    b -= bWhite*factor;
-    // Now we multiply everything by 2, because we want brightness==1 to be the maximum amount of light possible
-    // (even if that means the color will be slightly off)
-    r *= 2;
-    g *= 2;
-    b *= 2;
-    w *= 2;
-    if (w > 1) {
-      // If we have too much white we use the RGB leds to give us as much as the extra white as possible
-      // If we go out of bounds the clamping (below) will fix that.
-      float excessWhite = w-1;
-      w = 1;
-      r += rWhite*excessWhite;
-      g += gWhite*excessWhite;
-      b += bWhite*excessWhite;
+  color = rgbwSpace.toRgbw(tempColor);
 
-    }
-  }
-  IFDEBUG IotsaSerial.printf("setTI(%f, %f): r=%f g=%f b=%f w=%f\n", _temp, _brightness, r, g, b, w);
-  if (r < 0) r = 0;
-  if (r > 1) r = 1;
-  if (g < 0) g = 0;
-  if (g > 1) g = 1;
-  if (b < 0) b = 0;
-  if (b > 1) b = 1;
-  if (w < 0) w = 0;
-  if (w > 1) w = 1;
-  color = RgbwFColor(r, g, b, w);
+  IFDEBUG IotsaSerial.printf("setTI(%f, %f): r=%d g=%d b=%d w=%d\n", _temp, _brightness, color.R, color.G, color.B, color.W);
 }
 
 #ifdef IOTSA_WITH_BLE
@@ -286,9 +236,23 @@ IotsaLedstripMod::handler() {
     darkPixels = server->arg("darkPixels").toInt();
     anyChanged = true;
   }
-  if( server->hasArg("white")) {
-    whiteTemperature = server->arg("white").toFloat();
+  bool whiteChanged = false;
+  float whiteTemperature = rgbwSpace.WTemperature;
+  float whiteBrightness = rgbwSpace.WBrightness;
+  if( server->hasArg("whiteTemperature")) {
+    whiteTemperature = server->arg("whiteTemperature").toFloat();
+    whiteChanged = true;
     anyChanged = true;
+  }
+  if( server->hasArg("whiteBrightness")) {
+    whiteBrightness = server->arg("whiteBrightness").toFloat();
+    whiteChanged = true;
+    anyChanged = true;
+  }
+  if (whiteChanged) {
+    rgbwSpace = Colorspace(whiteTemperature, whiteBrightness, false, false);
+    if (hslColorIsValid) setHSL(hslColor.H, hslColor.S, hslColor.L);
+    if (tempColorIsValid) setTI(tempColor.Temperature, tempColor.Brightness);
   }
   String set = "rgb";
   if (server->hasArg("set")) set = server->arg("set");
@@ -309,10 +273,10 @@ IotsaLedstripMod::handler() {
     setTI(temp, brightness);
     anyChanged = true;
   } else {
-    float r=color.R;
-    float g=color.G;
-    float b=color.B;
-    float w=color.W;
+    float r=color.R/255.0;
+    float g=color.G/255.0;
+    float b=color.B/255.0;
+    float w=color.W/255.0;
     if( server->hasArg("r")) {
       hslColorIsValid = false;
       tempColorIsValid = false;
@@ -365,11 +329,11 @@ IotsaLedstripMod::handler() {
   String checked = "";
   if (!hslColorIsValid && !tempColorIsValid) checked = " checked";
   message += "<input type='radio' name='set' value=''" + checked + ">Set RGB value:<br>";
-  message += "Red (0..1): <input type='text' name='r' value='" + String(color.R) +"' ><br>";
-  message += "Green (0..1): <input type='text' name='g' value='" + String(color.G) +"' ><br>";
-  message += "Blue (0..1): <input type='text' name='b' value='" + String(color.B) +"' ><br>";
+  message += "Red (0..1): <input type='text' name='r' value='" + String(color.R/255.0) +"' ><br>";
+  message += "Green (0..1): <input type='text' name='g' value='" + String(color.G/255.0) +"' ><br>";
+  message += "Blue (0..1): <input type='text' name='b' value='" + String(color.B/255.0) +"' ><br>";
   if (bpp == 4) 
-    message += "White (0..1): <input type='text' name='w' value='" + String(color.W) +"' ><br>";
+    message += "White (0..1): <input type='text' name='w' value='" + String(color.W/255.0) +"' ><br>";
 
   checked = "";
   if (hslColorIsValid) {
@@ -391,7 +355,8 @@ IotsaLedstripMod::handler() {
   message += "Dark pixels between lit pixels: <input type='text' name='darkPixels' value='" + String(darkPixels) +"' ><br>";
   message += "Animation duration (ms): <input type='text' name='animation' value='" + String(millisAnimationDuration) +"' ><br>";
   if (bpp == 4) {
-    message += "White LED temperature: <input type='text' name='white' value='" + String(whiteTemperature) +"' ><br>";
+    message += "White LED temperature: <input type='text' name='whiteTemperature' value='" + String(whiteTemperature) +"' ><br>";
+    message += "White LED brightness: <input type='text' name='whiteBrightness' value='" + String(whiteBrightness) +"' ><br>";
   }
   message += "<input type='submit'></form></body></html>";
   server->send(200, "text/html", message);
@@ -412,10 +377,10 @@ String IotsaLedstripMod::info() {
 #endif // IOTSA_WITH_WEB
 
 bool IotsaLedstripMod::getHandler(const char *path, JsonObject& reply) {
-  reply["r"] = color.R;
-  reply["g"] = color.G;
-  reply["b"] = color.B;
-  if (bpp == 4) reply["w"] = color.W;
+  reply["r"] = color.R/255.0;
+  reply["g"] = color.G/255.0;
+  reply["b"] = color.B/255.0;
+  if (bpp == 4) reply["w"] = color.W/255.0;
   if (hslColorIsValid) {
     reply["h"] = hslColor.H;
     reply["s"] = hslColor.S;
@@ -428,7 +393,10 @@ bool IotsaLedstripMod::getHandler(const char *path, JsonObject& reply) {
   reply["darkPixels"] = darkPixels;
   reply["isOn"] = isOn;
   reply["animation"] = millisAnimationDuration;
-  if (bpp == 4) reply["white"] = whiteTemperature;
+  if (bpp == 4) {
+    reply["whiteTemperature"] = rgbwSpace.WTemperature;
+    reply["whiteBrightness"] = rgbwSpace.WBrightness;
+  }
   return true;
 }
 
@@ -436,7 +404,9 @@ bool IotsaLedstripMod::putHandler(const char *path, const JsonVariant& request, 
   if (request["identify"]|0) identify();
   darkPixels = request["darkPixels"]|darkPixels;
   millisAnimationDuration = request["animation"]|millisAnimationDuration;
-  whiteTemperature = request["white"]|whiteTemperature;
+  float whiteTemperature = request["whiteTemperature"]|rgbwSpace.WTemperature;
+  float whiteBrightness = request["whiteBrightness"]|rgbwSpace.WBrightness;
+  rgbwSpace = Colorspace(whiteTemperature, whiteBrightness, false, false);
   hslColorIsValid = request.containsKey("h")||request.containsKey("s")||request.containsKey("l");
   tempColorIsValid = request.containsKey("temperature")||request.containsKey("brightness");
   if (hslColorIsValid) {
@@ -454,10 +424,10 @@ bool IotsaLedstripMod::putHandler(const char *path, const JsonVariant& request, 
   } else {
     // By default look at RGB values (using current values as default)
     isOn = true;
-    float r = color.R;
-    float g = color.G;
-    float b = color.B;
-    float w = color.W;
+    float r = color.R/255.0;
+    float g = color.G/255.0;
+    float b = color.B/255.0;
+    float w = color.W/255.0;
     r = request["r"]|r;
     g = request["g"]|g;
     b = request["b"]|b;
@@ -492,7 +462,10 @@ void IotsaLedstripMod::configLoad() {
   isOn = value;
   cf.get("darkPixels", darkPixels, 0);
   cf.get("animation", millisAnimationDuration, 500);
-  cf.get("white", whiteTemperature, 4000);
+  float whiteTemperature, whiteBrightness;
+  cf.get("whiteTemperature", whiteTemperature, 4000);
+  cf.get("whiteBrightness", whiteBrightness, 1.0);
+  rgbwSpace = Colorspace(whiteTemperature, whiteBrightness, false, false);
   float r, g, b, w;
   cf.get("r", r, 0.0);
   cf.get("g", g, 0.0);
@@ -517,12 +490,13 @@ void IotsaLedstripMod::configSave() {
   cf.put("isOn", isOn);
   cf.put("darkPixels", darkPixels);
   cf.put("animation", millisAnimationDuration);
-  cf.put("white", whiteTemperature);
+  cf.put("whiteTemperature", rgbwSpace.WTemperature);
+  cf.put("whiteBrightness", rgbwSpace.WBrightness);
 
-  cf.put("r", color.R);
-  cf.put("g", color.G);
-  cf.put("b", color.B);
-  cf.put("w", color.W);
+  cf.put("r", color.R/255.0f);
+  cf.put("g", color.G/255.0f);
+  cf.put("b", color.B/255.0f);
+  cf.put("w", color.W/255.0f);
   
   if (hslColorIsValid) {
     IotsaSerial.println("xxxjack saving hsl");
@@ -608,7 +582,7 @@ void IotsaLedstripMod::loop() {
     progress = 1;
     millisStartAnimation = 0;
     prevColor = wanted;
-    IFDEBUG IotsaSerial.printf("IotsaLedstrip: isOn=%d r=%f, g=%f, b=%f, w=%f count=%d darkPixels=%d\n", isOn, color.R, color.G, color.B, color.W, count, darkPixels);
+    IFDEBUG IotsaSerial.printf("IotsaLedstrip: isOn=%d r=%d, g=%d, b=%d, w=%d count=%d darkPixels=%d\n", isOn, color.R, color.G, color.B, color.W, count, darkPixels);
   }
   RgbwFColor cur = RgbwFColor::LinearBlend(wanted, prevColor, progress);
   RgbwColor pixelColor(cur);
