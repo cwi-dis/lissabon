@@ -109,7 +109,7 @@ private:
   uint32_t millisStartAnimation;
   int millisAnimationDuration;
   int millisThisAnimationDuration;
-//  float whiteTemperature = 4000;  // Color temperature of the white channel
+
   uint8_t *buffer;
   int count;  // Number of LEDs
   int bpp; // Number of colors per LED (3 or 4)
@@ -277,31 +277,25 @@ IotsaLedstripMod::handler() {
     float g=color.G/255.0;
     float b=color.B/255.0;
     float w=color.W/255.0;
+    hslColorIsValid = false;
+    tempColorIsValid = false;
     if( server->hasArg("r")) {
-      hslColorIsValid = false;
-      tempColorIsValid = false;
       r = server->arg("r").toFloat();
       anyChanged = true;
     }
     if( server->hasArg("g")) {
-      hslColorIsValid = false;
-      tempColorIsValid = false;
       g = server->arg("g").toFloat();
       anyChanged = true;
     }
     if( server->hasArg("b")) {
-      hslColorIsValid = false;
-      tempColorIsValid = false;
       b = server->arg("b").toFloat();
       anyChanged = true;
     }
     if( bpp == 4 && server->hasArg("w")) {
-      hslColorIsValid = false;
-      tempColorIsValid = false;
       w = server->arg("w").toFloat();
       anyChanged = true;
     }
-    color = RgbwColor(r, g, b, w);
+    color = RgbwFColor(r, g, b, w);
   }
   isOn = true;
   if( server->hasArg("isOn")) {
