@@ -42,15 +42,26 @@ IotsaPixelstripMod pixelstripMod(application);
 // Define this to enable support for touchpads to control the led strip (otherwise only BLE/REST/WEB control)
 #define WITH_TOUCHPADS
 
+// Define this to also enable support for temperature touchpads
+#define WITH_TTOUCHPADS
+
 #ifdef WITH_TOUCHPADS
 #include "iotsaInput.h"
 Touchpad upTouch(12, true, true, true);
 Touchpad downTouch(13, true, true, true);
 UpDownButtons levelDimmer(upTouch, downTouch, true);
+#ifdef WITH_TTOUCHPADS
+Touchpad upTempTouch(14, true, true, true);
+Touchpad downTempTouch(15, true, true, true);
+UpDownButtons tempDimmer(upTempTouch, downTempTouch, false);
+#endif
 //Touchpad(15, true, false, true);
 
 Input* inputs[] = {
   &levelDimmer
+#ifdef WITH_TTOUCHPADS
+  , &tempDimmer
+#endif
 };
 
 IotsaInputMod inputMod(application, inputs, sizeof(inputs)/sizeof(inputs[0]));
@@ -516,10 +527,14 @@ void IotsaLedstripMod::setup() {
   prevColor = color;
   startAnimation();
 #ifdef WITH_TOUCHPADS
-  levelDimmer.bindVar(tempColor.Brightness, 0.0, 1.0, 0.01);
+  levelDimmer.bindVar(tempColor.Brightness, 0.1, 1.0, 0.02);
   levelDimmer.setCallback(std::bind(&IotsaLedstripMod::changedBrightness, this));
   levelDimmer.bindStateVar(isOn);
   levelDimmer.setStateCallback(std::bind(&IotsaLedstripMod::changedOnOff, this));
+#ifdef WITH_TTOUCHPADS
+  tempDimmer.bindVar(tempColor.Temperature, 2200.0, 6500.0, 100.0);
+  tempDimmer.setCallback(std::bind(&IotsaLedstripMod::changedBrightness, this));
+#endif
 #endif
 #ifdef IOTSA_WITH_BLE
   // Set default advertising interval to be between 200ms and 600ms
