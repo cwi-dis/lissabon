@@ -139,12 +139,18 @@ void IotsaLedstripMod::setHandler(uint8_t *_buffer, size_t _count, int _bpp, Iot
     setTI(tempColor.Temperature, tempColor.Brightness);
     prevColor = color;
   }
-  startAnimation();
+  startAnimation(true);
 }
 
 void IotsaLedstripMod::startAnimation(bool quick) {
-  millisStartAnimation = millis();
-  millisThisAnimationDuration = quick ? 1 : millisAnimationDuration;
+  if (quick) {
+    millisStartAnimation = millis()-2;
+    millisThisAnimationDuration = 1;
+  } else {
+    millisStartAnimation = millis();
+    millisThisAnimationDuration = millisAnimationDuration;
+
+  }
   iotsaConfig.postponeSleep(millisThisAnimationDuration+100);
 }
 
