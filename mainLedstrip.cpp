@@ -383,6 +383,12 @@ String IotsaLedstripMod::info() {
   rv += " Or use BLE service " + String(serviceUUID) + ".";
 #endif
   rv += "</p>";
+#ifdef IOTSA_DEBUG_INPUT
+  rv += "<p>Touch 12: value=" + String(upTouch.dbg_lastValue) + ", threshold=" + String(upTouch.threshold) + "<br>\n";
+  rv += "<p>Touch 13: value=" + String(downTouch.dbg_lastValue) + ", threshold=" + String(downTouch.threshold) + "<br>\n";
+  rv += "<p>Touch 14: value=" + String(upTempTouch.dbg_lastValue) + ", threshold=" + String(upTempTouch.threshold) + "<br>\n";
+  rv += "<p>Touch 15: value=" + String(downTempTouch.dbg_lastValue) + ", threshold=" + String(downTempTouch.threshold) + "<br>\n";
+#endif
   return rv;
 }
 #endif // IOTSA_WITH_WEB
