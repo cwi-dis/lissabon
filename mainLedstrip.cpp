@@ -510,13 +510,13 @@ void IotsaLedstripMod::configSave() {
   cf.put("w", color.W/255.0f);
   
   if (hslColorIsValid) {
-    IotsaSerial.println("xxxjack saving hsl");
+    IotsaSerial.println("saving hsl");
     cf.put("h", hslColor.H);
     cf.put("s", hslColor.S);
     cf.put("l", hslColor.L);
   }
   if (tempColorIsValid) {
-    IotsaSerial.println("xxxjack saving ti");
+    IotsaSerial.println("saving ti");
     cf.put("temp", tempColor.Temperature);
     cf.put("brightness", tempColor.Brightness);
   }
@@ -593,13 +593,14 @@ void IotsaLedstripMod::loop() {
   RgbwFColor wanted = RgbwFColor(0);
   if (isOn) wanted = color;
 
-  if (progress < 0 || progress > 1) {
+  if (progress < 0) progress = 0;
+  if (progress > 1) {
     progress = 1;
     millisStartAnimation = 0;
     prevColor = wanted;
     IFDEBUG IotsaSerial.printf("IotsaLedstrip: isOn=%d r=%d, g=%d, b=%d, w=%d count=%d darkPixels=%d\n", isOn, color.R, color.G, color.B, color.W, count, darkPixels);
   }
-  RgbwFColor cur = RgbwFColor::LinearBlend(wanted, prevColor, progress);
+  RgbwFColor cur = RgbwFColor::LinearBlend(prevColor, wanted, progress);
   RgbwColor pixelColor(cur);
 
 #if 0
@@ -654,7 +655,6 @@ bool IotsaLedstripMod::changedBrightness() {
 
 bool IotsaLedstripMod::changedOnOff() {
   // Start the animation to get to the wanted value
-  IotsaSerial.printf("xxxjack changedOnOff %d\n", isOn);
   startAnimation();
   // And prepare for saving (because we don't want to wear out the Flash chip)
   iotsaConfig.postponeSleep(2000);
