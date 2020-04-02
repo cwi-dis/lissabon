@@ -52,6 +52,10 @@ IotsaPixelstripMod::handler() {
   String message = "<html><head><title>Pixelstrip module</title></head><body><h1>Pixelstrip module</h1>";
   message += "<h2>Configuration</h2><form method='get'>GPIO pin: <input name='pin' value='" + String(pin) + "'><br>";
   message += "Number of NeoPixels: <input name='count' value='" + String(count) + "'><br>";
+#define STRINGIFY1(x) #x
+#define STRINGIFY(x) STRINGIFY1(x)
+#define IOTSA_NEOPIXEL_TYPE STRINGIFY(IOTSA_NPB_FEATURE)
+  message += "NeoPixel type: " + String(IOTSA_NEOPIXEL_TYPE) + "<br>";
   message += "LEDs per NeoPixel: " + String(IOTSA_NPB_BPP) + "<br>";
   message += "Gamma (1.0 neutral, 2.2 suggested): <input name='gamma' value='" + String(gamma) + "'><br>";
   message += "<input type='submit'></form>";
