@@ -41,7 +41,9 @@ IotsaBatteryMod batteryMod(application);
 #endif
 
 #include "iotsaInput.h"
+#ifndef WITHOUT_TOUCHPADS
 #define WITH_TOUCHPADS
+#endif
 
 #ifdef WITH_TOUCHPADS
 // Two touchpad pins: off/decrement (long press), on/increment (long press)
@@ -230,6 +232,7 @@ bool IotsaDimmerMod::getHandler(const char *path, JsonObject& reply) {
   reply["illuminance"] = illum;
   reply["isOn"] = isOn;
   reply["animation"] = millisAnimationDuration;
+  reply["gamma"] = gamma;
   return true;
 }
 
@@ -241,7 +244,6 @@ bool IotsaDimmerMod::putHandler(const char *path, const JsonVariant& request, Js
   }
   if (request.containsKey("gamma")) {
     gamma = request["gamma"];
-    isOn = true;
   }
   if (request.containsKey("illum")) {
     illum = request["illum"];
