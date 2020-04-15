@@ -27,3 +27,4 @@ When configured for reasonable power saving options for control over bluetooth (
 The intention (but that hasn't been tested yet as of this writing) is that this allows you to use these dimmers for lighting in an off-grid 12V environment with solar cells charging a car battery without having to worry about the power consumption of the control hardware and software.
 
 An accompanying _iotsaLedstripController_ application should also be available at some point in the future, which will allow you to control a number of _iotsaDimmer_ and _iotsaLedstrip_ modules over Bluetooth LE.
+
