@@ -13,7 +13,14 @@
 
 // CHANGE: Add application includes and declarations here
 
-#define WITH_OTA    // Enable Over The Air updates from ArduinoIDE. Needs at least 1MB flash.
+// Enable Over The Air updates from ArduinoIDE. Needs at least 1MB flash.
+#define WITH_OTA
+// Define this to enable power managemenrt
+#define WITH_BATTERY
+// Define this to enable support for touchpads to control the led strip (otherwise only BLE/REST/WEB control)
+#define WITH_TOUCHPADS
+// Define this to also enable support for temperature touchpads
+#define WITH_TTOUCHPADS
 
 IotsaApplication application("Iotsa LEDstrip Lighting Server");
 IotsaWifiMod wifiMod(application);
@@ -28,22 +35,19 @@ IotsaOtaMod otaMod(application);
 IotsaBLEServerMod bleserverMod(application);
 #endif
 
+#ifdef WITH_BATTERY
 #include "iotsaBattery.h"
 #define PIN_DISABLESLEEP 0
 //#define PIN_VBAT 37
 //#define VBAT_100_PERCENT (12.0/11.0) // 100K and 1M resistors divide by 11, not 10...
 IotsaBatteryMod batteryMod(application);
+#endif
 
 #include "iotsaPixelStrip.h"
 IotsaPixelstripMod pixelstripMod(application);
 
 #include "NPBColorLib.h"
 
-// Define this to enable support for touchpads to control the led strip (otherwise only BLE/REST/WEB control)
-#define WITH_TOUCHPADS
-
-// Define this to also enable support for temperature touchpads
-#define WITH_TTOUCHPADS
 
 #ifdef WITH_TOUCHPADS
 #include "iotsaInput.h"
@@ -71,7 +75,8 @@ IotsaInputMod inputMod(application, inputs, sizeof(inputs)/sizeof(inputs[0]));
 // LED Lighting module. 
 //
 
-class IotsaLedstripMod : public IotsaApiMod, public IotsaPixelsource, public IotsaBLEApiProvider {
+class IotsaLedstripMod : public IotsaApiMod, public IotsaPixelsource, public IotsaBLEApiProvider 
+{
 public:
   using IotsaApiMod::IotsaApiMod;
   void setup();
