@@ -43,7 +43,7 @@ IotsaBLEServerMod bleserverMod(application);
 IotsaBatteryMod batteryMod(application);
 #endif
 
-#include "iotsaPixelStrip.h"
+#include "iotsaPixelstrip.h"
 IotsaPixelstripMod pixelstripMod(application);
 
 #include "NPBColorLib.h"
