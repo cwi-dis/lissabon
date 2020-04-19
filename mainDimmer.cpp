@@ -115,7 +115,8 @@ private:
 };
 
 void IotsaDimmerMod::startAnimation() {
-  int thisDuration = int(millisAnimationDuration * fabs(illum-illumPrev));
+  float newIllum = isOn ? illum : 0;
+  int thisDuration = int(millisAnimationDuration * fabs(newIllum-illumPrev));
   millisAnimationStart = millis();
   millisAnimationEnd = millis() + thisDuration;
   iotsaConfig.postponeSleep(thisDuration+100);
@@ -369,7 +370,8 @@ void IotsaDimmerMod::loop() {
   float progress = float(millis() - millisAnimationStart) / float(thisDur);
   float wantedIllum = illum;
   if (!isOn) wantedIllum = 0;
-  if (progress < 0 || progress >= 1) {
+  if (progress < 0) progress = 0;
+  if (progress >= 1) {
     progress = 1;
     millisAnimationStart = 0;
     illumPrev = wantedIllum;
@@ -389,7 +391,6 @@ void IotsaDimmerMod::loop() {
 
 bool IotsaDimmerMod::touchedOnOff() {
   // Start the animation to get to the wanted value
-  IotsaSerial.printf("xxxjack touchedOnOff isOn=%d\n", isOn);
   startAnimation();
   // And prepare for saving (because we don't want to wear out the Flash chip)
   iotsaConfig.postponeSleep(2000);
