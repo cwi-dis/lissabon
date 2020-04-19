@@ -50,15 +50,21 @@ IotsaBatteryMod batteryMod(application);
 Touchpad touchdown(12, true, true, true);
 Touchpad touchup(13, true, true, true);
 UpDownButtons encoder(touchdown, touchup, true);
-#else
-// A rotary encoder for increment/decrement and a button for on/off.
-Button button(4, true, false, true);
-RotaryEncoder encoder(16, 17);
-#endif
 
 Input* inputs[] = {
   &encoder
 };
+#else
+// A rotary encoder for increment/decrement and a button for on/off.
+Button button(4, true, false, true);
+RotaryEncoder encoder(16, 17);
+
+Input* inputs[] = {
+  &button,
+  &encoder
+};
+#endif
+
 
 
 IotsaInputMod inputMod(application, inputs, sizeof(inputs)/sizeof(inputs[0]));
@@ -383,6 +389,7 @@ void IotsaDimmerMod::loop() {
 
 bool IotsaDimmerMod::touchedOnOff() {
   // Start the animation to get to the wanted value
+  IotsaSerial.printf("xxxjack touchedOnOff isOn=%d\n", isOn);
   startAnimation();
   // And prepare for saving (because we don't want to wear out the Flash chip)
   iotsaConfig.postponeSleep(2000);
