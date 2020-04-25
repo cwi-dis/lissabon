@@ -37,7 +37,6 @@ IotsaBatteryMod batteryMod(application);
 #define PIN_OUTPUT 2
 #ifdef ESP32
 #define CHANNEL_OUTPUT 0
-#define FREQ_OUTPUT 5000
 #endif
 
 #include "iotsaInput.h"
@@ -100,6 +99,7 @@ protected:
 //  static constexpr UUIDstring intervalUUID = "F3390006-F793-4D0C-91BB-C91EEB92A1A4";
 #endif // IOTSA_WITH_BLE
 private:
+  void setupPwm();
   void handler();
   void startAnimation();
   void identify();
@@ -108,6 +108,9 @@ private:
   float illumPrev;
   float minLevel;
   float gamma;
+#ifdef ESP32
+  float pwmFrequency;
+#endif
   uint32_t millisAnimationStart;
   uint32_t millisAnimationEnd;
   int millisAnimationDuration;
@@ -176,25 +179,50 @@ IotsaDimmerMod::handler() {
   bool anyChanged = false;
   if (server->hasArg("identify")) identify();
   if( server->hasArg("animation")) {
-    millisAnimationDuration = server->arg("animation").toInt();
-    anyChanged = true;
+    int val = server->arg("animation").toInt();
+    if (val != millisAnimationDuration) {
+      millisAnimationDuration = val;
+      anyChanged = true;
+    }
   }
   if (server->hasArg("minLevel")) {
-    minLevel = server->arg("minLevel").toFloat();
-    anyChanged = true;
+    float val = server->arg("minLevel").toFloat();
+    if (val != minLevel) {
+      minLevel = val;
+      anyChanged = true;
+    }
   }
   if (server->hasArg("gamma")) {
-    gamma = server->arg("gamma").toFloat();
-    anyChanged = true;
+    float val = server->arg("gamma").toFloat();
+    if (val != gamma) {
+      gamma = val;
+      anyChanged = true;
+    }
   }
+#ifdef ESP32
+  if (server->hasArg("pwmFrequency")) {
+    float val = server->arg("pwmFrequency").toFloat();
+    if (val != pwmFrequency) {
+      pwmFrequency = val;
+      setupPwm();
+      anyChanged = true;
+    }
+  }
+#endif
   if( server->hasArg("illuminance")) {
-    illum = server->arg("illuminance").toFloat();
-    isOn = (illum != 0);
-    anyChanged = true;
+    float val = server->arg("illuminance").toFloat();
+    if (val != illum) {
+      illum = val;
+      isOn = (illum != 0);
+      anyChanged = true;
+    }
   }
   if( server->hasArg("isOn")) {
-    isOn = server->arg("isOn").toInt();
-    anyChanged = true;
+    bool val = server->arg("isOn").toInt();
+    if (val != isOn) {
+      isOn = val;
+      anyChanged = true;
+    }
   }
 
   if (anyChanged) {
@@ -217,6 +245,9 @@ IotsaDimmerMod::handler() {
   message += "Dimmer minimum (0..1): <input type='text' name='minLevel' value='" + String(minLevel) +"'><br>";
   message += "Animation duration (ms): <input type='text' name='animation' value='" + String(millisAnimationDuration) +"'><br>";
   message += "Gamma (1.0 or 2.2): <input type='text' name='gamma' value='" + String(gamma) +"'><br>";
+#ifdef ESP32
+  message += "PWM Frequency: <input type='text' name='pwmFrequency' value='" + String(pwmFrequency) +"'><br>";
+#endif
   message += "<input type='submit' value='Set'></form></body></html>";
   server->send(200, "text/html", message);
 }
@@ -240,6 +271,9 @@ bool IotsaDimmerMod::getHandler(const char *path, JsonObject& reply) {
   reply["isOn"] = isOn;
   reply["animation"] = millisAnimationDuration;
   reply["gamma"] = gamma;
+#ifdef ESP32
+  reply["pwmFrequency"] = pwmFrequency;
+#endif
   return true;
 }
 
@@ -259,6 +293,12 @@ bool IotsaDimmerMod::putHandler(const char *path, const JsonVariant& request, Js
   if (request.containsKey("isOn")) {
     isOn = request["isOn"];
   }
+#ifdef ESP32
+  if (request.containsKey("pwmFrequency")) {
+    pwmFrequency = request["pwmFrequency"];
+    setupPwm();
+  }
+#endif
   configSave();
   startAnimation();
   return true;
@@ -283,6 +323,9 @@ void IotsaDimmerMod::configLoad() {
   cf.get("animation", millisAnimationDuration, 500);
   cf.get("minLevel", minLevel, 0.1);
   cf.get("gamma", gamma, 1.0);
+#ifdef ESP32
+  cf.get("pwmFrequency", pwmFrequency, 5000.0);
+#endif
 }
 
 void IotsaDimmerMod::configSave() {
@@ -293,6 +336,18 @@ void IotsaDimmerMod::configSave() {
   cf.put("animation", millisAnimationDuration);
   cf.put("minLevel", minLevel);
   cf.put("gamma", gamma);
+#ifdef ESP32
+  cf.put("pwmFrequency", pwmFrequency);
+#endif
+}
+
+void IotsaDimmerMod::setupPwm() {
+#ifdef ESP32
+  ledcSetup(CHANNEL_OUTPUT, pwmFrequency, 8);
+  ledcAttachPin(PIN_OUTPUT, CHANNEL_OUTPUT);
+#else
+  pinMode(PIN_OUTPUT, OUTPUT);
+#endif
 }
 
 void IotsaDimmerMod::setup() {
@@ -302,13 +357,8 @@ void IotsaDimmerMod::setup() {
 #ifdef PIN_DISABLESLEEP
   batteryMod.setPinDisableSleep(PIN_DISABLESLEEP);
 #endif
-#ifdef ESP32
-  ledcSetup(CHANNEL_OUTPUT, FREQ_OUTPUT, 8);
-  ledcAttachPin(PIN_OUTPUT, CHANNEL_OUTPUT);
-#else
-  pinMode(PIN_OUTPUT, OUTPUT);
-#endif
   configLoad();
+  setupPwm();
   illumPrev = isOn ? illum : 0;
   startAnimation();
   encoder.setCallback(std::bind(&IotsaDimmerMod::changedValue, this));
