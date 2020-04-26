@@ -351,6 +351,8 @@ void IotsaDimmerMod::setupPwm() {
 }
 
 void IotsaDimmerMod::setup() {
+  // Allow switching the dimmer to iotsa config mode over BLE.
+  batteryMod.allowBLEConfigModeSwitch();
 #ifdef PIN_VBAT
   batteryMod.setPinVBat(PIN_VBAT, VBAT_100_PERCENT);
 #endif
