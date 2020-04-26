@@ -11,12 +11,14 @@ It is intended mainly to be used in lighting applications.
 
 ## Hardware construction
 
-To be supplied.
+The `extras` folder contains the [circuit diagram](extras/hardware_schematic.pdf) and a [stripboard layout](extras/hardware_board.pdf), plus the underlying [fritzing file](hardware.fzz).
+
+There is also a 3D-printable case as a [Fusion 360 Design](extras/pluggable-12v-dimmer.f3d), which works if you have wired up your 12V system using ancient KPN (dutch telephone company) plugs and outlets, but you can probably adapt it.
 
 ## Configuration
 
 At compile time you select whether to use a rotary encoder, buttons or touchpads
-to control the dimmer (depending on the hardware you built).
+to control the dimmer (depending on the hardware you built). Alternatively, if you select neither of those, you can build a dimmer that can only be controlled over WiFi or BLE (to build into a wall, for example).
 
 ## Usage
 

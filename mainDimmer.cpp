@@ -40,11 +40,12 @@ IotsaBatteryMod batteryMod(application);
 #endif
 
 #include "iotsaInput.h"
-#ifndef WITHOUT_TOUCHPADS
-#define WITH_TOUCHPADS
-#endif
-
+// Define WITH_TOUCHPADS to enable user interface consisting of two touchpads (off/down and on/up)
+// #define WITH_TOUCHPADS
+// Define WITH_ROTARY to enable user interface consisting of a rotary encoder (up/down) and a button (on/off)
+// #define WITH_ROTARY
 #ifdef WITH_TOUCHPADS
+#define WITH_UI
 // Two touchpad pins: off/decrement (long press), on/increment (long press)
 Touchpad touchdown(12, true, true, true);
 Touchpad touchup(13, true, true, true);
@@ -53,7 +54,9 @@ UpDownButtons encoder(touchdown, touchup, true);
 Input* inputs[] = {
   &encoder
 };
-#else
+#endif // WITH_TOUCHPADS
+#ifdef WITH_ROTARY
+#define WITH_UI
 // A rotary encoder for increment/decrement and a button for on/off.
 Button button(4, true, false, true);
 RotaryEncoder encoder(16, 17);
@@ -62,11 +65,12 @@ Input* inputs[] = {
   &button,
   &encoder
 };
-#endif
+#endif // WITH_ROTARY
 
 
-
+#ifdef WITH_UI
 IotsaInputMod inputMod(application, inputs, sizeof(inputs)/sizeof(inputs[0]));
+#endif
 
 //
 // LED Lighting module. 
@@ -363,13 +367,15 @@ void IotsaDimmerMod::setup() {
   setupPwm();
   illumPrev = isOn ? illum : 0;
   startAnimation();
+#ifdef WITH_UI
   encoder.setCallback(std::bind(&IotsaDimmerMod::changedValue, this));
 #ifdef WITH_TOUCHPADS
   // Bind up/down buttons to variable illum, ranging from minLevel to 1.0 in 25 steps
   encoder.bindVar(illum, minLevel, 1.0, 0.02);
   encoder.bindStateVar(isOn);
   encoder.setStateCallback(std::bind(&IotsaDimmerMod::touchedOnOff, this));
-#else
+#endif // WITH_TOUCHPADS
+#ifdef WITH_ROTARY
   button.setCallback(std::bind(&IotsaDimmerMod::touchedOnOff, this));
   // Bind button to isOn (toggling it on every press)
   button.bindVar(isOn, true);
@@ -377,7 +383,8 @@ void IotsaDimmerMod::setup() {
   encoder.bindVar(illum, minLevel, 1.0, 0.01);
   // And if the rotary encoder does more than 2 steps per second we speed up
   encoder.setAcceleration(500);
-#endif
+#endif // WITH_ROTARY
+#endif // WITH_UI
 
 #ifdef IOTSA_WITH_BLE
   // Set default advertising interval to be between 200ms and 600ms
