@@ -11,8 +11,6 @@
 #include "iotsaLed.h"
 #include "iotsaConfigFile.h"
 
-#include "display.h"
-Display *display;
 
 // CHANGE: Add application includes and declarations here
 
@@ -37,16 +35,12 @@ Touchpad touchpad12(12, true, false, true);
 Touchpad touchpad13(13, true, false, true);
 Touchpad touchpad14(14, true, false, true);
 Touchpad touchpad15(15, true, false, true);
-Button button(0, true, false, true);
-RotaryEncoder encoder(4, 2);
 
 Input* inputs[] = {
   &touchpad12,
   &touchpad13,
   &touchpad14,
-  &touchpad15,
-  &button,
-  &encoder
+  &touchpad15
 };
 
 IotsaInputMod touchMod(application, inputs, sizeof(inputs)/sizeof(inputs[0]));
@@ -72,7 +66,6 @@ public:
   void loop();
 
 protected:
-  void _setupDisplay();
   bool getHandler(const char *path, JsonObject& reply);
   bool putHandler(const char *path, const JsonVariant& request, JsonObject& reply);
   void deviceFound(BLEAdvertisedDevice& device);
@@ -82,67 +75,29 @@ private:
   bool touch13();
   bool touch14();
   bool touch15();
-  bool buttonPress();
-  bool encoderChanged();
-  void updateDisplay();
 };
-
-void 
-IotsaLedstripControllerMod::updateDisplay() {
-  IotsaSerial.print(bleClientMod.devices.size());
-  IotsaSerial.println(" strips:");
-
-  display->clearStrips();
-  int index = 0;
-  for (auto& elem : bleClientMod.devices) {
-    index++;
-    std::string name = elem.first;
-    IotsaBLEClientConnection* conn = elem.second;
-    IotsaSerial.printf("device %s, available=%d\n", name.c_str(), conn->available());
-    display->addStrip(index, name, conn->available());
-  }
-  display->show();
-}
 
 bool
 IotsaLedstripControllerMod::touch12() {
   IFDEBUG IotsaSerial.println("touch12()");
-  updateDisplay();
   return true;
 }
 
 bool
 IotsaLedstripControllerMod::touch13() {
   IFDEBUG IotsaSerial.println("touch13()");
-  updateDisplay();
   return true;
 }
 
 bool
 IotsaLedstripControllerMod::touch14() {
   IFDEBUG IotsaSerial.println("touch14()");
-  updateDisplay();
   return true;
 }
 
 bool
 IotsaLedstripControllerMod::touch15() {
   IFDEBUG IotsaSerial.println("touch15()");
-  updateDisplay();
-  return true;
-}
-
-bool
-IotsaLedstripControllerMod::buttonPress() {
-  IFDEBUG IotsaSerial.println("buttonPress()");
-  iotsaConfig.postponeSleep(4000);
-  return true;
-}
-
-bool
-IotsaLedstripControllerMod::encoderChanged() {
-  IFDEBUG IotsaSerial.println("encoderChanged()");
-  iotsaConfig.postponeSleep(4000);
   return true;
 }
 
@@ -178,28 +133,19 @@ void IotsaLedstripControllerMod::setup() {
 #ifdef PIN_DISABLESLEEP
   batteryMod.setPinDisableSleep(PIN_DISABLESLEEP);
 #endif
-  _setupDisplay();
   touchpad12.setCallback(std::bind(&IotsaLedstripControllerMod::touch12, this));
   touchpad13.setCallback(std::bind(&IotsaLedstripControllerMod::touch13, this));
   touchpad14.setCallback(std::bind(&IotsaLedstripControllerMod::touch14, this));
   touchpad15.setCallback(std::bind(&IotsaLedstripControllerMod::touch15, this));
-  button.setCallback(std::bind(&IotsaLedstripControllerMod::buttonPress, this));
-  encoder.setCallback(std::bind(&IotsaLedstripControllerMod::encoderChanged, this));
   auto callback = std::bind(&IotsaLedstripControllerMod::deviceFound, this, std::placeholders::_1);
   bleClientMod.setDeviceFoundCallback(callback);
   bleClientMod.setServiceFilter(ledstripServiceUUID);
-}
-
-void IotsaLedstripControllerMod::_setupDisplay() {
-  if (display == NULL) display = new Display();
-  updateDisplay();
 }
 
 void IotsaLedstripControllerMod::deviceFound(BLEAdvertisedDevice& device) {
   IFDEBUG IotsaSerial.printf("Found iotsaLedstrip %s\n", device.getName().c_str());
   // Add the device, or update the connection information
   if (bleClientMod.addDevice(device.getName(), device)) {
-    updateDisplay();
   }
 }
 
@@ -220,4 +166,3 @@ void setup(void){
 void loop(void){
   application.loop();
 }
-
