@@ -16,7 +16,7 @@
 
 #define WITH_OTA    // Enable Over The Air updates from ArduinoIDE. Needs at least 1MB flash.
 
-IotsaApplication application("Iotsa LEDstrip Controller");
+IotsaApplication application("Iotsa BLE Dimmer");
 IotsaWifiMod wifiMod(application);
 
 #ifdef WITH_OTA
@@ -48,14 +48,14 @@ IotsaInputMod touchMod(application, inputs, sizeof(inputs)/sizeof(inputs[0]));
 #include "iotsaBLEClient.h"
 IotsaBLEClientMod bleClientMod(application);
 
-// UUID of service advertised by iotsaLedstrip devices
+// UUID of service advertised by iotsaLedstrip and iotsaDimmer devices
 BLEUUID ledstripServiceUUID("153C0001-D28E-40B8-84EB-7F64B56D4E2E");
 
 //
 // LED Lighting control module. 
 //
 
-class IotsaLedstripControllerMod : public IotsaApiMod {
+class iotsaBLEDimmerMod : public IotsaApiMod {
 public:
   using IotsaApiMod::IotsaApiMod;
   void setup();
@@ -78,83 +78,83 @@ private:
 };
 
 bool
-IotsaLedstripControllerMod::touch12() {
+iotsaBLEDimmerMod::touch12() {
   IFDEBUG IotsaSerial.println("touch12()");
   return true;
 }
 
 bool
-IotsaLedstripControllerMod::touch13() {
+iotsaBLEDimmerMod::touch13() {
   IFDEBUG IotsaSerial.println("touch13()");
   return true;
 }
 
 bool
-IotsaLedstripControllerMod::touch14() {
+iotsaBLEDimmerMod::touch14() {
   IFDEBUG IotsaSerial.println("touch14()");
   return true;
 }
 
 bool
-IotsaLedstripControllerMod::touch15() {
+iotsaBLEDimmerMod::touch15() {
   IFDEBUG IotsaSerial.println("touch15()");
   return true;
 }
 
 #ifdef IOTSA_WITH_WEB
 void
-IotsaLedstripControllerMod::handler() {
+iotsaBLEDimmerMod::handler() {
 }
 
-String IotsaLedstripControllerMod::info() {
+String iotsaBLEDimmerMod::info() {
   return "";
 }
 #endif // IOTSA_WITH_WEB
 
-bool IotsaLedstripControllerMod::getHandler(const char *path, JsonObject& reply) {
+bool iotsaBLEDimmerMod::getHandler(const char *path, JsonObject& reply) {
   return true;
 }
 
-bool IotsaLedstripControllerMod::putHandler(const char *path, const JsonVariant& request, JsonObject& reply) {
+bool iotsaBLEDimmerMod::putHandler(const char *path, const JsonVariant& request, JsonObject& reply) {
   return true;
 }
 
-void IotsaLedstripControllerMod::serverSetup() {
+void iotsaBLEDimmerMod::serverSetup() {
 }
 
 
-void IotsaLedstripControllerMod::configLoad() {
+void iotsaBLEDimmerMod::configLoad() {
 }
 
-void IotsaLedstripControllerMod::configSave() {
+void iotsaBLEDimmerMod::configSave() {
 }
 
-void IotsaLedstripControllerMod::setup() {
+void iotsaBLEDimmerMod::setup() {
 #ifdef PIN_DISABLESLEEP
   batteryMod.setPinDisableSleep(PIN_DISABLESLEEP);
 #endif
-  touchpad12.setCallback(std::bind(&IotsaLedstripControllerMod::touch12, this));
-  touchpad13.setCallback(std::bind(&IotsaLedstripControllerMod::touch13, this));
-  touchpad14.setCallback(std::bind(&IotsaLedstripControllerMod::touch14, this));
-  touchpad15.setCallback(std::bind(&IotsaLedstripControllerMod::touch15, this));
-  auto callback = std::bind(&IotsaLedstripControllerMod::deviceFound, this, std::placeholders::_1);
+  touchpad12.setCallback(std::bind(&iotsaBLEDimmerMod::touch12, this));
+  touchpad13.setCallback(std::bind(&iotsaBLEDimmerMod::touch13, this));
+  touchpad14.setCallback(std::bind(&iotsaBLEDimmerMod::touch14, this));
+  touchpad15.setCallback(std::bind(&iotsaBLEDimmerMod::touch15, this));
+  auto callback = std::bind(&iotsaBLEDimmerMod::deviceFound, this, std::placeholders::_1);
   bleClientMod.setDeviceFoundCallback(callback);
   bleClientMod.setServiceFilter(ledstripServiceUUID);
 }
 
-void IotsaLedstripControllerMod::deviceFound(BLEAdvertisedDevice& device) {
-  IFDEBUG IotsaSerial.printf("Found iotsaLedstrip %s\n", device.getName().c_str());
+void iotsaBLEDimmerMod::deviceFound(BLEAdvertisedDevice& device) {
+  IFDEBUG IotsaSerial.printf("Found iotsaLedstrip/iotsaDimmer %s\n", device.getName().c_str());
   // Add the device, or update the connection information
   if (bleClientMod.addDevice(device.getName(), device)) {
   }
 }
 
-void IotsaLedstripControllerMod::loop() {
+void iotsaBLEDimmerMod::loop() {
 
 }
 
 // Instantiate the Led module, and install it in the framework
-IotsaLedstripControllerMod ledstripControllerMod(application);
+iotsaBLEDimmerMod bleDimmerControllerMod(application);
 
 // Standard setup() method, hands off most work to the application framework
 void setup(void){
