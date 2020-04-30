@@ -15,6 +15,8 @@
 // CHANGE: Add application includes and declarations here
 
 #define WITH_OTA    // Enable Over The Air updates from ArduinoIDE. Needs at least 1MB flash.
+#define LED_PIN 22  // Define to turn on the LED when powered and not sleeping.
+
 
 IotsaApplication application("Iotsa BLE Dimmer");
 IotsaWifiMod wifiMod(application);
@@ -181,6 +183,10 @@ void IotsaBLEDimmerMod::configSave() {
 }
 
 void IotsaBLEDimmerMod::setup() {
+#ifdef LED_PIN
+  pinMode(LED_PIN, OUTPUT);
+  digitalWrite(LED_PIN, LOW);
+#endif
 #ifdef PIN_DISABLESLEEP
   batteryMod.setPinDisableSleep(PIN_DISABLESLEEP);
 #endif
