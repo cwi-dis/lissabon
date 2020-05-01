@@ -19,11 +19,15 @@ public:
   void setServiceFilter(const BLEUUID& serviceUUID);
   void setManufacturerFilter(uint16_t manufacturerID);
 
-  // These are all the devices ever seen. They are saved persistently.
+  // These are all the known devices. They are saved persistently.
   std::map<std::string, IotsaBLEClientConnection*> devices;
-  bool addDevice(std::string id, BLEAdvertisedDevice& device);
+  IotsaBLEClientConnection* addDevice(std::string id);
+  IotsaBLEClientConnection* addDevice(String id);
+  IotsaBLEClientConnection* getDevice(std::string id);
+  IotsaBLEClientConnection* getDevice(String id);
   void delDevice(std::string id);
-  void clearDevicesSeen();
+  void delDevice(String id);
+  bool deviceSeen(std::string id, BLEAdvertisedDevice& device, bool add=false);
 protected:
   void configLoad();
   void configSave();
@@ -36,7 +40,6 @@ protected:
   BLEUUID* serviceFilter = NULL;
   uint16_t manufacturerFilter;
   bool hasManufacturerFilter = false;
-  std::map<std::string, IotsaBLEClientConnection*> connections;
 };
 
 #endif

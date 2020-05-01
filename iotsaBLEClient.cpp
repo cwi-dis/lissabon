@@ -96,19 +96,45 @@ void IotsaBLEClientMod::onResult(BLEAdvertisedDevice advertisedDevice) {
   callback(advertisedDevice);
 }
 
-bool IotsaBLEClientMod::addDevice(std::string id, BLEAdvertisedDevice& device) {
-  IotsaBLEClientConnection *dev = NULL;
+IotsaBLEClientConnection* IotsaBLEClientMod::addDevice(std::string id) {
   auto it = devices.find(id);
   if (it == devices.end()) {
     // Device with this ID doesn't exist yet. Add it.
-    dev = new IotsaBLEClientConnection(id);
+    IotsaBLEClientConnection* dev = new IotsaBLEClientConnection(id);
     devices[id] = dev;
     configSave();
-  } else {
-    dev = it->second;
+    return dev;
   }
-  // And we always tell the device about the advertisement getManufacturerData
-  return dev->setDevice(device);
+  return it->second;
+}
+
+IotsaBLEClientConnection* IotsaBLEClientMod::addDevice(String id) {
+  return addDevice(std::string(id.c_str()));
+}
+
+IotsaBLEClientConnection* IotsaBLEClientMod::getDevice(std::string id) {
+  auto it = devices.find(id);
+  if (it == devices.end()) {
+    return NULL;
+  }
+  return it->second;
+}
+
+IotsaBLEClientConnection* IotsaBLEClientMod::getDevice(String id) {
+  return getDevice(std::string(id.c_str()));
+}
+
+bool IotsaBLEClientMod::deviceSeen(std::string id, BLEAdvertisedDevice& device, bool add) {
+  IotsaBLEClientConnection *dev;
+  if (add) {
+    dev = addDevice(id);
+  } else {
+    dev = getDevice(id);
+  }
+  if (dev == NULL) return false;
+  // And we tell the device about the advertisement getManufacturerData
+  dev->setDevice(device);
+  return true;
 }
 
 void IotsaBLEClientMod::delDevice(std::string id) {
@@ -116,8 +142,7 @@ void IotsaBLEClientMod::delDevice(std::string id) {
   configSave();
 }
 
-void IotsaBLEClientMod::clearDevicesSeen() {
-  for (auto it : devices) {
-    it.second->clearDevice();
-  }
+
+void IotsaBLEClientMod::delDevice(String id) {
+  delDevice(std::string(id.c_str()));
 }
