@@ -181,6 +181,7 @@ void IotsaBLEDimmerMod::buttonChanged() {
 void
 IotsaBLEDimmerMod::handler() {
   bool anyChanged = false;
+  bool dimmerChanged = false;
   if (server->hasArg("dimmer1")) {
     String value = server->arg("dimmer1");
     if (value != nameDimmer1) {
@@ -191,44 +192,165 @@ IotsaBLEDimmerMod::handler() {
     }
   }
   if (server->hasArg("isOn1")) {
-    isOn1 = server->arg("isOn1").toInt();
-    anyChanged = true;
+    int val = server->arg("isOn1").toInt();
+    if (val != isOn1) {
+      isOn1 = val;
+      dimmerChanged = true;
+      anyChanged = true;
+    }
   }
   if (server->hasArg("level1")) {
-    isOn1 = server->arg("level1").toFloat();
-    anyChanged = true;
+    float val = server->arg("level1").toFloat();
+    if (val != level1) {
+      level1 = val;
+      dimmerChanged = true;
+      anyChanged = true;
+    }
   }
   if (server->hasArg("minLevel1")) {
-    isOn1 = server->arg("minLevel1").toFloat();
-    anyChanged = true;
+    float val = server->arg("minLevel1").toFloat();
+    if (val != minLevel1) {
+      minLevel1 = val;
+      dimmerChanged = true;
+      anyChanged = true;
+    }
   }
+  if (dimmerChanged) {
+    // xxxjack send to dimmer
+  }
+#ifdef WITH_SECOND_DIMMER
+  dimmerChanged = false;
+  if (server->hasArg("dimmer2")) {
+    String value = server->arg("dimmer2");
+    if (value != nameDimmer2) {
+      if (nameDimmer2) bleClientMod.delDevice(nameDimmer2);
+      nameDimmer2 = value;
+      if (value) bleClientMod.addDevice(nameDimmer2);
+      anyChanged = true;
+    }
+  }
+  if (server->hasArg("isOn2")) {
+    int val = server->arg("isOn2").toInt();
+    if (val != isOn2) {
+      isOn2 = val;
+      dimmerChanged = true;
+      anyChanged = true;
+    }
+  }
+  if (server->hasArg("level2")) {
+    float val = server->arg("level2").toFloat();
+    if (val != level2) {
+      level2 = val;
+      dimmerChanged = true;
+      anyChanged = true;
+    }
+  }
+  if (server->hasArg("minLevel2")) {
+    float val = server->arg("minLevel2").toFloat();
+    if (val != minLevel2) {
+      minLevel2 = val;
+      dimmerChanged = true;
+      anyChanged = true;
+    }
+  }
+  if (dimmerChanged) {
+    // xxxjack send to dimmer
+  }
+#endif // WITH_SECOND_DIMMER
   if (anyChanged) {
     configSave();
-    // xxxjack send changes to dimmers
   }
-  String message = "<html><head><title>BLE Dimmers</head><body><h1>BLE Dimmers</h1>";
+  String message = "<html><head><title>BLE Dimmers</title></head><body><h1>BLE Dimmers</h1>";
+
+  message += "<h2>Dimmer 1 (" + nameDimmer1 + ") operation</h2><form method='get'>";
+  IotsaBLEClientConnection *dimmer = bleClientMod.getDevice(nameDimmer1);
+  if (dimmer == NULL || !dimmer->available()) message += "<em>(dimmer may be unavailable)</em><br>";
+  String checkedOn = isOn1 ? "checked" : "";
+  String checkedOff = !isOn1 ? "checked " : "";
+  message += "<input type='radio' name='isOn1'" + checkedOff + " value='0'>Off <input type='radio' " + checkedOn + " name='isOn1' value='1'>On</br>";
+  message += "Level (0.0..1.0): <input name='level1' value='" + String(level1) + "'></br>";
+  message += "<input type='submit'></form>";
+#ifdef WITH_SECOND_DIMMER
+  message += "<h2>Dimmer 2 (" + nameDimmer2 + ") operation</h2><form method='get'>";
+  dimmer = bleClientMod.getDevice(nameDimmer2);
+  if (dimmer == NULL || !dimmer->available()) message += "<em>(dimmer may be unavailable)</em><br>";
+  checkedOn = isOn2 ? "checked" : "";
+  checkedOff = !isOn2 ? "checked" : "";
+  message += "<input type='radio' name='isOn2'" + checkedOff + " value='0'>Off <input type='radio' " + checkedOn + " name='isOn2' value='1'>On</br>";
+  message += "Level (0.0..1.0): <input name='level2' value='" + String(level2) + "'></br>";
+  message += "<input type='submit'></form>";
+#endif // WITH_SECOND_DIMMER
+  message += "<h2>Dimmer 1 configuration</h2><form method='get'>";
+  message += "BLE name: <input name='dimmer1' value='" + nameDimmer1 + "'><br>";
+  message += "Min Level (0.0..1.0): <input name='minLevel1' value='" + String(minLevel1) + "'></br>";
+  message += "<input type='submit'></form>";
+#ifdef WITH_SECOND_DIMMER
+  message += "<h2>Dimmer 2 configuration</h2><form method='get'>";
+  message += "BLE name: <input name='dimmer2' value='" + nameDimmer2 + "'><br>";
+  message += "Min Level (0.0..1.0): <input name='minLevel2' value='" + String(minLevel2) + "'></br>";
+  message += "<input type='submit'></form>";
+#endif // WITH_SECOND_DIMMER
+  message += "<h2>Available BLE dimmer devices</h2>";
+  if (unknownDimmers.size() == 0) {
+    message += "<p>No unassigned BLE dimmer devices seen recently.</p>";
+  } else {
+    message += "<ul>";
+    for (auto it: unknownDimmers) {
+      message += "<li>" + String(it.c_str()) + "</li>";
+    }
+    message += "</ul>";
+  }
+  message += "</body></html>";
+  server->send(200, "text/html", message);
 }
 
 String IotsaBLEDimmerMod::info() {
-  return "";
+
+  String message = "Built with BLE Dimmer module. See <a href='/bledimmer'>/bledimmer</a> to change settings or <a href='/api/bledimmer'>/api/bledimmer</a> for REST API.<br>";
+  message += "Dimmer1: ";
+  message += nameDimmer1;
+  if (!isOn1) {
+    message += " off";
+  } else {
+    message += " on (" + String(int(level1*100)) + "%)";
+  }
+  message += "<br>";
+#ifdef WITH_SECOND_DIMMER
+  message += "Dimmer2: ";
+  message += nameDimmer2;
+  if (!isOn2) {
+    message += " off";
+  } else {
+    message += " on (" + String(int(level2*100)) + "%)";
+  }
+  message += "<br>";
+#endif // WITH_SECOND_DIMMER
+  return message;
 }
 #endif // IOTSA_WITH_WEB
 
 bool IotsaBLEDimmerMod::getHandler(const char *path, JsonObject& reply) {
+  // xxxjack need to distinguish between config and operational parameters
   reply["dimmer1"] = nameDimmer1;
+  IotsaBLEClientConnection *dimmer = bleClientMod.getDevice(nameDimmer1);
+  reply["available1"] = (bool)(dimmer != NULL && dimmer->available());
   reply["isOn1"] = isOn1;
   reply["level1"] = level1;
   reply["minLevel1"] = minLevel1;
 #ifdef WITH_SECOND_DIMMER
   reply["dimmer2"] = nameDimmer2;
+  dimmer = bleClientMod.getDevice(nameDimmer2);
+  reply["available2"] = (bool)(dimmer != NULL && dimmer->available());
   reply["isOn2"] = isOn2;
   reply["level2"] = level2;
   reply["minLevel2"] = minLevel2;
 #endif
+  // xxxjack should we return unassigned dimmers?
   return true;
 }
 
 bool IotsaBLEDimmerMod::putHandler(const char *path, const JsonVariant& request, JsonObject& reply) {
+  // xxxjack need to distinguish between config and operational parameters
   bool anyChanged = false;
   JsonObject reqObj = request.as<JsonObject>();
   if (reqObj.containsKey("dimmer1")) {
