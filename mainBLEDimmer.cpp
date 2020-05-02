@@ -44,7 +44,7 @@ UpDownButtons encoder1(touch1down, touch1up, true);
 Touchpad touch2down(14, true, true, true);
 Touchpad touch2up(15, true, true, true);
 UpDownButtons encoder2(touch2down, touch2up, true);
-#endif
+#endif // WITH_SECOND_DIMMER
 
 Input* inputs[] = {
   &encoder1,
@@ -494,15 +494,16 @@ void IotsaBLEDimmerMod::setup() {
 }
 
 void IotsaBLEDimmerMod::deviceFound(BLEAdvertisedDevice& device) {
-  IFDEBUG IotsaSerial.printf("deviceFound: iotsaLedstrip/iotsaDimmer %s\n", device.getName().c_str());
+  IFDEBUG IotsaSerial.printf("deviceFound: iotsaLedstrip/iotsaDimmer \"%s\"\n", device.getName().c_str());
   // update the connection information, or add to unknown dimmers if not known
   if (!bleClientMod.deviceSeen(device.getName(), device)) {
-    IFDEBUG IotsaSerial.printf("deviceFound: unknown dimmer %s\n", device.getName().c_str());
+    IFDEBUG IotsaSerial.printf("deviceFound: unknown dimmer \"%s\"\n", device.getName().c_str());
     unknownDimmers.insert(device.getName());
   }
 }
 
 void IotsaBLEDimmerMod::loop() {
+  // xxxjack debug: { static uint32_t last; if (millis() > last+1000) { IotsaSerial.println("xxxjack loop"); last = millis(); }}
   // See whether we have a value to save (because the user has been turning the dimmer)
   if (saveAtMillis > 0 && millis() > saveAtMillis) {
     saveAtMillis = 0;
@@ -521,23 +522,42 @@ void IotsaBLEDimmerMod::loop() {
     if (dimmer == NULL) {
       needTransmit1 = false;
     } else if (dimmer->available() && dimmer->connect()) {
-      IFDEBUG IotsaSerial.println("Transmit setting to dimmer1");
-      dimmer->set(serviceUUID, brightnessUUID, (uint8_t)(level1*255));
-      dimmer->set(serviceUUID, isOnUUID, (uint8_t)isOn1);
+      IFDEBUG IotsaSerial.println("Transmit brightness to dimmer1");
+      bool ok = dimmer->set(serviceUUID, brightnessUUID, (uint8_t)(level1*100));
+      if (!ok) {
+        IFDEBUG IotsaSerial.println("BLE: set(brightness) failed");
+      }
+      IFDEBUG IotsaSerial.println("Transmit ison to dimmer1");
+      ok = dimmer->set(serviceUUID, isOnUUID, (uint8_t)isOn1);
+      if (!ok) {
+        IFDEBUG IotsaSerial.println("BLE: set(isOn) failed");
+      }
+      IFDEBUG IotsaSerial.println("disconnecting to dimmer1");
       dimmer->disconnect();
+      IFDEBUG IotsaSerial.println("disconnected to dimmer1");
       needTransmit1 = false;
     }
   }
 #ifdef WITH_SECOND_DIMMER
+  // See whether we have some values to transmit to Dimmer2
   if (needTransmit2) {
     IotsaBLEClientConnection *dimmer = bleClientMod.getDevice(nameDimmer2);
     if (dimmer == NULL) {
       needTransmit2 = false;
     } else if (dimmer->available() && dimmer->connect()) {
-      IFDEBUG IotsaSerial.println("Transmit setting to dimmer2");
-      dimmer->set(serviceUUID, brightnessUUID, (uint8_t)(level2*255));
-      dimmer->set(serviceUUID, isOnUUID, (uint8_t)isOn2);
+      IFDEBUG IotsaSerial.println("Transmit brightness to dimmer2");
+      bool ok = dimmer->set(serviceUUID, brightnessUUID, (uint8_t)(level2*100));
+      if (!ok) {
+        IFDEBUG IotsaSerial.println("BLE: set(brightness) failed");
+      }
+      IFDEBUG IotsaSerial.println("Transmit ison to dimmer2");
+      ok = dimmer->set(serviceUUID, isOnUUID, (uint8_t)isOn2);
+      if (!ok) {
+        IFDEBUG IotsaSerial.println("BLE: set(isOn) failed");
+      }
+      IFDEBUG IotsaSerial.println("disconnecting to dimmer2");
       dimmer->disconnect();
+      IFDEBUG IotsaSerial.println("disconnected to dimmer2");
       needTransmit2 = false;
     }
   }
