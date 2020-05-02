@@ -59,10 +59,10 @@ IotsaInputMod touchMod(application, inputs, sizeof(inputs)/sizeof(inputs[0]));
 IotsaBLEClientMod bleClientMod(application);
 
 // UUID of service advertised by iotsaLedstrip and iotsaDimmer devices
-static constexpr UUIDstring serviceUUID = "F3390001-F793-4D0C-91BB-C91EEB92A1A4";
-static constexpr UUIDstring isOnUUID = "F3390002-F793-4D0C-91BB-C91EEB92A1A4";
+static BLEUUID serviceUUID("F3390001-F793-4D0C-91BB-C91EEB92A1A4");
+static BLEUUID isOnUUID("F3390002-F793-4D0C-91BB-C91EEB92A1A4");
 //static constexpr UUIDstring identifyUUID = "F3390003-F793-4D0C-91BB-C91EEB92A1A4";
-static constexpr UUIDstring brightnessUUID = "F3390004-F793-4D0C-91BB-C91EEB92A1A4";
+static BLEUUID brightnessUUID("F3390004-F793-4D0C-91BB-C91EEB92A1A4");
 //static constexpr UUIDstring tempUUID = "F3390005-F793-4D0C-91BB-C91EEB92A1A4";
 //static constexpr UUIDstring intervalUUID = "F3390006-F793-4D0C-91BB-C91EEB92A1A4";
 
@@ -94,6 +94,7 @@ private:
   float level1;
   float minLevel1;
   String nameDimmer1;
+  bool needTransmit1;
 #ifdef WITH_SECOND_DIMMER
   bool touched2OnOff();
   bool level2Changed();
@@ -102,6 +103,7 @@ private:
   float level2;
   float minLevel2;
   String nameDimmer2;
+  bool needTransmit2;
 #endif
   std::set<std::string> unknownDimmers;
   uint32_t saveAtMillis = 0;
@@ -126,7 +128,7 @@ IotsaBLEDimmerMod::level1Changed() {
 }
 
 void IotsaBLEDimmerMod::updateDimmer1() {
-  // xxxjack send onOff and level to dimmer
+  needTransmit1 = true;
   iotsaConfig.postponeSleep(2100);
   saveAtMillis = millis() + 2000;
 }
@@ -148,7 +150,7 @@ IotsaBLEDimmerMod::level2Changed() {
 }
 
 void IotsaBLEDimmerMod::updateDimmer2() {
-  // xxxjack send onOff and level to dimmer
+  needTransmit2 = true;
   iotsaConfig.postponeSleep(2100);
   saveAtMillis = millis() + 2000;
 }
@@ -501,17 +503,44 @@ void IotsaBLEDimmerMod::deviceFound(BLEAdvertisedDevice& device) {
 }
 
 void IotsaBLEDimmerMod::loop() {
-  // See if we have a value to save (because the user has been turning the dimmer)
+  // See whether we have a value to save (because the user has been turning the dimmer)
   if (saveAtMillis > 0 && millis() > saveAtMillis) {
     saveAtMillis = 0;
     configSave();
   }
 #ifdef LED_PIN
+  // See whether we have to turn on the LED again (after a short off-period as feedback for user interaction)
   if (ledOffUntilMillis > 0 && millis() > ledOffUntilMillis) {
     digitalWrite(LED_PIN, LOW);
     ledOffUntilMillis = 0;
   }
-  #endif
+#endif
+  // See whether we have some values to transmit to Dimmer1
+  if (needTransmit1) {
+    IotsaBLEClientConnection *dimmer = bleClientMod.getDevice(nameDimmer1);
+    if (dimmer == NULL) {
+      needTransmit1 = false;
+    } else if (dimmer->available() && dimmer->connect()) {
+      dimmer->set(serviceUUID, brightnessUUID, (uint8_t)(level1*255));
+      dimmer->set(serviceUUID, isOnUUID, (uint8_t)isOn1);
+      dimmer->disconnect();
+      needTransmit1 = false;
+    }
+  }
+#ifdef WITH_SECOND_DIMMER
+  if (needTransmit2) {
+    IotsaBLEClientConnection *dimmer = bleClientMod.getDevice(nameDimmer2);
+    if (dimmer == NULL) {
+      needTransmit2 = false;
+    } else if (dimmer->available() && dimmer->connect()) {
+      dimmer->set(serviceUUID, brightnessUUID, (uint8_t)(level2*255));
+      dimmer->set(serviceUUID, isOnUUID, (uint8_t)isOn2);
+      dimmer->disconnect();
+      needTransmit2 = false;
+    }
+  }
+#endif
+
 }
 
 // Instantiate the Led module, and install it in the framework

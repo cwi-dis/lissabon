@@ -18,7 +18,6 @@ public:
   String info() { return ""; }
   void setDeviceFoundCallback(BleDeviceFoundCallback _callback);
   void setServiceFilter(const BLEUUID& serviceUUID);
-  void setServiceFilter(const UUIDString serviceUUID);
   void setManufacturerFilter(uint16_t manufacturerID);
 
   // These are all the known devices. They are saved persistently.
