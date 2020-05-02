@@ -221,7 +221,7 @@ IotsaBLEDimmerMod::handler() {
     }
   }
   if (dimmerChanged) {
-    // xxxjack send to dimmer
+    updateDimmer1();
   }
 #ifdef WITH_SECOND_DIMMER
   dimmerChanged = false;
@@ -259,7 +259,7 @@ IotsaBLEDimmerMod::handler() {
     }
   }
   if (dimmerChanged) {
-    // xxxjack send to dimmer
+    updateDimmer2();
   }
 #endif // WITH_SECOND_DIMMER
   if (anyChanged) {
@@ -357,6 +357,7 @@ bool IotsaBLEDimmerMod::getHandler(const char *path, JsonObject& reply) {
 bool IotsaBLEDimmerMod::putHandler(const char *path, const JsonVariant& request, JsonObject& reply) {
   // xxxjack need to distinguish between config and operational parameters
   bool anyChanged = false;
+  bool dimmerChanged = false;
   JsonObject reqObj = request.as<JsonObject>();
   if (reqObj.containsKey("dimmer1")) {
     String value = reqObj["dimmer1"].as<String>();
@@ -370,16 +371,22 @@ bool IotsaBLEDimmerMod::putHandler(const char *path, const JsonVariant& request,
   if (reqObj.containsKey("isOn1")) {
     isOn1 = reqObj["isOn1"];
     anyChanged = true;
+    dimmerChanged = true;
   }
   if (reqObj.containsKey("level1")) {
     level1 = reqObj["level1"];
     anyChanged = true;
+    dimmerChanged = true;
   }
   if (reqObj.containsKey("minLevel1")) {
     minLevel1 = reqObj["minLevel1"];
     anyChanged = true;
   }
+  if (dimmerChanged) {
+    updateDimmer1();
+  }
 #ifdef WITH_SECOND_DIMMER
+  dimmerChanged = false;
   if (reqObj.containsKey("dimmer2")) {
     String value = reqObj["dimmer2"].as<String>();
     if (value != nameDimmer2) {
@@ -401,10 +408,12 @@ bool IotsaBLEDimmerMod::putHandler(const char *path, const JsonVariant& request,
     minLevel2 = reqObj["minLevel2"];
     anyChanged = true;
   }
+  if (dimmerChanged) {
+    updateDimmer2();
+  }
 #endif
   if (anyChanged) {
     configSave();
-    // xxxjack send changes to dimmers
   }
   return anyChanged;
 }
@@ -483,9 +492,10 @@ void IotsaBLEDimmerMod::setup() {
 }
 
 void IotsaBLEDimmerMod::deviceFound(BLEAdvertisedDevice& device) {
-  IFDEBUG IotsaSerial.printf("Found iotsaLedstrip/iotsaDimmer %s\n", device.getName().c_str());
+  IFDEBUG IotsaSerial.printf("deviceFound: iotsaLedstrip/iotsaDimmer %s\n", device.getName().c_str());
   // update the connection information, or add to unknown dimmers if not known
   if (!bleClientMod.deviceSeen(device.getName(), device)) {
+    IFDEBUG IotsaSerial.printf("deviceFound: unknown dimmer %s\n", device.getName().c_str());
     unknownDimmers.insert(device.getName());
   }
 }

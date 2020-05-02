@@ -3,6 +3,7 @@
 #include "iotsaConfigFile.h"
 
 void IotsaBLEClientMod::configLoad() {
+#if 0
   IotsaConfigFileLoad cf("/config/bleclient.cfg");
   devices.clear();
   int nDevice;
@@ -17,9 +18,11 @@ void IotsaBLEClientMod::configLoad() {
       devices[idd] = conn;
     }
   }
+#endif
 }
 
 void IotsaBLEClientMod::configSave() {
+#if 0
   IotsaConfigFileSave cf("/config/bleclient.cfg");
   cf.put("nDevice", (int)devices.size());
   int i = 0;
@@ -28,6 +31,7 @@ void IotsaBLEClientMod::configSave() {
     String id(it.first.c_str());
     cf.put(name, id);
   }
+#endif
 }
 
 void IotsaBLEClientMod::setup() {
