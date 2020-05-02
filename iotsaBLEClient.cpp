@@ -69,6 +69,11 @@ void IotsaBLEClientMod::setServiceFilter(const BLEUUID& serviceUUID) {
   serviceFilter = new BLEUUID(serviceUUID);
 }
 
+void IotsaBLEClientMod::setServiceFilter(const UUIDString serviceUUID) {
+  if (serviceFilter) delete serviceFilter;
+  serviceFilter = new BLEUUID(serviceUUID);
+}
+
 void IotsaBLEClientMod::setManufacturerFilter(uint16_t manufacturerID) {
   manufacturerFilter = manufacturerID;
   hasManufacturerFilter = true;

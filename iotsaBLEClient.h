@@ -6,6 +6,7 @@
 #include "iotsaBLEClientConnection.h"
 
 typedef std::function<void(BLEAdvertisedDevice&)> BleDeviceFoundCallback;
+typedef const char *UUIDString;
 
 class IotsaBLEClientMod : public IotsaMod, public BLEAdvertisedDeviceCallbacks {
 public:
@@ -17,6 +18,7 @@ public:
   String info() { return ""; }
   void setDeviceFoundCallback(BleDeviceFoundCallback _callback);
   void setServiceFilter(const BLEUUID& serviceUUID);
+  void setServiceFilter(const UUIDString serviceUUID);
   void setManufacturerFilter(uint16_t manufacturerID);
 
   // These are all the known devices. They are saved persistently.

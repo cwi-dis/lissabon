@@ -59,7 +59,12 @@ IotsaInputMod touchMod(application, inputs, sizeof(inputs)/sizeof(inputs[0]));
 IotsaBLEClientMod bleClientMod(application);
 
 // UUID of service advertised by iotsaLedstrip and iotsaDimmer devices
-BLEUUID ledstripServiceUUID("153C0001-D28E-40B8-84EB-7F64B56D4E2E");
+static constexpr UUIDstring serviceUUID = "F3390001-F793-4D0C-91BB-C91EEB92A1A4";
+static constexpr UUIDstring isOnUUID = "F3390002-F793-4D0C-91BB-C91EEB92A1A4";
+//static constexpr UUIDstring identifyUUID = "F3390003-F793-4D0C-91BB-C91EEB92A1A4";
+static constexpr UUIDstring brightnessUUID = "F3390004-F793-4D0C-91BB-C91EEB92A1A4";
+//static constexpr UUIDstring tempUUID = "F3390005-F793-4D0C-91BB-C91EEB92A1A4";
+//static constexpr UUIDstring intervalUUID = "F3390006-F793-4D0C-91BB-C91EEB92A1A4";
 
 //
 // LED Lighting control module. 
@@ -474,7 +479,7 @@ void IotsaBLEDimmerMod::setup() {
 
   auto callback = std::bind(&IotsaBLEDimmerMod::deviceFound, this, std::placeholders::_1);
   bleClientMod.setDeviceFoundCallback(callback);
-  bleClientMod.setServiceFilter(ledstripServiceUUID);
+  bleClientMod.setServiceFilter(serviceUUID);
 }
 
 void IotsaBLEDimmerMod::deviceFound(BLEAdvertisedDevice& device) {
