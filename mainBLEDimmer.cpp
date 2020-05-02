@@ -521,6 +521,7 @@ void IotsaBLEDimmerMod::loop() {
     if (dimmer == NULL) {
       needTransmit1 = false;
     } else if (dimmer->available() && dimmer->connect()) {
+      IFDEBUG IotsaSerial.println("Transmit setting to dimmer1");
       dimmer->set(serviceUUID, brightnessUUID, (uint8_t)(level1*255));
       dimmer->set(serviceUUID, isOnUUID, (uint8_t)isOn1);
       dimmer->disconnect();
@@ -533,6 +534,7 @@ void IotsaBLEDimmerMod::loop() {
     if (dimmer == NULL) {
       needTransmit2 = false;
     } else if (dimmer->available() && dimmer->connect()) {
+      IFDEBUG IotsaSerial.println("Transmit setting to dimmer2");
       dimmer->set(serviceUUID, brightnessUUID, (uint8_t)(level2*255));
       dimmer->set(serviceUUID, isOnUUID, (uint8_t)isOn2);
       dimmer->disconnect();

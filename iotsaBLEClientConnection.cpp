@@ -21,6 +21,7 @@ bool IotsaBLEClientConnection::setDevice(BLEAdvertisedDevice& _device) {
 
 void IotsaBLEClientConnection::clearDevice() {
   if (device != NULL) delete device;
+  device = NULL;
 }
 
 bool IotsaBLEClientConnection::available() {
@@ -32,7 +33,10 @@ bool IotsaBLEClientConnection::connect() {
   if (client != NULL) return true;
   client = BLEDevice::createClient();
   bool ok = client->connect(device);
-  if (!ok) delete client;
+  if (!ok) {
+    delete client;
+    client = NULL;
+  }
   return ok;
 }
 
@@ -40,6 +44,7 @@ void IotsaBLEClientConnection::disconnect() {
   if (client != NULL) {
     client->disconnect();
     delete client;
+    client = NULL;
   }
 }
 
