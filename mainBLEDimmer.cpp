@@ -87,6 +87,8 @@ public:
   bool putHandler(const JsonVariant& request);
   bool handlerArgs(IotsaWebServer *server);
   bool handlerConfigArgs(IotsaWebServer *server);
+  void configLoad(IotsaConfigFileLoad& cf);
+  void configSave(IotsaConfigFileSave& cf);
   String handlerForm();
   String handlerConfigForm();
 
@@ -228,6 +230,25 @@ bool RemoteDimmer::handlerConfigArgs(IotsaWebServer *server){
     }
   }
   return anyChanged;
+}
+void RemoteDimmer::configLoad(IotsaConfigFileLoad& cf) {
+  int value;
+  String n_name = "dimmer" + String(num);
+  String strval;
+  cf.get(n_name + ".name", strval, "");
+  setName(strval);
+  cf.get(n_name + ".isOn", value, 0);
+  isOn = value;
+  cf.get(n_name + ".level", level, 0.0);
+  cf.get(n_name + ".minLevel", minLevel, 0.1);
+}
+
+void RemoteDimmer::configSave(IotsaConfigFileSave& cf) {
+  String n_name = "dimmer" + String(num);
+  cf.put(n_name + ".name", name);
+  cf.put(n_name + ".level", level);
+  cf.put(n_name + ".isOn", isOn);
+  cf.put(n_name + ".minLevel", minLevel);
 }
 
 String RemoteDimmer::handlerForm() {
@@ -456,36 +477,17 @@ void IotsaBLEDimmerMod::serverSetup() {
 
 void IotsaBLEDimmerMod::configLoad() {
   IotsaConfigFileLoad cf("/config/bledimmer.cfg");
-  int value;
-  String strval;
-  cf.get("dimmer1.name", strval, "");
-  dimmer1.setName(strval);
-  cf.get("dimmer1.isOn", value, 0);
-  dimmer1.isOn = value;
-  cf.get("dimmer1.level", dimmer1.level, 0.0);
-  cf.get("dimmer1.minLevel", dimmer1.minLevel, 0.1);
+  dimmer1.configLoad(cf);
 #ifdef WITH_SECOND_DIMMER
-  cf.get("dimmer2.name", strval, "");
-  dimmer2.setName(strval);
-  cf.get("dimmer2.isOn", value, 0);
-  dimmer2.isOn = value;
-  cf.get("dimmer2.level", dimmer2.level, 0.0);
-  cf.get("dimmer2.minLevel", dimmer2.minLevel, 0.1);
+  dimmer2.configLoad(cf);
 #endif // WITH_SECOND_DIMMER
 }
 
 void IotsaBLEDimmerMod::configSave() {
   IotsaConfigFileSave cf("/config/bledimmer.cfg");
-
-  cf.put("dimmer1.name", dimmer1.name);
-  cf.put("dimmer1.level", dimmer1.level);
-  cf.put("dimmer1.isOn", dimmer1.isOn);
-  cf.put("dimmer1.minLevel", dimmer1.minLevel);
+  dimmer1.configSave(cf);
 #ifdef WITH_SECOND_DIMMER
-  cf.put("dimmer2.name", dimmer2.name);
-  cf.put("dimmer2.level", dimmer2.level);
-  cf.put("dimmer2.isOn", dimmer2.isOn);
-  cf.put("dimmer2.minLevel", dimmer2.minLevel);
+  dimmer2.configSave(cf);
 #endif // WITH_SECOND_DIMMER
 }
 
