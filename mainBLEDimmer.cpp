@@ -102,22 +102,27 @@ public:
   void loop();
 };
 
-class DimmerUI : public BLEDimmer {
+class DimmerUI  {
 public:
   //DimmerUI(int _num, DimmerCallbacks *_callbacks) : BLEDimmer(_num, _callbacks) {}
-  using BLEDimmer::BLEDimmer;
+  DimmerUI(BLEDimmer& _dimmer) : dimmer(_dimmer) {}
   void setEncoder(UpDownButtons& encoder);
   bool touchedOnOff();
   bool levelChanged();
+protected:
+  BLEDimmer& dimmer;
 };
 
 class IotsaBLEDimmerMod : public IotsaApiMod, public DimmerCallbacks {
 public:
   IotsaBLEDimmerMod(IotsaApplication &_app, IotsaAuthenticationProvider *_auth=NULL)
   : IotsaRestApiMod(_app, _auth),
-    dimmer1(1, this)
+    dimmer1(1, this),
+    dimmer1ui(dimmer1)
 #ifdef WITH_SECOND_DIMMER
-    , dimmer2(2, this)
+    , 
+    dimmer2(2, this),
+    dimmer2ui(dimmer2)
 #endif
   {
   }
@@ -136,9 +141,11 @@ private:
   void buttonChanged();
   void needSave();
   void handler();
-  DimmerUI dimmer1;
+  BLEDimmer dimmer1;
+  DimmerUI dimmer1ui;
 #ifdef WITH_SECOND_DIMMER
-  DimmerUI dimmer2;
+  BLEDimmer dimmer2;
+  DimmerUI dimmer2ui;
 #endif
   std::set<std::string> unknownDimmers;
   uint32_t saveAtMillis = 0;
@@ -149,16 +156,16 @@ private:
 
 bool
 DimmerUI::touchedOnOff() {
-  IFDEBUG IotsaSerial.printf("touchedOnOff %d: onOff=%d level=%f\n", num, isOn, level);
-  callbacks->buttonChanged();
-  updateDimmer();
+  IFDEBUG IotsaSerial.printf("touchedOnOff %d: onOff=%d level=%f\n", dimmer.num, dimmer.isOn, dimmer.level);
+  dimmer.callbacks->buttonChanged();
+  dimmer.updateDimmer();
   return true;
 }
 
 bool
 DimmerUI::levelChanged() {
-  IFDEBUG IotsaSerial.printf("levelChanged %d: onOff=%d level=%f\n", num, isOn, level);
-  updateDimmer();
+  IFDEBUG IotsaSerial.printf("levelChanged %d: onOff=%d level=%f\n", dimmer.num, dimmer.isOn, dimmer.level);
+  dimmer.updateDimmer();
   return true;
 }
 
@@ -166,8 +173,8 @@ void
 DimmerUI::setEncoder(UpDownButtons& encoder) {
   encoder.setCallback(std::bind(&DimmerUI::levelChanged, this));
   // Bind up/down buttons to variable illum, ranging from minLevel to 1.0 in 25 steps
-  encoder.bindVar(level, minLevel, 1.0, 0.02);
-  encoder.bindStateVar(isOn);
+  encoder.bindVar(dimmer.level, dimmer.minLevel, 1.0, 0.02);
+  encoder.bindStateVar(dimmer.isOn);
   encoder.setStateCallback(std::bind(&DimmerUI::touchedOnOff, this));
 }
 
@@ -381,11 +388,11 @@ void IotsaBLEDimmerMod::buttonChanged() {
 #ifdef IOTSA_WITH_WEB
 void
 IotsaBLEDimmerMod::handler() {
-  bool anyChanged;
-  anyChanged = dimmer1.handlerConfigArgs(server);
+  bool anyChanged = false;
+  anyChanged |= dimmer1.handlerConfigArgs(server);
   dimmer1.handlerArgs(server);
 #ifdef WITH_SECOND_DIMMER
-  anyChanged = dimmer2.handlerConfigArgs(server);
+  anyChanged |= dimmer2.handlerConfigArgs(server);
   dimmer2.handlerArgs(server);
 #endif // WITH_SECOND_DIMMER
   if (anyChanged) {
@@ -438,7 +445,7 @@ bool IotsaBLEDimmerMod::getHandler(const char *path, JsonObject& reply) {
   if (unknownDimmers.size()) {
     JsonArray unknownReply = reply.createNestedArray("unassigned");
     for (auto it : unknownDimmers) {
-      unknownReply.add(it.c_str());
+      unknownReply.add((char *)it.c_str());
     }
   }
   return true;
@@ -501,9 +508,9 @@ void IotsaBLEDimmerMod::setup() {
 #ifdef PIN_DISABLESLEEP
   batteryMod.setPinDisableSleep(PIN_DISABLESLEEP);
 #endif
-  dimmer1.setEncoder(encoder1);
+  dimmer1ui.setEncoder(encoder1);
 #ifdef WITH_SECOND_DIMMER
-  dimmer2.setEncoder(encoder2);
+  dimmer2ui.setEncoder(encoder2);
 #endif // WITH_SECOND_DIMMER
 
   auto callback = std::bind(&IotsaBLEDimmerMod::deviceFound, this, std::placeholders::_1);
