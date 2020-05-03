@@ -76,9 +76,9 @@ public:
   virtual void needSave() = 0;
 };
 
-class RemoteDimmer {
+class BLEDimmer {
 public:
-  RemoteDimmer(int _num, DimmerCallbacks *_callbacks) : num(_num), callbacks(_callbacks) {}
+  BLEDimmer(int _num, DimmerCallbacks *_callbacks) : num(_num), callbacks(_callbacks) {}
   void updateDimmer();
   bool setName(String value);
   bool available();
@@ -102,10 +102,10 @@ public:
   void loop();
 };
 
-class RemoteDimmerUI : public RemoteDimmer {
+class DimmerUI : public BLEDimmer {
 public:
-  //RemoteDimmerUI(int _num, DimmerCallbacks *_callbacks) : RemoteDimmer(_num, _callbacks) {}
-  using RemoteDimmer::RemoteDimmer;
+  //DimmerUI(int _num, DimmerCallbacks *_callbacks) : BLEDimmer(_num, _callbacks) {}
+  using BLEDimmer::BLEDimmer;
   void setEncoder(UpDownButtons& encoder);
   bool touchedOnOff();
   bool levelChanged();
@@ -136,9 +136,9 @@ private:
   void buttonChanged();
   void needSave();
   void handler();
-  RemoteDimmerUI dimmer1;
+  DimmerUI dimmer1;
 #ifdef WITH_SECOND_DIMMER
-  RemoteDimmerUI dimmer2;
+  DimmerUI dimmer2;
 #endif
   std::set<std::string> unknownDimmers;
   uint32_t saveAtMillis = 0;
@@ -148,7 +148,7 @@ private:
 };
 
 bool
-RemoteDimmerUI::touchedOnOff() {
+DimmerUI::touchedOnOff() {
   IFDEBUG IotsaSerial.printf("touchedOnOff %d: onOff=%d level=%f\n", num, isOn, level);
   callbacks->buttonChanged();
   updateDimmer();
@@ -156,27 +156,27 @@ RemoteDimmerUI::touchedOnOff() {
 }
 
 bool
-RemoteDimmerUI::levelChanged() {
+DimmerUI::levelChanged() {
   IFDEBUG IotsaSerial.printf("levelChanged %d: onOff=%d level=%f\n", num, isOn, level);
   updateDimmer();
   return true;
 }
 
 void
-RemoteDimmerUI::setEncoder(UpDownButtons& encoder) {
-  encoder.setCallback(std::bind(&RemoteDimmerUI::levelChanged, this));
+DimmerUI::setEncoder(UpDownButtons& encoder) {
+  encoder.setCallback(std::bind(&DimmerUI::levelChanged, this));
   // Bind up/down buttons to variable illum, ranging from minLevel to 1.0 in 25 steps
   encoder.bindVar(level, minLevel, 1.0, 0.02);
   encoder.bindStateVar(isOn);
-  encoder.setStateCallback(std::bind(&RemoteDimmerUI::touchedOnOff, this));
+  encoder.setStateCallback(std::bind(&DimmerUI::touchedOnOff, this));
 }
 
-bool RemoteDimmer::available() {
+bool BLEDimmer::available() {
   IotsaBLEClientConnection *dimmer = bleClientMod.getDevice(name);
   return dimmer != NULL && dimmer->available();
 }
 
-String RemoteDimmer::info() {
+String BLEDimmer::info() {
   String message = "Dimmer";
   message += String(num);
   message += ": ";
@@ -190,7 +190,7 @@ String RemoteDimmer::info() {
   return message;
 }
 
-bool RemoteDimmer::handlerArgs(IotsaWebServer *server) {
+bool BLEDimmer::handlerArgs(IotsaWebServer *server) {
   String n_dimmer = "dimmer" + String(num);
   String n_isOn = n_dimmer + ".isOn";
   String n_level = n_dimmer + ".level";
@@ -211,7 +211,7 @@ bool RemoteDimmer::handlerArgs(IotsaWebServer *server) {
   return true;
 }
 
-bool RemoteDimmer::handlerConfigArgs(IotsaWebServer *server){
+bool BLEDimmer::handlerConfigArgs(IotsaWebServer *server){
   bool anyChanged = false;
   String n_dimmer = "dimmer" + String(num);
   String n_name = n_dimmer + ".name";
@@ -231,7 +231,7 @@ bool RemoteDimmer::handlerConfigArgs(IotsaWebServer *server){
   }
   return anyChanged;
 }
-void RemoteDimmer::configLoad(IotsaConfigFileLoad& cf) {
+void BLEDimmer::configLoad(IotsaConfigFileLoad& cf) {
   int value;
   String n_name = "dimmer" + String(num);
   String strval;
@@ -243,7 +243,7 @@ void RemoteDimmer::configLoad(IotsaConfigFileLoad& cf) {
   cf.get(n_name + ".minLevel", minLevel, 0.1);
 }
 
-void RemoteDimmer::configSave(IotsaConfigFileSave& cf) {
+void BLEDimmer::configSave(IotsaConfigFileSave& cf) {
   String n_name = "dimmer" + String(num);
   cf.put(n_name + ".name", name);
   cf.put(n_name + ".level", level);
@@ -251,7 +251,7 @@ void RemoteDimmer::configSave(IotsaConfigFileSave& cf) {
   cf.put(n_name + ".minLevel", minLevel);
 }
 
-String RemoteDimmer::handlerForm() {
+String BLEDimmer::handlerForm() {
   String s_num = String(num);
   String s_name = "dimmer" + s_num;
 
@@ -265,7 +265,7 @@ String RemoteDimmer::handlerForm() {
   return message;
 }
 
-String RemoteDimmer::handlerConfigForm() {
+String BLEDimmer::handlerConfigForm() {
   String s_num = String(num);
   String s_name = "dimmer" + s_num;
   String message = "<h2>Dimmer " + s_num + " configuration</h2><form method='get'>";
@@ -275,7 +275,7 @@ String RemoteDimmer::handlerConfigForm() {
   return message;
 }
 
-bool RemoteDimmer::getHandler(JsonObject& reply) {
+bool BLEDimmer::getHandler(JsonObject& reply) {
   reply["name"] = name;
   reply["available"] = available();
   reply["isOn"] = isOn;
@@ -284,7 +284,7 @@ bool RemoteDimmer::getHandler(JsonObject& reply) {
   return true;
 }
 
-bool RemoteDimmer::putHandler(const JsonVariant& request) {
+bool BLEDimmer::putHandler(const JsonVariant& request) {
   bool configChanged = false;
   bool dimmerChanged = false;
   JsonObject reqObj = request.as<JsonObject>();
@@ -311,12 +311,12 @@ bool RemoteDimmer::putHandler(const JsonVariant& request) {
   return configChanged;
 }
 
-void RemoteDimmer::updateDimmer() {
+void BLEDimmer::updateDimmer() {
   needTransmit = true;
   callbacks->needSave();
 }
 
-bool RemoteDimmer::setName(String value) {
+bool BLEDimmer::setName(String value) {
   if (value == name) return false;
   if (name) bleClientMod.delDevice(name);
   name = value;
@@ -324,7 +324,7 @@ bool RemoteDimmer::setName(String value) {
   return true;
 }
 
-void RemoteDimmer::loop() {
+void BLEDimmer::loop() {
     // See whether we have some values to transmit to Dimmer1
   if (needTransmit) {
     IotsaBLEClientConnection *dimmer = bleClientMod.getDevice(name);
