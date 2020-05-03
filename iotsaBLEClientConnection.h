@@ -24,6 +24,7 @@ public:
   int getAsInt(BLEUUID& service, BLEUUID& charUUID);
   std::string getAsString(BLEUUID& service, BLEUUID& charUUID);
   bool getAsNotification(BLEUUID& service, BLEUUID& charUUID, BleNotificationCallback callback);
+  const std::string& getName() { return name; }
 protected:
   std::string name;
   BLERemoteCharacteristic *_getCharacteristic(BLEUUID& service, BLEUUID& charUUID);
