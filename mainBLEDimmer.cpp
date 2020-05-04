@@ -279,7 +279,7 @@ void IotsaBLEDimmerMod::needSave() {
 }
 
 void IotsaBLEDimmerMod::loop() {
-  // xxxjack debug: { static uint32_t last; if (millis() > last+1000) { IotsaSerial.println("xxxjack loop"); last = millis(); }}
+  { static uint32_t last; if (millis() > last+1000) { iotsaConfig.printHeapSpace(); last = millis(); }}
   // See whether we have a value to save (because the user has been turning the dimmer)
   if (saveAtMillis > 0 && millis() > saveAtMillis) {
     saveAtMillis = 0;

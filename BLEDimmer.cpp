@@ -1,6 +1,9 @@
 #include "BLEDimmer.h"
 #include "iotsaBLEClient.h"
 
+// How long we keep open a ble connection (in case we have a quick new command)
+#define IOTSA_BLECLIENT_KEEPOPEN_MILLIS 10000
+
 // xxxjack This is nasty: need access to the ble client in the main program.
 extern IotsaBLEClientMod bleClientMod;
 
@@ -175,10 +178,16 @@ void BLEDimmer::loop() {
       if (!ok) {
         IFDEBUG IotsaSerial.println("BLE: set(isOn) failed");
       }
+      disconnectAtMillis = millis() + IOTSA_BLECLIENT_KEEPOPEN_MILLIS;
+      needTransmit = false;
+    }
+  } else if (disconnectAtMillis > 0 && millis() > disconnectAtMillis) {
+    disconnectAtMillis = 0;
+    IotsaBLEClientConnection *dimmer = bleClientMod.getDevice(name);
+    if (dimmer) {
       IFDEBUG IotsaSerial.println("xxxjack disconnecting");
       dimmer->disconnect();
       IFDEBUG IotsaSerial.println("xxxjack disconnected");
-      needTransmit = false;
     }
   }
 }
