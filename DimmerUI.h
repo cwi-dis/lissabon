@@ -2,7 +2,7 @@
 #ifndef _DIMMERUI_H_
 #define _DIMMERUI_H_
 #include "iotsa.h"
-#include "BLEDImmer.h"
+#include "BLEDimmer.h"
 #include "iotsaInput.h"
 
 class DimmerUI  {
