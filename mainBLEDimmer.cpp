@@ -58,7 +58,7 @@ IotsaInputMod touchMod(application, inputs, sizeof(inputs)/sizeof(inputs[0]));
 #include "iotsaBLEClient.h"
 IotsaBLEClientMod bleClientMod(application);
 
-#include "BLEDImmer.h"
+#include "BLEDimmer.h"
 #include "DimmerUI.h"
 
 class IotsaBLEDimmerMod : public IotsaApiMod, public DimmerCallbacks {
