@@ -33,6 +33,8 @@ IotsaOtaMod otaMod(application);
 #include "iotsaBLEServer.h"
 #ifdef IOTSA_WITH_BLE
 IotsaBLEServerMod bleserverMod(application);
+#else
+#warning Building this module without BLE support may be a bit pointless
 #endif
 
 #ifdef WITH_BATTERY
