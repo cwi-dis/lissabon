@@ -45,4 +45,17 @@ Eventually this repository will contain the central configuration component, but
 
 ## Pictures
 
-To be supplied.
+Lissabon Dimmer, plug-in variant with rotary control:
+![Plugin Dimmer](images/plugindimmer.jpg)
+
+Lissabon Dimmer, for use in inaccessible locations:
+![Hidden Dimmer](images/hiddendimmer.jpg)
+
+Ledstrip dimmer, with brightness and color temperature touchpads:
+![Ledstrip Dimmer](images/ledstripdimmer.jpg)
+
+Remote control: to be supplied
+
+Controller: to be supplied
+
+In situ pictures: to be supplied
