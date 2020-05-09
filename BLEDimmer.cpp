@@ -1,8 +1,11 @@
 #include "BLEDimmer.h"
 #include "iotsaBLEClient.h"
 
+// How long we keep trying to connect to a dimmer
+#define IOTSA_BLEDIMMER_CONNECT_TIMEOUT 10000
+
 // How long we keep open a ble connection (in case we have a quick new command)
-#define IOTSA_BLECLIENT_KEEPOPEN_MILLIS 10000
+#define IOTSA_BLEDIMMER_KEEPOPEN_MILLIS 1000
 
 // xxxjack This is nasty: need access to the ble client in the main program.
 extern IotsaBLEClientMod bleClientMod;
@@ -149,6 +152,7 @@ bool BLEDimmer::putHandler(const JsonVariant& request) {
 
 void BLEDimmer::updateDimmer() {
   needTransmit = true;
+  needTransmitTimeoutAtMillis = millis() + IOTSA_BLEDIMMER_CONNECT_TIMEOUT;
   callbacks->needSave();
 }
 
@@ -161,33 +165,56 @@ bool BLEDimmer::setName(String value) {
 }
 
 void BLEDimmer::loop() {
-    // See whether we have some values to transmit to Dimmer1
-  if (needTransmit) {
-    IotsaBLEClientConnection *dimmer = bleClientMod.getDevice(name);
-    if (dimmer == NULL) {
-      IFDEBUG IotsaSerial.printf("Ignoring transmission to dimmer %d\n", num);
-      needTransmit = false;
-    } else if (dimmer->available() && dimmer->connect()) {
-      IFDEBUG IotsaSerial.println("xxxjack Transmit brightness");
-      bool ok = dimmer->set(serviceUUID, brightnessUUID, (uint8_t)(level*100));
-      if (!ok) {
-        IFDEBUG IotsaSerial.println("BLE: set(brightness) failed");
+  // If we don't have anything to transmit we bail out quickly...
+  if (!needTransmit) {
+    // But we first disconnect if we are connected-idle for long enough.
+    if (disconnectAtMillis > 0 && millis() > disconnectAtMillis) {
+      disconnectAtMillis = 0;
+      IotsaBLEClientConnection *dimmer = bleClientMod.getDevice(name);
+      if (dimmer) {
+        IFDEBUG IotsaSerial.println("xxxjack disconnecting");
+        dimmer->disconnect();
+        IFDEBUG IotsaSerial.println("xxxjack disconnected");
       }
-      IFDEBUG IotsaSerial.println("xxxjack Transmit ison");
-      ok = dimmer->set(serviceUUID, isOnUUID, (uint8_t)isOn);
-      if (!ok) {
-        IFDEBUG IotsaSerial.println("BLE: set(isOn) failed");
-      }
-      disconnectAtMillis = millis() + IOTSA_BLECLIENT_KEEPOPEN_MILLIS;
-      needTransmit = false;
     }
-  } else if (disconnectAtMillis > 0 && millis() > disconnectAtMillis) {
-    disconnectAtMillis = 0;
-    IotsaBLEClientConnection *dimmer = bleClientMod.getDevice(name);
-    if (dimmer) {
-      IFDEBUG IotsaSerial.println("xxxjack disconnecting");
-      dimmer->disconnect();
-      IFDEBUG IotsaSerial.println("xxxjack disconnected");
-    }
+    return;
   }
+  // We have something to transmit. Check whether our dimmer actually exists.
+  IotsaBLEClientConnection *dimmer = bleClientMod.getDevice(name);
+  if (dimmer == NULL) {
+    IFDEBUG IotsaSerial.printf("Skip xmit to nonexistent dimmer %d %s\n", num, name.c_str());
+    needTransmit = false;
+    return;
+  }
+  // If it exists, check that we have enough information to connect.
+  if (!dimmer->available()) {
+    IotsaSerial.println("xxxjack dimmer not available");
+    if (millis() > needTransmitTimeoutAtMillis) {
+      IotsaSerial.println("Giving up on connecting to dimmer");
+      needTransmit = false;
+      return;
+    }
+    // xxxjack ask iotsaBLEClient to listen for advertisements
+    return;
+  }
+  // If all that is correct, try to connect.
+  if (!dimmer->connect()) {
+    IotsaSerial.println("xxxjack cannot connect to dimmer");
+    // xxxjack tell dimmer it is unavailable. Next time through the loop will
+    // restart listening for advertisements.
+    return;
+  }
+  // Connected to dimmer.
+  IFDEBUG IotsaSerial.printf("xxxjack Transmit brightness %d\n", (uint8_t)(level*100));
+  bool ok = dimmer->set(serviceUUID, brightnessUUID, (uint8_t)(level*100));
+  if (!ok) {
+    IFDEBUG IotsaSerial.println("BLE: set(brightness) failed");
+  }
+  IFDEBUG IotsaSerial.printf("xxxjack Transmit ison %d\n", (int)isOn);
+  ok = dimmer->set(serviceUUID, isOnUUID, (uint8_t)isOn);
+  if (!ok) {
+    IFDEBUG IotsaSerial.println("BLE: set(isOn) failed");
+  }
+  disconnectAtMillis = millis() + IOTSA_BLEDIMMER_KEEPOPEN_MILLIS;
+  needTransmit = false;
 }

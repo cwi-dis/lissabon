@@ -49,6 +49,7 @@ public:
   float minLevel;
   String name;
   bool needTransmit;
+  uint32_t needTransmitTimeoutAtMillis;
   uint32_t disconnectAtMillis;
   void loop();
 };
