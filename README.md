@@ -54,7 +54,9 @@ Lissabon Dimmer, for use in inaccessible locations:
 Ledstrip dimmer, with brightness and color temperature touchpads:
 ![Ledstrip Dimmer](images/ledstripdimmer.jpg)
 
-Remote control: to be supplied
+Wireless remote control, inside and outside with holder:
+![Wireless Remote](images/remote.jpg)
+
 
 Controller: to be supplied
 
