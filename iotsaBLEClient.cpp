@@ -40,8 +40,8 @@ void IotsaBLEClientMod::setup() {
   BLEDevice::init(iotsaConfig.hostName.c_str());
   // The scanner is a singleton. We initialize it once.
   scanner = BLEDevice::getScan();
-  scanner->setAdvertisedDeviceCallbacks(this);
-  scanner->setActiveScan(true);
+  scanner->setAdvertisedDeviceCallbacks(this, true);
+  scanner->setActiveScan(false);
   scanner->setInterval(155);
   scanner->setWindow(151);
   scanner = NULL;
@@ -78,7 +78,7 @@ void IotsaBLEClientMod::startScanning() {
   scanner = BLEDevice::getScan();
   IFDEBUG IotsaSerial.println("BLE scan start");
   scanningMod = this;
-  scanner->start(20, &IotsaBLEClientMod::scanComplete, false);
+  scanner->start(6, &IotsaBLEClientMod::scanComplete, false);
   iotsaConfig.pauseSleep();
 }
 
