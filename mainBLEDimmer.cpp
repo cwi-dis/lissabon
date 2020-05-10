@@ -65,11 +65,11 @@ class IotsaBLEDimmerMod : public IotsaApiMod, public DimmerCallbacks {
 public:
   IotsaBLEDimmerMod(IotsaApplication &_app, IotsaAuthenticationProvider *_auth=NULL)
   : IotsaRestApiMod(_app, _auth),
-    dimmer1(1, this),
+    dimmer1(1, bleClientMod, this),
     dimmer1ui(dimmer1)
 #ifdef WITH_SECOND_DIMMER
     , 
-    dimmer2(2, this),
+    dimmer2(2, bleClientMod, this),
     dimmer2ui(dimmer2)
 #endif
   {

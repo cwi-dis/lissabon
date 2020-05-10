@@ -28,7 +28,7 @@ public:
 
 class BLEDimmer {
 public:
-  BLEDimmer(int _num, DimmerCallbacks *_callbacks) : num(_num), callbacks(_callbacks) {}
+  BLEDimmer(int _num, IotsaBLEClientMod &_bleClientMod, DimmerCallbacks *_callbacks) : num(_num), bleClientMod(_bleClientMod), callbacks(_callbacks) {}
   void updateDimmer();
   bool setName(String value);
   bool available();
@@ -43,6 +43,7 @@ public:
   String handlerConfigForm();
 
   int num;
+  IotsaBLEClientMod& bleClientMod;
   DimmerCallbacks *callbacks;
   bool isOn;
   float level;

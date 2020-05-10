@@ -7,9 +7,6 @@
 // How long we keep open a ble connection (in case we have a quick new command)
 #define IOTSA_BLEDIMMER_KEEPOPEN_MILLIS 1000
 
-// xxxjack This is nasty: need access to the ble client in the main program.
-extern IotsaBLEClientMod bleClientMod;
-
 bool BLEDimmer::available() {
   IotsaBLEClientConnection *dimmer = bleClientMod.getDevice(name);
   return dimmer != NULL && dimmer->available();
