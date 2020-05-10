@@ -38,27 +38,67 @@ void IotsaBLEClientMod::setup() {
   IFDEBUG IotsaSerial.println("BLEClientmod::setup()");
   configLoad();
   BLEDevice::init(iotsaConfig.hostName.c_str());
+  // The scanner is a singleton. We initialize it once.
   scanner = BLEDevice::getScan();
   scanner->setAdvertisedDeviceCallbacks(this);
   scanner->setActiveScan(true);
   scanner->setInterval(155);
   scanner->setWindow(151);
-  startScanning();
+  scanner = NULL;
+}
+
+void IotsaBLEClientMod::findUnknownClients(bool on) {
+  scanForUnknownClients = on;
+  shouldUpdateScan = true;
+}
+
+void IotsaBLEClientMod::updateScanning() {
+  // We should be scanning if scanForUnknownClients is true or any of
+  // our known devices does not have an address associated with it yet.
+  IotsaSerial.println("xxxjack updateScanning");
+  bool shouldScan = scanForUnknownClients;
+  if (!shouldScan) {
+    for (auto it: devices) {
+      if (!it.second->available()) {
+        shouldScan = true;
+        break;
+      }
+    }
+  }
+  if (shouldScan) {
+    // if we should be scanning and we aren't we start scanning
+    if (scanner == NULL) startScanning();
+  } else {
+    // if we should not be scanning but we are: we stop
+    if (scanner != NULL) stopScanning();
+  }
 }
 
 void IotsaBLEClientMod::startScanning() {
+  scanner = BLEDevice::getScan();
+  IFDEBUG IotsaSerial.println("BLE scan start");
+  scanningMod = this;
   scanner->start(20, &IotsaBLEClientMod::scanComplete, false);
   iotsaConfig.pauseSleep();
 }
 
 void IotsaBLEClientMod::stopScanning() {
-  scanner->stop();
-  iotsaConfig.resumeSleep();
+  if (scanner) {
+    IFDEBUG IotsaSerial.println("BLE scan stop");
+    scanner->stop();
+    iotsaConfig.resumeSleep();
+    scanner = NULL;
+    scanningMod = NULL;
+  }
+  shouldUpdateScan = true;
 }
+
+IotsaBLEClientMod* IotsaBLEClientMod::scanningMod = NULL;
 
 void IotsaBLEClientMod::scanComplete(BLEScanResults results) {
     IFDEBUG IotsaSerial.println("BLE scan complete");
     iotsaConfig.resumeSleep();
+    if (scanningMod) scanningMod->stopScanning();
 }
 
 void IotsaBLEClientMod::serverSetup() {
@@ -79,7 +119,10 @@ void IotsaBLEClientMod::setManufacturerFilter(uint16_t manufacturerID) {
 }
 
 void IotsaBLEClientMod::loop() {
-
+  if (shouldUpdateScan) {
+    shouldUpdateScan = false;
+    updateScanning();
+  }
 }
 
 void IotsaBLEClientMod::onResult(BLEAdvertisedDevice advertisedDevice) {
@@ -109,6 +152,7 @@ IotsaBLEClientConnection* IotsaBLEClientMod::addDevice(std::string id) {
     configSave();
     return dev;
   }
+  shouldUpdateScan = true; // We probably want to scan for the new device
   return it->second;
 }
 
@@ -138,14 +182,27 @@ bool IotsaBLEClientMod::deviceSeen(std::string id, BLEAdvertisedDevice& device, 
   if (dev == NULL) return false;
   // And we tell the device about the advertisement getManufacturerData
   dev->setDevice(device);
+  shouldUpdateScan = true;  // We may be able to stop scanning
   return true;
 }
 
+void IotsaBLEClientMod::deviceNotSeen(std::string id) {
+  IotsaBLEClientConnection *dev;
+  dev = addDevice(id);
+  if (dev == NULL) return;
+  dev->clearDevice();
+  shouldUpdateScan = true; // We may want to start scanning again
+}
+
+void IotsaBLEClientMod::deviceNotSeen(String id) {
+  deviceNotSeen(std::string(id.c_str()));
+}
+
 void IotsaBLEClientMod::delDevice(std::string id) {
+  shouldUpdateScan = true;  // We may be able to stop scanning
   devices.erase(id);
   configSave();
 }
-
 
 void IotsaBLEClientMod::delDevice(String id) {
   delDevice(std::string(id.c_str()));

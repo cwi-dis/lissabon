@@ -256,13 +256,16 @@ void IotsaBLEDimmerMod::setup() {
   batteryMod.setPinDisableSleep(PIN_DISABLESLEEP);
 #endif
   dimmer1ui.setEncoder(encoder1);
+  bool wantUnknownDevices = dimmer1.name == "";
 #ifdef WITH_SECOND_DIMMER
   dimmer2ui.setEncoder(encoder2);
+  if (dimmer2.name == "") wantUnknownDevices = true;
 #endif // WITH_SECOND_DIMMER
 
   auto callback = std::bind(&IotsaBLEDimmerMod::deviceFound, this, std::placeholders::_1);
   bleClientMod.setDeviceFoundCallback(callback);
   bleClientMod.setServiceFilter(serviceUUID);
+  bleClientMod.findUnknownClients(wantUnknownDevices);
 }
 
 void IotsaBLEDimmerMod::deviceFound(BLEAdvertisedDevice& device) {

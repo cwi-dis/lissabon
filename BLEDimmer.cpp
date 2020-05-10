@@ -191,14 +191,13 @@ void BLEDimmer::loop() {
       needTransmit = false;
       return;
     }
-    // xxxjack ask iotsaBLEClient to listen for advertisements
+    // iotsaBLEClient should be listening for advertisements
     return;
   }
   // If all that is correct, try to connect.
   if (!dimmer->connect()) {
     IotsaSerial.println("xxxjack cannot connect to dimmer");
-    // xxxjack tell dimmer it is unavailable. Next time through the loop will
-    // restart listening for advertisements.
+    bleClientMod.deviceNotSeen(name);
     return;
   }
   // Connected to dimmer.
