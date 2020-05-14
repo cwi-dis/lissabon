@@ -2,6 +2,8 @@
 #include "iotsaBLEClient.h"
 #include "iotsaConfigFile.h"
 
+#undef DEBUG_PRINT_ALL_CLIENTS
+
 void IotsaBLEClientMod::configLoad() {
 #if 0
   IotsaConfigFileLoad cf("/config/bleclient.cfg");
@@ -126,7 +128,9 @@ void IotsaBLEClientMod::loop() {
 }
 
 void IotsaBLEClientMod::onResult(BLEAdvertisedDevice advertisedDevice) {
-  IFDEBUG IotsaSerial.printf("BLEClientMod::onResult(%s)\n", advertisedDevice.toString().c_str());
+#ifdef DEBUG_PRINT_ALL_CLIENTS
+  IotsaSerial.printf("BLEClientMod::onResult(%s)\n", advertisedDevice.toString().c_str());
+#endif
   // Do we want callbacks?
   if (callback == NULL) return;
   // Do we filter on services?

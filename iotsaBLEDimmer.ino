@@ -12,6 +12,8 @@
 #include "iotsaConfigFile.h"
 #include <set>
 
+#define DEBUG_PRINT_HEAP_SPACE
+
 #define WITH_OTA    // Enable Over The Air updates from ArduinoIDE. Needs at least 1MB flash.
 #define LED_PIN 22  // Define to turn on the LED when powered and not sleeping.
 
@@ -282,7 +284,9 @@ void IotsaBLEDimmerMod::needSave() {
 }
 
 void IotsaBLEDimmerMod::loop() {
+#ifdef DEBUG_PRINT_HEAP_SPACE
   { static uint32_t last; if (millis() > last+1000) { iotsaConfig.printHeapSpace(); last = millis(); }}
+#endif
   // See whether we have a value to save (because the user has been turning the dimmer)
   if (saveAtMillis > 0 && millis() > saveAtMillis) {
     saveAtMillis = 0;
