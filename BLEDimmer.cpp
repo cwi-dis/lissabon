@@ -185,7 +185,7 @@ void BLEDimmer::loop() {
   }
   // If it exists, check that we have enough information to connect.
   if (!dimmer->available()) {
-    IotsaSerial.println("xxxjack dimmer not available");
+    //IotsaSerial.println("xxxjack dimmer not available");
     if (millis() > needTransmitTimeoutAtMillis) {
       IotsaSerial.println("Giving up on connecting to dimmer");
       needTransmit = false;
@@ -194,9 +194,11 @@ void BLEDimmer::loop() {
     // iotsaBLEClient should be listening for advertisements
     return;
   }
+  // If we are scanning we don't try to connect
+  if (!bleClientMod.canConnect()) return;
   // If all that is correct, try to connect.
   if (!dimmer->connect()) {
-    IotsaSerial.println("xxxjack cannot connect to dimmer");
+    IotsaSerial.println("connect to dimmer failed");
     bleClientMod.deviceNotSeen(name);
     return;
   }
@@ -212,5 +214,6 @@ void BLEDimmer::loop() {
     IFDEBUG IotsaSerial.println("BLE: set(isOn) failed");
   }
   disconnectAtMillis = millis() + IOTSA_BLEDIMMER_KEEPOPEN_MILLIS;
+  iotsaConfig.postponeSleep(IOTSA_BLEDIMMER_KEEPOPEN_MILLIS+100);
   needTransmit = false;
 }

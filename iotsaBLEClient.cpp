@@ -43,13 +43,13 @@ void IotsaBLEClientMod::setup() {
   // The scanner is a singleton. We initialize it once.
   scanner = BLEDevice::getScan();
   scanner->setAdvertisedDeviceCallbacks(this, true);
-  scanner->setActiveScan(false);
+  scanner->setActiveScan(true);
   scanner->setInterval(155);
   scanner->setWindow(151);
   scanner = NULL;
 }
 
-void IotsaBLEClientMod::findUnknownClients(bool on) {
+void IotsaBLEClientMod::findUnknownDevices(bool on) {
   scanForUnknownClients = on;
   shouldUpdateScan = true;
 }
@@ -77,10 +77,16 @@ void IotsaBLEClientMod::updateScanning() {
 }
 
 void IotsaBLEClientMod::startScanning() {
+  // First close all connections. Scanning while connected has proved to result in issues.
+  for (auto it : devices) {
+    it.second->disconnect();
+  }
+  // Now start the scan
   scanner = BLEDevice::getScan();
   IFDEBUG IotsaSerial.println("BLE scan start");
   scanningMod = this;
   scanner->start(6, &IotsaBLEClientMod::scanComplete, false);
+  // Do not sleep until scan is done
   iotsaConfig.pauseSleep();
 }
 
@@ -88,11 +94,20 @@ void IotsaBLEClientMod::stopScanning() {
   if (scanner) {
     IFDEBUG IotsaSerial.println("BLE scan stop");
     scanner->stop();
-    iotsaConfig.resumeSleep();
     scanner = NULL;
     scanningMod = NULL;
+    // We can sleep again, but give a bit of time to cient-connection objects to
+    // react to scan results.
+    iotsaConfig.resumeSleep();
+    iotsaConfig.postponeSleep(100);
   }
+  // Next time through loop, check whether we should scan again.
   shouldUpdateScan = true;
+}
+
+bool IotsaBLEClientMod::canConnect() {
+  // Connecting to a device while we are scanning has proved to result in issues.
+  return scanner == NULL;
 }
 
 IotsaBLEClientMod* IotsaBLEClientMod::scanningMod = NULL;
@@ -106,7 +121,7 @@ void IotsaBLEClientMod::scanComplete(BLEScanResults results) {
 void IotsaBLEClientMod::serverSetup() {
 }
 
-void IotsaBLEClientMod::setDeviceFoundCallback(BleDeviceFoundCallback _callback) {
+void IotsaBLEClientMod::setUnknownDeviceFoundCallback(BleDeviceFoundCallback _callback) {
   callback = _callback;
 }
 
@@ -131,7 +146,29 @@ void IotsaBLEClientMod::onResult(BLEAdvertisedDevice advertisedDevice) {
 #ifdef DEBUG_PRINT_ALL_CLIENTS
   IotsaSerial.printf("BLEClientMod::onResult(%s)\n", advertisedDevice.toString().c_str());
 #endif
-  // Do we want callbacks?
+  // Is this an advertisement for a device we know, either by name or by address?
+  std::string deviceName = advertisedDevice.getName();
+  auto it = devices.find(deviceName);
+  if (it != devices.end()) {
+    auto dev = it->second;
+    bool changed = dev->setDevice(advertisedDevice);
+    if (changed) {
+      devicesByAddress[advertisedDevice.getAddress().toString()] = dev;
+    }
+    shouldUpdateScan = true; // We may have found what we were looking for
+    return;
+  }
+  auto it2 = devicesByAddress.find(advertisedDevice.getAddress().toString());
+  if (it2 != devicesByAddress.end()) {
+    auto dev = it->second;
+    bool changed = dev->setDevice(advertisedDevice);
+    if (changed) {
+      devicesByAddress[advertisedDevice.getAddress().toString()] = dev;
+    }
+    shouldUpdateScan = true; // We may have found what we were looking for
+    return;
+  }
+  // Do we want callbacks for unknown devices?
   if (callback == NULL) return;
   // Do we filter on services?
   if (serviceFilter != NULL) {
@@ -174,20 +211,6 @@ IotsaBLEClientConnection* IotsaBLEClientMod::getDevice(std::string id) {
 
 IotsaBLEClientConnection* IotsaBLEClientMod::getDevice(String id) {
   return getDevice(std::string(id.c_str()));
-}
-
-bool IotsaBLEClientMod::deviceSeen(std::string id, BLEAdvertisedDevice& device, bool add) {
-  IotsaBLEClientConnection *dev;
-  if (add) {
-    dev = addDevice(id);
-  } else {
-    dev = getDevice(id);
-  }
-  if (dev == NULL) return false;
-  // And we tell the device about the advertisement getManufacturerData
-  dev->setDevice(device);
-  shouldUpdateScan = true;  // We may be able to stop scanning
-  return true;
 }
 
 void IotsaBLEClientMod::deviceNotSeen(std::string id) {

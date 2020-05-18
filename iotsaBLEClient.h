@@ -16,22 +16,25 @@ public:
   void serverSetup();
   void loop();
   String info() { return ""; }
-  void findUnknownClients(bool on);
-  void setDeviceFoundCallback(BleDeviceFoundCallback _callback);
+  void findUnknownDevices(bool on);
+  void setUnknownDeviceFoundCallback(BleDeviceFoundCallback _callback);
   void setServiceFilter(const BLEUUID& serviceUUID);
   void setManufacturerFilter(uint16_t manufacturerID);
-
+protected:
   // These are all the known devices (known by the application, not by this module)
   std::map<std::string, IotsaBLEClientConnection*> devices;
+  // These are all known devices by address
+  std::map<std::string, IotsaBLEClientConnection *>devicesByAddress;
+public:
   IotsaBLEClientConnection* addDevice(std::string id);
   IotsaBLEClientConnection* addDevice(String id);
   IotsaBLEClientConnection* getDevice(std::string id);
   IotsaBLEClientConnection* getDevice(String id);
   void delDevice(std::string id);
   void delDevice(String id);
-  bool deviceSeen(std::string id, BLEAdvertisedDevice& device, bool add=false);
   void deviceNotSeen(std::string id);
   void deviceNotSeen(String id);
+  bool canConnect();
 protected:
   void configLoad();
   void configSave();

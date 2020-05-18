@@ -13,7 +13,6 @@ bool IotsaBLEClientConnection::setDevice(BLEAdvertisedDevice& _device) {
       return false;
     }
   }
-  // No device, or different address.
   if (device != NULL) delete device;
   device = new BLEAdvertisedDevice(_device);
   return true;

@@ -86,7 +86,7 @@ public:
 protected:
   bool getHandler(const char *path, JsonObject& reply);
   bool putHandler(const char *path, const JsonVariant& request, JsonObject& reply);
-  void deviceFound(BLEAdvertisedDevice& device);
+  void unknownDeviceFound(BLEAdvertisedDevice& deviceAdvertisement);
 private:
   void buttonChanged();
   void needSave();
@@ -264,19 +264,15 @@ void IotsaBLEDimmerMod::setup() {
   if (dimmer2.name == "") wantUnknownDevices = true;
 #endif // WITH_SECOND_DIMMER
 
-  auto callback = std::bind(&IotsaBLEDimmerMod::deviceFound, this, std::placeholders::_1);
-  bleClientMod.setDeviceFoundCallback(callback);
+  auto callback = std::bind(&IotsaBLEDimmerMod::unknownDeviceFound, this, std::placeholders::_1);
+  bleClientMod.setUnknownDeviceFoundCallback(callback);
   bleClientMod.setServiceFilter(serviceUUID);
-  bleClientMod.findUnknownClients(wantUnknownDevices);
+  bleClientMod.findUnknownDevices(wantUnknownDevices);
 }
 
-void IotsaBLEDimmerMod::deviceFound(BLEAdvertisedDevice& device) {
-  IFDEBUG IotsaSerial.printf("deviceFound: iotsaLedstrip/iotsaDimmer \"%s\"\n", device.getName().c_str());
-  // update the connection information, or add to unknown dimmers if not known
-  if (!bleClientMod.deviceSeen(device.getName(), device)) {
-    IFDEBUG IotsaSerial.printf("deviceFound: unknown dimmer \"%s\"\n", device.getName().c_str());
-    unknownDimmers.insert(device.getName());
-  }
+void IotsaBLEDimmerMod::unknownDeviceFound(BLEAdvertisedDevice& deviceAdvertisement) {
+  IFDEBUG IotsaSerial.printf("unknownDeviceFound: iotsaLedstrip/iotsaDimmer \"%s\"\n", deviceAdvertisement.getName().c_str());
+  unknownDimmers.insert(deviceAdvertisement.getName());
 }
 
 void IotsaBLEDimmerMod::needSave() {
@@ -316,5 +312,6 @@ void setup(void){
  
 // Standard loop() routine, hands off most work to the application framework
 void loop(void){
+  heap_caps_check_integrity_all(true);
   application.loop();
 }
