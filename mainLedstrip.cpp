@@ -134,6 +134,14 @@ private:
   IotsaPixelsourceHandler *stripHandler;
   int darkPixels; // Number of unlit pixels between lit pixels
   uint32_t saveAtMillis;
+#ifdef PIN_MASTER_POWER
+  void powerOn();
+  void powerOff();
+  bool isPowerOn;
+#else
+  void powerOn() {}
+  void powerOff() {}
+#endif
 };
 
 void IotsaLedstripMod::setHandler(uint8_t *_buffer, size_t _count, int _bpp, IotsaPixelsourceHandler *_handler) {
@@ -536,6 +544,12 @@ void IotsaLedstripMod::configSave() {
 }
 
 void IotsaLedstripMod::setup() {
+#ifdef PIN_MASTER_POWER
+  pinMode(PIN_MASTER_POWER, OUTPUT);
+  gpio_hold_dis((gpio_num_t)PIN_MASTER_POWER);
+  digitalWrite(PIN_MASTER_POWER, LOW);
+  isPowerOn = false;
+#endif
 #ifdef PIN_VBAT
   batteryMod.setPinVBat(PIN_VBAT, VBAT_100_PERCENT);
 #endif
@@ -543,8 +557,10 @@ void IotsaLedstripMod::setup() {
   batteryMod.setPinDisableSleep(PIN_DISABLESLEEP);
 #endif
   configLoad();
+  // We need to initialize ledstrip. We flip one bit in the prevColor to ensure this.
   prevColor = color;
-  startAnimation();
+  prevColor.R = prevColor.R ^ 1;
+  startAnimation(true);
 #ifdef WITH_TOUCHPADS
   levelDimmer.bindVar(tempColor.Brightness, 0.1, 1.0, 0.02);
   levelDimmer.setCallback(std::bind(&IotsaLedstripMod::changedBrightness, this));
@@ -601,10 +617,14 @@ void IotsaLedstripMod::loop() {
   }
   // Quick return if we have nothing to do
   if (millisStartAnimation == 0) return;
-  // Determine how far along the animation we are, and terminate the animation when done (or if it looks preposterous)
-  float progress = float(millis()-millisStartAnimation) / float(millisThisAnimationDuration);
+  // The color we want to go to
   RgbwFColor wanted = RgbwFColor(0);
   if (isOn) wanted = color;
+  // Enable power to the led strip, if needed
+  if (wanted.CalculateBrightness() > 0 || prevColor.CalculateBrightness() > 0) powerOn();
+
+  // Determine how far along the animation we are, and terminate the animation when done (or if it looks preposterous)
+  float progress = float(millis()-millisStartAnimation) / float(millisThisAnimationDuration);
 
   if (progress < 0) progress = 0;
   if (progress > 1) {
@@ -654,6 +674,8 @@ void IotsaLedstripMod::loop() {
       stripHandler->pixelSourceCallback();
     }
   }
+  // Disable power to the led strip, if we can
+  if ( millisStartAnimation == 0 && prevColor.CalculateBrightness() == 0) powerOff();
 }
 
 bool IotsaLedstripMod::changedBrightness() {
@@ -691,6 +713,28 @@ void IotsaLedstripMod::identify() {
     delay(100);
     startAnimation();
 }
+ 
+#ifdef PIN_MASTER_POWER
+void IotsaLedstripMod::powerOn() {
+  if (isPowerOn) return;
+  IFDEBUG IotsaSerial.println("poweron");
+  isPowerOn = true;
+  gpio_hold_dis((gpio_num_t)PIN_MASTER_POWER);
+  digitalWrite(PIN_MASTER_POWER, HIGH);
+  gpio_hold_en((gpio_num_t)PIN_MASTER_POWER);
+  delay(1);
+}
+void IotsaLedstripMod::powerOff() {
+  if (!isPowerOn) return;
+  delay(1);
+  IFDEBUG IotsaSerial.println("poweroff");
+  isPowerOn = false;
+  gpio_hold_dis((gpio_num_t)PIN_MASTER_POWER);
+  digitalWrite(PIN_MASTER_POWER, LOW);
+  gpio_hold_en((gpio_num_t)PIN_MASTER_POWER);
+}
+#endif // PIN_MASTER_POWER
+
 // Instantiate the Led module, and install it in the framework
 IotsaLedstripMod ledstripMod(application);
 
@@ -700,7 +744,7 @@ void setup(void){
   application.setup();
   application.serverSetup();
 }
- 
+
 // Standard loop() routine, hands off most work to the application framework
 void loop(void){
   application.loop();
