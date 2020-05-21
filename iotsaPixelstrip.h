@@ -34,6 +34,8 @@ class IotsaPixelsourceHandler {
 public:
   virtual ~IotsaPixelsourceHandler() {};
   virtual void pixelSourceCallback() = 0;
+  virtual void powerOn(bool force=false) = 0;
+  virtual void powerOff(bool force=false) = 0;
 };
 
 class IotsaPixelsource {
@@ -58,6 +60,8 @@ public:
   String info();
   void setPixelsource(IotsaPixelsource *_source) { source = _source; };
   void pixelSourceCallback();
+  void powerOn(bool force=false);
+  void powerOff(bool force=false);
 protected:
   bool getHandler(const char *path, JsonObject& reply);
   bool putHandler(const char *path, const JsonVariant& request, JsonObject& reply);
@@ -75,6 +79,9 @@ protected:
   NeoGamma<NeoGammaTableMethod> *gammaConverter;
 #else
   uint8_t *gammaTable;
+#endif
+#ifdef IOTSA_NPB_POWER_PIN
+  bool isPowerOn;
 #endif
 };
 

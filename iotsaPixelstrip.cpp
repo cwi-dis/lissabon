@@ -82,8 +82,13 @@ void IotsaPixelstripMod::setup() {
 void IotsaPixelstripMod::setupStrip() {
   IFDEBUG IotsaSerial.printf("setup count=%d bpp=%d pin=%d\n", count, IOTSA_NPB_BPP, pin);
   if (strip) delete strip;
+  strip = NULL;
   strip = new IotsaNeoPixelBus(count, pin);
   strip->Begin();
+#ifdef IOTSA_NPB_POWER_PIN
+  pinMode(IOTSA_NPB_POWER_PIN, OUTPUT);
+  powerOn(true);
+#endif
   if (buffer) free(buffer);
   buffer = (uint8_t *)malloc(count*IOTSA_NPB_BPP);
   if (buffer == NULL) {
@@ -118,6 +123,37 @@ void IotsaPixelstripMod::setupStrip() {
     source->setHandler(buffer, count, IOTSA_NPB_BPP, this);
   }
 }
+
+void IotsaPixelstripMod::powerOn(bool force) {
+#ifdef IOTSA_NPB_POWER_PIN
+  if (isPowerOn && !force) return;
+  IFDEBUG IotsaSerial.println("poweron");
+  isPowerOn = true;
+  gpio_hold_dis((gpio_num_t)IOTSA_NPB_POWER_PIN);
+  digitalWrite(IOTSA_NPB_POWER_PIN, HIGH);
+  gpio_hold_en((gpio_num_t)IOTSA_NPB_POWER_PIN);
+  delay(1);
+  if (strip) {
+    strip->ClearTo(RgbColor(0));
+    strip->Show();
+    strip->Dirty();
+    strip->Show();
+  }
+#endif // IOTSA_NPB_POWER_PIN
+}
+
+void IotsaPixelstripMod::powerOff(bool force) {
+#ifdef IOTSA_NPB_POWER_PIN
+  if (!isPowerOn && !force) return;
+  delay(1);
+  IFDEBUG IotsaSerial.println("poweroff");
+  isPowerOn = false;
+  gpio_hold_dis((gpio_num_t)IOTSA_NPB_POWER_PIN);
+  digitalWrite(IOTSA_NPB_POWER_PIN, LOW);
+  gpio_hold_en((gpio_num_t)IOTSA_NPB_POWER_PIN);
+#endif // IOTSA_NPB_POWER_PIN
+}
+
 
 #ifdef IOTSA_WITH_API
 bool IotsaPixelstripMod::getHandler(const char *path, JsonObject& reply) {
