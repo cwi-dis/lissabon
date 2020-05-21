@@ -129,10 +129,22 @@ void IotsaPixelstripMod::powerOn(bool force) {
   if (isPowerOn && !force) return;
   IFDEBUG IotsaSerial.println("poweron");
   isPowerOn = true;
+  //
+  // The powerpin should connect to a mosfet or something that enables power to
+  // the ledstrip when high (and disables power when low or floating)
+  //
   gpio_hold_dis((gpio_num_t)IOTSA_NPB_POWER_PIN);
   digitalWrite(IOTSA_NPB_POWER_PIN, HIGH);
   gpio_hold_en((gpio_num_t)IOTSA_NPB_POWER_PIN);
+  //
+  // We also ensure the ledstrip DATA output pin will carry the data signal.
+  //
+  IOTSA_NPB_ENABLE_OUTPUT_PIN();
   delay(1);
+  //
+  // We clear the strip twice, because pixels may come up with random colors
+  // and the may be slow coming up.
+  //
   if (strip) {
     strip->ClearTo(RgbColor(0));
     strip->Show();
@@ -148,9 +160,18 @@ void IotsaPixelstripMod::powerOff(bool force) {
   delay(1);
   IFDEBUG IotsaSerial.println("poweroff");
   isPowerOn = false;
+  //
+  // The powerpin should connect to a mosfet or something that enables power to
+  // the ledstrip when high (and disables power when low or floating)
+  //
   gpio_hold_dis((gpio_num_t)IOTSA_NPB_POWER_PIN);
   digitalWrite(IOTSA_NPB_POWER_PIN, LOW);
   gpio_hold_en((gpio_num_t)IOTSA_NPB_POWER_PIN);
+  //
+  // We also try to float the ledstrip DATA output pin (to forestall leaking
+  // current from data to very dimply power the leds)
+  //
+  IOTSA_NPB_FLOAT_OUTPUT_PIN();
 #endif // IOTSA_NPB_POWER_PIN
 }
 

@@ -18,6 +18,18 @@ const int IOTSA_NPB_BPP = (IOTSA_NPB_FEATURE::PixelSize);
 
 #ifndef IOTSA_NPB_METHOD
 #define IOTSA_NPB_METHOD Neo800KbpsMethod
+#ifdef ESP32
+// A hack-ish solution to float the output pin when we powerdown the strip.
+#define IOTSA_NPB_FLOAT_OUTPUT_PIN() (rmt_set_idle_level(RMT_CHANNEL_6, true, RMT_IDLE_LEVEL_HIGH))
+#define IOTSA_NPB_ENABLE_OUTPUT_PIN() (rmt_set_idle_level(RMT_CHANNEL_6, true, RMT_IDLE_LEVEL_LOW))
+#endif
+#endif
+
+#ifndef IOTSA_NPB_FLOAT_OUTPUT_PIN
+#define IOTSA_NPB_FLOAT_OUTPUT_PIN()
+#endif
+#ifndef IOTSA_NPB_ENABLE_OUTPUT_PIN
+#define IOTSA_NPB_ENABLE_OUTPUT_PIN()
 #endif
 
 #ifndef IOTSA_NPB_DEFAULT_PIN
