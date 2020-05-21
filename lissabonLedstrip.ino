@@ -22,7 +22,7 @@
 // Define this to also enable support for temperature touchpads
 #define WITH_TTOUCHPADS
 
-IotsaApplication application("Iotsa LEDstrip Lighting Server");
+IotsaApplication application("Lissabon LEDstrip");
 IotsaWifiMod wifiMod(application);
 
 #ifdef WITH_OTA
@@ -77,7 +77,7 @@ IotsaInputMod inputMod(application, inputs, sizeof(inputs)/sizeof(inputs[0]));
 // LED Lighting module. 
 //
 
-class IotsaLedstripMod : public IotsaApiMod, public IotsaPixelsource, public IotsaBLEApiProvider 
+class LissabonLedstripMod : public IotsaApiMod, public IotsaPixelsource, public IotsaBLEApiProvider 
 {
 public:
   using IotsaApiMod::IotsaApiMod;
@@ -136,7 +136,7 @@ private:
   uint32_t saveAtMillis;
 };
 
-void IotsaLedstripMod::setHandler(uint8_t *_buffer, size_t _count, int _bpp, IotsaPixelsourceHandler *_handler) {
+void LissabonLedstripMod::setHandler(uint8_t *_buffer, size_t _count, int _bpp, IotsaPixelsourceHandler *_handler) {
   buffer = _buffer;
   count = _count;
   bpp = _bpp;
@@ -149,7 +149,7 @@ void IotsaLedstripMod::setHandler(uint8_t *_buffer, size_t _count, int _bpp, Iot
   startAnimation(true);
 }
 
-void IotsaLedstripMod::startAnimation(bool quick) {
+void LissabonLedstripMod::startAnimation(bool quick) {
   if (quick) {
     millisStartAnimation = millis()-2;
     millisThisAnimationDuration = 1;
@@ -161,14 +161,14 @@ void IotsaLedstripMod::startAnimation(bool quick) {
   iotsaConfig.postponeSleep(millisThisAnimationDuration+100);
 }
 
-void IotsaLedstripMod::setHSL(float _h, float _s, float _l) {
+void LissabonLedstripMod::setHSL(float _h, float _s, float _l) {
   hslColor = HslFColor(_h, _s, _l);
   hslColorIsValid = true;
   tempColorIsValid = false;
   color = rgbwSpace.toRgbw(hslColor);
 }
 
-void IotsaLedstripMod::setTI(float _temp, float _brightness) {
+void LissabonLedstripMod::setTI(float _temp, float _brightness) {
   if (_temp < 1000 || _temp > 10000) _temp = rgbwSpace.WTemperature; // Cater for coming from RGB or HLS value
   tempColor = TempFColor(_temp, _brightness);
   tempColorIsValid = true;
@@ -179,7 +179,7 @@ void IotsaLedstripMod::setTI(float _temp, float _brightness) {
 }
 
 #ifdef IOTSA_WITH_BLE
-bool IotsaLedstripMod::blePutHandler(UUIDstring charUUID) {
+bool LissabonLedstripMod::blePutHandler(UUIDstring charUUID) {
   bool anyChanged = false;
   if (charUUID == tempUUID) {
       int _temp = bleApi.getAsInt(tempUUID);
@@ -216,7 +216,7 @@ bool IotsaLedstripMod::blePutHandler(UUIDstring charUUID) {
   return false;
 }
 
-bool IotsaLedstripMod::bleGetHandler(UUIDstring charUUID) {
+bool LissabonLedstripMod::bleGetHandler(UUIDstring charUUID) {
   if (charUUID == tempUUID) {
       int _temp = int(tempColor.Temperature);
       IFDEBUG IotsaSerial.printf("xxxjack ble: read temp %s value %d\n", charUUID, _temp);
@@ -246,7 +246,7 @@ bool IotsaLedstripMod::bleGetHandler(UUIDstring charUUID) {
 
 #ifdef IOTSA_WITH_WEB
 void
-IotsaLedstripMod::handler() {
+LissabonLedstripMod::handler() {
   // Handles the page that is specific to the Led module, greets the user and
   // optionally stores a new name to greet the next time.
   String error;
@@ -333,7 +333,7 @@ IotsaLedstripMod::handler() {
     startAnimation();
   }
   
-  String message = "<html><head><title>Ledstrip Server</title></head><body><h1>Ledstrip Server</h1>";
+  String message = "<html><head><title>Lissabon Ledstrip</title></head><body><h1>Lissabon Ledstrip</h1>";
   if (error != "") {
     message += "<p><em>" + error + "</em></p>";
   }
@@ -380,7 +380,7 @@ IotsaLedstripMod::handler() {
   server->send(200, "text/html", message);
 }
 
-String IotsaLedstripMod::info() {
+String LissabonLedstripMod::info() {
   // Return some information about this module, for the main page of the web server.
   String rv = "<p>See <a href=\"/ledstrip\">/led</a> for setting the color of the LEDs and their count.";
 #ifdef IOTSA_WITH_REST
@@ -400,7 +400,7 @@ String IotsaLedstripMod::info() {
 }
 #endif // IOTSA_WITH_WEB
 
-bool IotsaLedstripMod::getHandler(const char *path, JsonObject& reply) {
+bool LissabonLedstripMod::getHandler(const char *path, JsonObject& reply) {
   reply["r"] = color.R/255.0;
   reply["g"] = color.G/255.0;
   reply["b"] = color.B/255.0;
@@ -424,7 +424,7 @@ bool IotsaLedstripMod::getHandler(const char *path, JsonObject& reply) {
   return true;
 }
 
-bool IotsaLedstripMod::putHandler(const char *path, const JsonVariant& request, JsonObject& reply) {
+bool LissabonLedstripMod::putHandler(const char *path, const JsonVariant& request, JsonObject& reply) {
   if (request["identify"]|0) identify();
   darkPixels = request["darkPixels"]|darkPixels;
   millisAnimationDuration = request["animation"]|millisAnimationDuration;
@@ -469,17 +469,17 @@ bool IotsaLedstripMod::putHandler(const char *path, const JsonVariant& request, 
   return true;
 }
 
-void IotsaLedstripMod::serverSetup() {
+void LissabonLedstripMod::serverSetup() {
   // Setup the web server hooks for this module.
 #ifdef IOTSA_WITH_WEB
-  server->on("/ledstrip", std::bind(&IotsaLedstripMod::handler, this));
+  server->on("/ledstrip", std::bind(&LissabonLedstripMod::handler, this));
 #endif // IOTSA_WITH_WEB
   api.setup("/api/ledstrip", true, true);
   name = "ledstrip";
 }
 
 
-void IotsaLedstripMod::configLoad() {
+void LissabonLedstripMod::configLoad() {
   IotsaConfigFileLoad cf("/config/ledstrip.cfg");
   int value;
   cf.get("isOn", value, 1);
@@ -509,7 +509,7 @@ void IotsaLedstripMod::configLoad() {
   if (temp > 0 || brightness > 0) setTI(temp, brightness);
 }
 
-void IotsaLedstripMod::configSave() {
+void LissabonLedstripMod::configSave() {
   IotsaConfigFileSave cf("/config/ledstrip.cfg");
   cf.put("isOn", isOn);
   cf.put("darkPixels", darkPixels);
@@ -535,7 +535,7 @@ void IotsaLedstripMod::configSave() {
   }
 }
 
-void IotsaLedstripMod::setup() {
+void LissabonLedstripMod::setup() {
 
 #ifdef PIN_VBAT
   batteryMod.setPinVBat(PIN_VBAT, VBAT_100_PERCENT);
@@ -550,12 +550,12 @@ void IotsaLedstripMod::setup() {
   startAnimation(true);
 #ifdef WITH_TOUCHPADS
   levelDimmer.bindVar(tempColor.Brightness, 0.1, 1.0, 0.02);
-  levelDimmer.setCallback(std::bind(&IotsaLedstripMod::changedBrightness, this));
+  levelDimmer.setCallback(std::bind(&LissabonLedstripMod::changedBrightness, this));
   levelDimmer.bindStateVar(isOn);
-  levelDimmer.setStateCallback(std::bind(&IotsaLedstripMod::changedOnOff, this));
+  levelDimmer.setStateCallback(std::bind(&LissabonLedstripMod::changedOnOff, this));
 #ifdef WITH_TTOUCHPADS
   tempDimmer.bindVar(tempColor.Temperature, 2200.0, 6500.0, 100.0);
-  tempDimmer.setCallback(std::bind(&IotsaLedstripMod::changedBrightness, this));
+  tempDimmer.setCallback(std::bind(&LissabonLedstripMod::changedBrightness, this));
 #endif
 #endif
 #ifdef IOTSA_WITH_BLE
@@ -596,7 +596,7 @@ void IotsaLedstripMod::setup() {
 #endif
 }
 
-void IotsaLedstripMod::loop() {
+void LissabonLedstripMod::loop() {
   // See if we have a value to save (because the user has been turning the dimmer)
   if (saveAtMillis > 0 && millis() > saveAtMillis) {
     saveAtMillis = 0;
@@ -665,7 +665,7 @@ void IotsaLedstripMod::loop() {
   if ( millisStartAnimation == 0 && prevColor.CalculateBrightness() == 0) stripHandler->powerOff();
 }
 
-bool IotsaLedstripMod::changedBrightness() {
+bool LissabonLedstripMod::changedBrightness() {
   isOn = true;
   setTI(tempColor.Temperature, tempColor.Brightness);
   startAnimation(true);
@@ -675,7 +675,7 @@ bool IotsaLedstripMod::changedBrightness() {
   return true;
 }
 
-bool IotsaLedstripMod::changedOnOff() {
+bool LissabonLedstripMod::changedOnOff() {
   // Start the animation to get to the wanted value
   startAnimation();
   // And prepare for saving (because we don't want to wear out the Flash chip)
@@ -684,7 +684,7 @@ bool IotsaLedstripMod::changedOnOff() {
   return true;
 }
 
-void IotsaLedstripMod::identify() {
+void LissabonLedstripMod::identify() {
   if (!buffer) return;
     memset(buffer, 255, count*bpp);
     stripHandler->pixelSourceCallback();
@@ -702,7 +702,7 @@ void IotsaLedstripMod::identify() {
 }
  
 // Instantiate the Led module, and install it in the framework
-IotsaLedstripMod ledstripMod(application);
+LissabonLedstripMod ledstripMod(application);
 
 // Standard setup() method, hands off most work to the application framework
 void setup(void){
