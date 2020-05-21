@@ -3,7 +3,7 @@
 bool
 DimmerUI::touchedOnOff() {
   IFDEBUG IotsaSerial.printf("touchedOnOff %d: onOff=%d level=%f\n", dimmer.num, dimmer.isOn, dimmer.level);
-  dimmer.callbacks->buttonChanged();
+  dimmer.callbacks->uiButtonChanged();
   dimmer.updateDimmer();
   return true;
 }

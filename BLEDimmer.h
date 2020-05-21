@@ -6,6 +6,7 @@
 #include "iotsa.h"
 #include "iotsaConfigFile.h"
 #include "iotsaBLEClient.h"
+#include "AbstractDimmer.h"
 
 #include <ArduinoJson.h>
 
@@ -19,14 +20,7 @@ static BLEUUID brightnessUUID("F3390004-F793-4D0C-91BB-C91EEB92A1A4");
 
 using namespace ArduinoJson;
 
-class DimmerCallbacks {
-public:
-  ~DimmerCallbacks() {}
-  virtual void buttonChanged() = 0;
-  virtual void needSave() = 0;
-};
-
-class BLEDimmer {
+class BLEDimmer : public AbstractDimmer {
 public:
   BLEDimmer(int _num, IotsaBLEClientMod &_bleClientMod, DimmerCallbacks *_callbacks) : num(_num), bleClientMod(_bleClientMod), callbacks(_callbacks) {}
   void updateDimmer();

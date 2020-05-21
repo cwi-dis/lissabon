@@ -12,7 +12,7 @@
 #include "iotsaConfigFile.h"
 #include <set>
 
-#define DEBUG_PRINT_HEAP_SPACE
+#undef DEBUG_PRINT_HEAP_SPACE
 
 #define WITH_OTA    // Enable Over The Air updates from ArduinoIDE. Needs at least 1MB flash.
 #define LED_PIN 22  // Define to turn on the LED when powered and not sleeping.
@@ -88,8 +88,8 @@ protected:
   bool putHandler(const char *path, const JsonVariant& request, JsonObject& reply);
   void unknownDeviceFound(BLEAdvertisedDevice& deviceAdvertisement);
 private:
-  void buttonChanged();
-  void needSave();
+  void uiButtonChanged();
+  void dimmerValueChanged();
   void handler();
   BLEDimmer dimmer1;
   DimmerUI dimmer1ui;
@@ -106,7 +106,7 @@ private:
 
 
 
-void IotsaBLEDimmerMod::buttonChanged() {
+void IotsaBLEDimmerMod::uiButtonChanged() {
   // Called whenever any button changed state.
   // Used to give visual feedback (led turning off) on presses and releases,
   // and to enable config mod after 4 taps and reboot after 8 taps
@@ -275,7 +275,7 @@ void IotsaBLEDimmerMod::unknownDeviceFound(BLEAdvertisedDevice& deviceAdvertisem
   unknownDimmers.insert(deviceAdvertisement.getName());
 }
 
-void IotsaBLEDimmerMod::needSave() {
+void IotsaBLEDimmerMod::dimmerValueChanged() {
   saveAtMillis = millis() + 1000;
 }
 

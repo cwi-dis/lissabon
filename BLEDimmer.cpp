@@ -150,7 +150,7 @@ bool BLEDimmer::putHandler(const JsonVariant& request) {
 void BLEDimmer::updateDimmer() {
   needTransmit = true;
   needTransmitTimeoutAtMillis = millis() + IOTSA_BLEDIMMER_CONNECT_TIMEOUT;
-  callbacks->needSave();
+  callbacks->dimmerValueChanged();
 }
 
 bool BLEDimmer::setName(String value) {
