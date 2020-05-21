@@ -1,5 +1,7 @@
 #include "DimmerUI.h"
 
+namespace Lissabon {
+
 bool
 DimmerUI::touchedOnOff() {
   IFDEBUG IotsaSerial.printf("touchedOnOff %d: onOff=%d level=%f\n", dimmer.num, dimmer.isOn, dimmer.level);
@@ -22,4 +24,6 @@ DimmerUI::setEncoder(UpDownButtons& encoder) {
   encoder.bindVar(dimmer.level, dimmer.minLevel, 1.0, 0.02);
   encoder.bindStateVar(dimmer.isOn);
   encoder.setStateCallback(std::bind(&DimmerUI::touchedOnOff, this));
+}
+
 }

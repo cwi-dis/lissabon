@@ -63,6 +63,8 @@ IotsaBLEClientMod bleClientMod(application);
 #include "BLEDimmer.h"
 #include "DimmerUI.h"
 
+using namespace Lissabon;
+
 class IotsaBLEDimmerMod : public IotsaApiMod, public DimmerCallbacks {
 public:
   IotsaBLEDimmerMod(IotsaApplication &_app, IotsaAuthenticationProvider *_auth=NULL)

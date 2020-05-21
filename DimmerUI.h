@@ -2,17 +2,19 @@
 #ifndef _DIMMERUI_H_
 #define _DIMMERUI_H_
 #include "iotsa.h"
-#include "BLEDimmer.h"
+#include "AbstractDimmer.h"
 #include "iotsaInput.h"
 
+namespace Lissabon {
 class DimmerUI  {
 public:
   //DimmerUI(int _num, DimmerCallbacks *_callbacks) : BLEDimmer(_num, _callbacks) {}
-  DimmerUI(BLEDimmer& _dimmer) : dimmer(_dimmer) {}
+  DimmerUI(AbstractDimmer& _dimmer) : dimmer(_dimmer) {}
   void setEncoder(UpDownButtons& encoder);
   bool touchedOnOff();
   bool levelChanged();
 protected:
-  BLEDimmer& dimmer;
+  AbstractDimmer& dimmer;
+};
 };
 #endif // _DIMMERUI_H_

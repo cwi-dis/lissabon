@@ -1,6 +1,8 @@
 #include "BLEDimmer.h"
 #include "iotsaBLEClient.h"
 
+namespace Lissabon {
+
 // How long we keep trying to connect to a dimmer
 #define IOTSA_BLEDIMMER_CONNECT_TIMEOUT 10000
 
@@ -216,4 +218,5 @@ void BLEDimmer::loop() {
   disconnectAtMillis = millis() + IOTSA_BLEDIMMER_KEEPOPEN_MILLIS;
   iotsaConfig.postponeSleep(IOTSA_BLEDIMMER_KEEPOPEN_MILLIS+100);
   needTransmit = false;
+}
 }
