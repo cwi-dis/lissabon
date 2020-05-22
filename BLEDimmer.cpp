@@ -1,5 +1,6 @@
 #include "BLEDimmer.h"
 #include "iotsaBLEClient.h"
+#include "LissabonBLE.h"
 
 namespace Lissabon {
 
@@ -72,12 +73,12 @@ void BLEDimmer::loop() {
   }
   // Connected to dimmer.
   IFDEBUG IotsaSerial.printf("xxxjack Transmit brightness %d\n", (uint8_t)(level*100));
-  bool ok = dimmer->set(serviceUUID, brightnessUUID, (uint8_t)(level*100));
+  bool ok = dimmer->set(Lissabon::Dimmer::serviceUUID, Lissabon::Dimmer::brightnessUUID, (uint8_t)(level*100));
   if (!ok) {
     IFDEBUG IotsaSerial.println("BLE: set(brightness) failed");
   }
   IFDEBUG IotsaSerial.printf("xxxjack Transmit ison %d\n", (int)isOn);
-  ok = dimmer->set(serviceUUID, isOnUUID, (uint8_t)isOn);
+  ok = dimmer->set(Lissabon::Dimmer::serviceUUID, Lissabon::Dimmer::isOnUUID, (uint8_t)isOn);
   if (!ok) {
     IFDEBUG IotsaSerial.println("BLE: set(isOn) failed");
   }

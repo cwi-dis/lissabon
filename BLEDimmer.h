@@ -7,20 +7,12 @@
 #include "iotsaConfigFile.h"
 #include "iotsaBLEClient.h"
 #include "AbstractDimmer.h"
+#include "LissabonBLE.h"
 
 #include <ArduinoJson.h>
 using namespace ArduinoJson;
 
 namespace Lissabon {
-
-// UUID of service advertised by iotsaLedstrip and iotsaDimmer devices
-static BLEUUID serviceUUID("F3390001-F793-4D0C-91BB-C91EEB92A1A4");
-static BLEUUID isOnUUID("F3390002-F793-4D0C-91BB-C91EEB92A1A4");
-//static constexpr UUIDstring identifyUUID = "F3390003-F793-4D0C-91BB-C91EEB92A1A4";
-static BLEUUID brightnessUUID("F3390004-F793-4D0C-91BB-C91EEB92A1A4");
-//static constexpr UUIDstring tempUUID = "F3390005-F793-4D0C-91BB-C91EEB92A1A4";
-//static constexpr UUIDstring intervalUUID = "F3390006-F793-4D0C-91BB-C91EEB92A1A4";
-
 
 class BLEDimmer : public AbstractDimmer {
 public:

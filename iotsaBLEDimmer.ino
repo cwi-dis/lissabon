@@ -268,7 +268,7 @@ void IotsaBLEDimmerMod::setup() {
 
   auto callback = std::bind(&IotsaBLEDimmerMod::unknownDeviceFound, this, std::placeholders::_1);
   bleClientMod.setUnknownDeviceFoundCallback(callback);
-  bleClientMod.setServiceFilter(serviceUUID);
+  bleClientMod.setServiceFilter(Lissabon::Dimmer::serviceUUID);
   bleClientMod.findUnknownDevices(wantUnknownDevices);
 }
 
