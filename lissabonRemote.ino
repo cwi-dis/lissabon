@@ -24,7 +24,7 @@
 #define TAP_COUNT_REBOOT 8
 #define TAP_DURATION 1000
 
-IotsaApplication application("Iotsa BLE Dimmer");
+IotsaApplication application("Lissabon Remote");
 IotsaWifiMod wifiMod(application);
 
 #ifdef WITH_OTA
