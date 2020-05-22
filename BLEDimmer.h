@@ -29,20 +29,10 @@ public:
     bleClientMod(_bleClientMod)
   {}
   void updateDimmer();
-  bool setName(String value);
   bool available();
-  String info();
-  bool getHandler(JsonObject& reply);
-  bool putHandler(const JsonVariant& request);
-  bool handlerArgs(IotsaWebServer *server);
-  bool handlerConfigArgs(IotsaWebServer *server);
-  void configLoad(IotsaConfigFileLoad& cf);
-  void configSave(IotsaConfigFileSave& cf);
-  String handlerForm();
-  String handlerConfigForm();
+  bool setName(String value);
 
   IotsaBLEClientMod& bleClientMod;
-  String name;
   bool needTransmit;
   uint32_t needTransmitTimeoutAtMillis;
   uint32_t disconnectAtMillis;

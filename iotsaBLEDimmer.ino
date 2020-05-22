@@ -260,10 +260,10 @@ void IotsaBLEDimmerMod::setup() {
   batteryMod.setPinDisableSleep(PIN_DISABLESLEEP);
 #endif
   dimmer1ui.setEncoder(encoder1);
-  bool wantUnknownDevices = dimmer1.name == "";
+  bool wantUnknownDevices = !dimmer1.hasName();
 #ifdef WITH_SECOND_DIMMER
   dimmer2ui.setEncoder(encoder2);
-  if (dimmer2.name == "") wantUnknownDevices = true;
+  if (!dimmer2.hasName()) wantUnknownDevices = true;
 #endif // WITH_SECOND_DIMMER
 
   auto callback = std::bind(&IotsaBLEDimmerMod::unknownDeviceFound, this, std::placeholders::_1);
