@@ -36,7 +36,10 @@ When the installation has to be reconfigured all components are sent a BLE instr
 
 ## Components
 
-Eventually this repository will contain the central configuration component, but that is future work. Existing components live in separate repositories:
+This repository contains common shared modules for all components. Documentation
+is still missing.
+
+Existing components live in separate repositories:
 
 - [lissabonDimmer](https://github.com/cwi-dis/lissabonDimmer) is a dimmer, with buttons, touchpads, rotary control or neither. It is intended for LED lights, monochrome ledstrips or incandescant lights.
 - [lissabonLedstrip](https://github.com/cwi-dis/lissabonLedstrip) is a dimmer with buttons, touchpads or neither for smart (neopixel) RGB or RGBW ledstrips.

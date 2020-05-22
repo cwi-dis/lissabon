@@ -1,0 +1,25 @@
+{
+    "name" : "lissabon",
+    "version" : "0.1",
+    "description" : "Library based on Iotsa to enable low-power remotely controlled lighting.",
+    "keywords" : "ble, lighting, low-power, off-grid",
+    "authors" : {
+        "name" : "Jack Jansen",
+        "email" : "Jack.Jansen@cwi.nl"
+    },
+    "repository" : {
+        "type" : "git",
+        "url" : "https://github.com/cwi-dis/lissabon.git"
+    },
+    "frameworks" : "Arduino",
+    "platforms" : [ "espressif32"],
+    "dependencies" : [
+        {
+            "name" : "iotsa",
+            "version" : "https://github.com/cwi-dis/iotsa.git#develop"
+        }
+    ],
+    "examples" : [
+        "lissabon.ino"
+    ]
+}
