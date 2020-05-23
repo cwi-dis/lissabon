@@ -10,7 +10,8 @@ class DimmerUI  {
 public:
   //DimmerUI(int _num, DimmerCallbacks *_callbacks) : BLEDimmer(_num, _callbacks) {}
   DimmerUI(AbstractDimmer& _dimmer) : dimmer(_dimmer) {}
-  void setEncoder(UpDownButtons& encoder);
+  void setUpDownButtons(UpDownButtons& encoder);
+  void setRotaryEncoder(Button& button, RotaryEncoder& encoder);
   bool touchedOnOff();
   bool levelChanged();
 protected:

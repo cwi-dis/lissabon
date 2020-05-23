@@ -15,7 +15,6 @@ bool BLEDimmer::available() {
   return dimmer != NULL && dimmer->available();
 }
 
-
 void BLEDimmer::updateDimmer() {
   needTransmit = true;
   needTransmitTimeoutAtMillis = millis() + IOTSA_BLEDIMMER_CONNECT_TIMEOUT;

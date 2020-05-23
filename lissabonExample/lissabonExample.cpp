@@ -136,7 +136,7 @@ void IotsaBLEDimmerMod::configSave() {
 void IotsaBLEDimmerMod::setup() {
   configLoad();
 
-  dimmer1ui.setEncoder(encoder1);
+  dimmer1ui.setUpDownButtons(encoder1);
 
   bleClientMod.setServiceFilter(Lissabon::Dimmer::serviceUUID);
 }
