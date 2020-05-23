@@ -12,9 +12,9 @@ public:
   DimmerUI(AbstractDimmer& _dimmer) : dimmer(_dimmer) {}
   void setUpDownButtons(UpDownButtons& encoder);
   void setRotaryEncoder(Button& button, RotaryEncoder& encoder);
+protected:
   bool touchedOnOff();
   bool levelChanged();
-protected:
   AbstractDimmer& dimmer;
 };
 };
