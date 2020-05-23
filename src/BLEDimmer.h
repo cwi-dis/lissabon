@@ -9,9 +9,6 @@
 #include "AbstractDimmer.h"
 #include "LissabonBLE.h"
 
-#include <ArduinoJson.h>
-using namespace ArduinoJson;
-
 namespace Lissabon {
 
 class BLEDimmer : public AbstractDimmer {
