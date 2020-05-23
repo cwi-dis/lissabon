@@ -21,11 +21,12 @@ public:
   bool available();
   bool setName(String value);
 
+  void loop();
+protected:
   IotsaBLEClientMod& bleClientMod;
   bool needTransmit;
   uint32_t needTransmitTimeoutAtMillis;
   uint32_t disconnectAtMillis;
-  void loop();
 };
 };
 #endif // _BLEDIMMER_H_
