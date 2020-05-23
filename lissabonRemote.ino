@@ -65,9 +65,9 @@ IotsaBLEClientMod bleClientMod(application);
 
 using namespace Lissabon;
 
-class IotsaBLEDimmerMod : public IotsaApiMod, public DimmerCallbacks {
+class LissabonRemoteMod : public IotsaApiMod, public DimmerCallbacks {
 public:
-  IotsaBLEDimmerMod(IotsaApplication &_app, IotsaAuthenticationProvider *_auth=NULL)
+  LissabonRemoteMod(IotsaApplication &_app, IotsaAuthenticationProvider *_auth=NULL)
   : IotsaRestApiMod(_app, _auth),
     dimmer1(1, bleClientMod, this),
     dimmer1ui(dimmer1)
@@ -108,7 +108,7 @@ private:
 
 
 
-void IotsaBLEDimmerMod::uiButtonChanged() {
+void LissabonRemoteMod::uiButtonChanged() {
   // Called whenever any button changed state.
   // Used to give visual feedback (led turning off) on presses and releases,
   // and to enable config mod after 4 taps and reboot after 8 taps
@@ -138,7 +138,7 @@ void IotsaBLEDimmerMod::uiButtonChanged() {
 }
 #ifdef IOTSA_WITH_WEB
 void
-IotsaBLEDimmerMod::handler() {
+LissabonRemoteMod::handler() {
   bool anyChanged = false;
   anyChanged |= dimmer1.handlerConfigArgs(server);
   dimmer1.handlerArgs(server);
@@ -174,7 +174,7 @@ IotsaBLEDimmerMod::handler() {
   server->send(200, "text/html", message);
 }
 
-String IotsaBLEDimmerMod::info() {
+String LissabonRemoteMod::info() {
 
   String message = "Built with BLE Dimmer module. See <a href='/bledimmer'>/bledimmer</a> to change settings or <a href='/api/bledimmer'>/api/bledimmer</a> for REST API.<br>";
   message += dimmer1.info();
@@ -185,7 +185,7 @@ String IotsaBLEDimmerMod::info() {
 }
 #endif // IOTSA_WITH_WEB
 
-bool IotsaBLEDimmerMod::getHandler(const char *path, JsonObject& reply) {
+bool LissabonRemoteMod::getHandler(const char *path, JsonObject& reply) {
   // xxxjack need to distinguish between config and operational parameters
   JsonObject dimmer1Reply = reply.createNestedObject("dimmer1");
   dimmer1.getHandler(dimmer1Reply);
@@ -202,7 +202,7 @@ bool IotsaBLEDimmerMod::getHandler(const char *path, JsonObject& reply) {
   return true;
 }
 
-bool IotsaBLEDimmerMod::putHandler(const char *path, const JsonVariant& request, JsonObject& reply) {
+bool LissabonRemoteMod::putHandler(const char *path, const JsonVariant& request, JsonObject& reply) {
   // xxxjack need to distinguish between config and operational parameters
   bool anyChanged = false;
   JsonObject reqObj = request.as<JsonObject>();
@@ -222,9 +222,9 @@ bool IotsaBLEDimmerMod::putHandler(const char *path, const JsonVariant& request,
   return anyChanged;
 }
 
-void IotsaBLEDimmerMod::serverSetup() {
+void LissabonRemoteMod::serverSetup() {
 #ifdef IOTSA_WITH_WEB
-  server->on("/bledimmer", std::bind(&IotsaBLEDimmerMod::handler, this));
+  server->on("/bledimmer", std::bind(&LissabonRemoteMod::handler, this));
 #endif
 #ifdef IOTSA_WITH_API
   api.setup("/api/bledimmer", true, true);
@@ -233,7 +233,7 @@ void IotsaBLEDimmerMod::serverSetup() {
 }
 
 
-void IotsaBLEDimmerMod::configLoad() {
+void LissabonRemoteMod::configLoad() {
   IotsaConfigFileLoad cf("/config/bledimmer.cfg");
   dimmer1.configLoad(cf);
 #ifdef WITH_SECOND_DIMMER
@@ -241,7 +241,7 @@ void IotsaBLEDimmerMod::configLoad() {
 #endif // WITH_SECOND_DIMMER
 }
 
-void IotsaBLEDimmerMod::configSave() {
+void LissabonRemoteMod::configSave() {
   IotsaConfigFileSave cf("/config/bledimmer.cfg");
   dimmer1.configSave(cf);
 #ifdef WITH_SECOND_DIMMER
@@ -249,7 +249,7 @@ void IotsaBLEDimmerMod::configSave() {
 #endif // WITH_SECOND_DIMMER
 }
 
-void IotsaBLEDimmerMod::setup() {
+void LissabonRemoteMod::setup() {
   configLoad();
   iotsaConfig.allowRCMDescription("tap any touchpad 4 times");
 #ifdef LED_PIN
@@ -266,22 +266,22 @@ void IotsaBLEDimmerMod::setup() {
   if (!dimmer2.hasName()) wantUnknownDevices = true;
 #endif // WITH_SECOND_DIMMER
 
-  auto callback = std::bind(&IotsaBLEDimmerMod::unknownDeviceFound, this, std::placeholders::_1);
+  auto callback = std::bind(&LissabonRemoteMod::unknownDeviceFound, this, std::placeholders::_1);
   bleClientMod.setUnknownDeviceFoundCallback(callback);
   bleClientMod.setServiceFilter(Lissabon::Dimmer::serviceUUID);
   bleClientMod.findUnknownDevices(wantUnknownDevices);
 }
 
-void IotsaBLEDimmerMod::unknownDeviceFound(BLEAdvertisedDevice& deviceAdvertisement) {
+void LissabonRemoteMod::unknownDeviceFound(BLEAdvertisedDevice& deviceAdvertisement) {
   IFDEBUG IotsaSerial.printf("unknownDeviceFound: iotsaLedstrip/iotsaDimmer \"%s\"\n", deviceAdvertisement.getName().c_str());
   unknownDimmers.insert(deviceAdvertisement.getName());
 }
 
-void IotsaBLEDimmerMod::dimmerValueChanged() {
+void LissabonRemoteMod::dimmerValueChanged() {
   saveAtMillis = millis() + 1000;
 }
 
-void IotsaBLEDimmerMod::loop() {
+void LissabonRemoteMod::loop() {
 #ifdef DEBUG_PRINT_HEAP_SPACE
   { static uint32_t last; if (millis() > last+1000) { iotsaConfig.printHeapSpace(); last = millis(); }}
 #endif
@@ -304,7 +304,7 @@ void IotsaBLEDimmerMod::loop() {
 }
 
 // Instantiate the Led module, and install it in the framework
-IotsaBLEDimmerMod bleDimmerControllerMod(application);
+LissabonRemoteMod remoteMod(application);
 
 // Standard setup() method, hands off most work to the application framework
 void setup(void){
