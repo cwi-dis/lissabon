@@ -259,7 +259,7 @@ void IotsaBLEDimmerMod::setup() {
 #ifdef PIN_DISABLESLEEP
   batteryMod.setPinDisableSleep(PIN_DISABLESLEEP);
 #endif
-  dimmer1ui.setEncoder(encoder1);
+  dimmer1ui.setUpDownButtons(encoder1);
   bool wantUnknownDevices = !dimmer1.hasName();
 #ifdef WITH_SECOND_DIMMER
   dimmer2ui.setEncoder(encoder2);
