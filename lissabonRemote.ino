@@ -106,8 +106,6 @@ private:
   int buttonChangeCount = 0;
 };
 
-
-
 void LissabonRemoteMod::uiButtonChanged() {
   // Called whenever any button changed state.
   // Used to give visual feedback (led turning off) on presses and releases,
@@ -176,11 +174,13 @@ LissabonRemoteMod::handler() {
 
 String LissabonRemoteMod::info() {
 
-  String message = "Built with BLE Dimmer module. See <a href='/bledimmer'>/bledimmer</a> to change settings or <a href='/api/bledimmer'>/api/bledimmer</a> for REST API.<br>";
+  String message = "<p>";
   message += dimmer1.info();
+  message += "See <a href='/bledimmer'>/bledimmer</a> to change settings or <a href='/api/bledimmer'>/api/bledimmer</a> for REST API.<br>";
 #ifdef WITH_SECOND_DIMMER
   message += dimmer2.info();
 #endif // WITH_SECOND_DIMMER
+  message += "</p>";
   return message;
 }
 #endif // IOTSA_WITH_WEB
@@ -209,11 +209,13 @@ bool LissabonRemoteMod::putHandler(const char *path, const JsonVariant& request,
   JsonVariant dimmer1Request = reqObj["dimmer1"];
   if (dimmer1Request) {
     if (dimmer1.putHandler(dimmer1Request)) anyChanged = true;
+    if (dimmer1.putConfigHandler(dimmer1Request)) anyChanged = true;
   }
 #ifdef WITH_SECOND_DIMMER
   JsonVariant dimmer2Request = reqObj["dimmer2"];
   if (dimmer2Request) {
     if (dimmer2.putHandler(dimmer2Request)) anyChanged = true;
+    if (dimmer2.putConfigHandler(dimmer2Request)) anyChanged = true;
   }
 #endif
   if (anyChanged) {
@@ -226,10 +228,8 @@ void LissabonRemoteMod::serverSetup() {
 #ifdef IOTSA_WITH_WEB
   server->on("/bledimmer", std::bind(&LissabonRemoteMod::handler, this));
 #endif
-#ifdef IOTSA_WITH_API
   api.setup("/api/bledimmer", true, true);
   name = "bledimmer";
-#endif
 }
 
 
@@ -314,6 +314,8 @@ void setup(void){
  
 // Standard loop() routine, hands off most work to the application framework
 void loop(void){
+#if 0
   heap_caps_check_integrity_all(true);
+#endif
   application.loop();
 }
