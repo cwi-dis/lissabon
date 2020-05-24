@@ -10,6 +10,8 @@
 #include "iotsaWifi.h"
 #include "iotsaLed.h"
 #include "iotsaConfigFile.h"
+#include "PWMDimmer.h"
+#include "DimmerUI.h"
 
 // CHANGE: Add application includes and declarations here
 
@@ -78,9 +80,17 @@ IotsaInputMod inputMod(application, inputs, sizeof(inputs)/sizeof(inputs[0]));
 // LED Lighting module. 
 //
 
-class IotsaDimmerMod : public IotsaApiMod, public IotsaBLEApiProvider {
+class IotsaDimmerMod : public IotsaApiMod, public IotsaBLEApiProvider, public DimmerCallbacks {
 public:
-  using IotsaApiMod::IotsaApiMod;
+  IotsaDimmerMod(IotsaApplication& _app, IotsaAUthenticationProvider *_auth=NULL)
+  : IotsaApiMod(_app, _auth),
+    dimmer(1, PIN_OUTPUT, this)
+  #ifdef WITH_UI
+    ,
+    dimmerUI(dimmer)
+  #endif
+  {
+  }
   void setup();
   void serverSetup();
   String info();
@@ -89,92 +99,22 @@ public:
   void loop();
 
 protected:
-  bool touchedOnOff();
-  bool changedValue();
+  PWMDimmer dimmer;
+#ifdef WITH_UI
+  DimmerUI dimmerUI;
+#endif
+  //bool touchedOnOff();
+  //bool changedValue();
   bool getHandler(const char *path, JsonObject& reply);
   bool putHandler(const char *path, const JsonVariant& request, JsonObject& reply);
-#ifdef IOTSA_WITH_BLE
-  IotsaBleApiService bleApi;
-  bool blePutHandler(UUIDstring charUUID);
-  bool bleGetHandler(UUIDstring charUUID);
-  static constexpr UUIDstring serviceUUID = "F3390001-F793-4D0C-91BB-C91EEB92A1A4";
-  static constexpr UUIDstring isOnUUID = "F3390002-F793-4D0C-91BB-C91EEB92A1A4";
-  static constexpr UUIDstring identifyUUID = "F3390003-F793-4D0C-91BB-C91EEB92A1A4";
-  static constexpr UUIDstring illumUUID = "F3390004-F793-4D0C-91BB-C91EEB92A1A4";
-//  static constexpr UUIDstring tempUUID = "F3390005-F793-4D0C-91BB-C91EEB92A1A4";
-//  static constexpr UUIDstring intervalUUID = "F3390006-F793-4D0C-91BB-C91EEB92A1A4";
-#endif // IOTSA_WITH_BLE
+
 private:
   void setupPwm();
   void handler();
-  void startAnimation();
-  void identify();
-  bool isOn;
-  float illum;
-  float illumPrev;
-  float minLevel;
-  float gamma;
-#ifdef ESP32
-  float pwmFrequency;
-#endif
-  uint32_t millisAnimationStart;
-  uint32_t millisAnimationEnd;
-  int millisAnimationDuration;
   uint32_t saveAtMillis;
 };
 
-void IotsaDimmerMod::startAnimation() {
-  float newIllum = isOn ? illum : 0;
-  int thisDuration = int(millisAnimationDuration * fabs(newIllum-illumPrev));
-  millisAnimationStart = millis();
-  millisAnimationEnd = millis() + thisDuration;
-  iotsaConfig.postponeSleep(thisDuration+100);
-}
 
-
-#ifdef IOTSA_WITH_BLE
-bool IotsaDimmerMod::blePutHandler(UUIDstring charUUID) {
-  bool anyChanged = false;
-  if (charUUID == illumUUID) {
-      int _illum = bleApi.getAsInt(illumUUID);
-      illum = float(_illum)/100.0;
-      IFDEBUG IotsaSerial.printf("xxxjack ble: wrote illum %s value %d %f\n", illumUUID, _illum, illum);
-      anyChanged = true;
-  }
-  if (charUUID == isOnUUID) {
-    int value = bleApi.getAsInt(isOnUUID);
-    isOn = (bool)value;
-    anyChanged = true;
-  }
-  if (charUUID == identifyUUID) {
-    int value = bleApi.getAsInt(identifyUUID);
-    if (value) identify();
-  }
-  if (anyChanged) {
-    configSave();
-    startAnimation();
-    return true;
-  }
-  IotsaSerial.println("IotsaDimmerMod: ble: write unknown uuid");
-  return false;
-}
-
-bool IotsaDimmerMod::bleGetHandler(UUIDstring charUUID) {
-  if (charUUID == illumUUID) {
-      int _illum = int(illum*100);
-      IFDEBUG IotsaSerial.printf("xxxjack ble: read illum %s value %d\n", charUUID, _illum);
-      bleApi.set(illumUUID, (uint8_t)_illum);
-      return true;
-  }
-  if (charUUID == isOnUUID) {
-      IFDEBUG IotsaSerial.printf("xxxjack ble: read isOn %s value %d\n", charUUID, isOn);
-      bleApi.set(isOnUUID, (uint8_t)isOn);
-      return true;
-  }
-  IotsaSerial.println("IotsaDimmerMod: ble: read unknown uuid");
-  return false;
-}
-#endif // IOTSA_WITH_BLE
 
 #ifdef IOTSA_WITH_WEB
 void
