@@ -7,19 +7,16 @@ namespace Lissabon {
 
 class PWMDimmer : public AbstractDimmer {
 public:
-  PWMDimmer(int _num, int pin, DimmerCallbacks *_callbacks);
+  PWMDimmer(int _num, int pin, int channel, DimmerCallbacks *_callbacks);
   void updateDimmer();
   bool available();
   void identify();
   void loop();
 protected:
   int pin;
+  int channel;
 
   float prevLevel;
-  float gamma;
-#ifdef ESP32
-  float pwmFrequency;
-#endif
   uint32_t millisAnimationStart;
   uint32_t millisAnimationEnd;
   int millisAnimationDuration;

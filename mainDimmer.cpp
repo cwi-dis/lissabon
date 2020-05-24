@@ -38,10 +38,9 @@ IotsaBLEServerMod bleserverMod(application);
 #define VBAT_100_PERCENT (12.0/11.0) // 100K and 1M resistors divide by 11, not 10...
 IotsaBatteryMod batteryMod(application);
 
-#define PIN_OUTPUT 2
-#ifdef ESP32
-#define CHANNEL_OUTPUT 0
-#endif
+// Pin to which MOSFET is attached. Channel is only relevant for esp32.
+#define PIN_PWM_DIMMER 2
+#define CHANNEL_PWM_DIMMER 0
 
 #include "iotsaInput.h"
 // Define WITH_TOUCHPADS to enable user interface consisting of two touchpads (off/down and on/up)
@@ -76,19 +75,21 @@ Input* inputs[] = {
 IotsaInputMod inputMod(application, inputs, sizeof(inputs)/sizeof(inputs[0]));
 #endif
 
+#include "DimmerBLEServer.h"
+
 //
-// LED Lighting module. 
+// PWM Lighting module. 
 //
 
 class IotsaDimmerMod : public IotsaApiMod, public IotsaBLEApiProvider, public DimmerCallbacks {
 public:
   IotsaDimmerMod(IotsaApplication& _app, IotsaAUthenticationProvider *_auth=NULL)
   : IotsaApiMod(_app, _auth),
-    dimmer(1, PIN_OUTPUT, this)
+    dimmer(1, PIN_PWM_DIMMER, CHANNEL_PWM_DIMMER, this),
   #ifdef WITH_UI
-    ,
-    dimmerUI(dimmer)
+    dimmerUI(dimmer),
   #endif
+    dimmerBLEServer(dimmer),
   {
   }
   void setup();
@@ -99,77 +100,55 @@ public:
   void loop();
 
 protected:
-  PWMDimmer dimmer;
-#ifdef WITH_UI
-  DimmerUI dimmerUI;
-#endif
-  //bool touchedOnOff();
-  //bool changedValue();
+  void uiButtonChanged();
+  void dimmerValueChanged();
+  void handler();
   bool getHandler(const char *path, JsonObject& reply);
   bool putHandler(const char *path, const JsonVariant& request, JsonObject& reply);
 
 private:
-  void setupPwm();
-  void handler();
-  uint32_t saveAtMillis;
+  PWMDimmer dimmer;
+#ifdef WITH_UI
+  DimmerUI dimmerUI;
+#endif
+  DimmerBLEServer dimmerBLEServer;
+  uint32_t saveAtMillis = 0;
+  uint32_t lastButtonChangeMillis = 0;
+  int buttonChangeCount = 0;
 };
 
 
+void LissabonRemoteMod::uiButtonChanged() {
+  // Called whenever any button changed state.
+  // Used to give visual feedback (led turning off) on presses and releases,
+  // and to enable config mod after 4 taps and reboot after 8 taps
+  uint32_t now = millis();
+  if (lastButtonChangeMillis > 0 && now < lastButtonChangeMillis + TAP_DURATION) {
+    // A button change that was quick enough for a tap
+    lastButtonChangeMillis = now;
+    buttonChangeCount++;
+    if (buttonChangeCount == TAP_COUNT_MODE_CHANGE) {
+      IFDEBUG IotsaSerial.println("tap mode change");
+      iotsaConfig.allowRequestedConfigurationMode();
+    }
+    if (buttonChangeCount == TAP_COUNT_REBOOT) {
+      IFDEBUG IotsaSerial.println("tap mode reboot");
+      ledOffUntilMillis = now + 2000;
+      iotsaConfig.requestReboot(1000);
+    }
+  } else {
+    // Either the first change, or too late. Reset.
+    lastButtonChangeMillis = millis();
+    buttonChangeCount = 0;
+  }
+}
 
 #ifdef IOTSA_WITH_WEB
 void
 IotsaDimmerMod::handler() {
-  // Handles the page that is specific to the Led module, greets the user and
-  // optionally stores a new name to greet the next time.
-  String error;
   bool anyChanged = false;
-  if (server->hasArg("identify")) identify();
-  if( server->hasArg("animation")) {
-    int val = server->arg("animation").toInt();
-    if (val != millisAnimationDuration) {
-      millisAnimationDuration = val;
-      anyChanged = true;
-    }
-  }
-  if (server->hasArg("minLevel")) {
-    float val = server->arg("minLevel").toFloat();
-    if (val != minLevel) {
-      minLevel = val;
-      anyChanged = true;
-    }
-  }
-  if (server->hasArg("gamma")) {
-    float val = server->arg("gamma").toFloat();
-    if (val != gamma) {
-      gamma = val;
-      anyChanged = true;
-    }
-  }
-#ifdef ESP32
-  if (server->hasArg("pwmFrequency")) {
-    float val = server->arg("pwmFrequency").toFloat();
-    if (val != pwmFrequency) {
-      pwmFrequency = val;
-      setupPwm();
-      anyChanged = true;
-    }
-  }
-#endif
-  if( server->hasArg("illuminance")) {
-    float val = server->arg("illuminance").toFloat();
-    if (val != illum) {
-      illum = val;
-      isOn = (illum != 0);
-      anyChanged = true;
-    }
-  }
-  if( server->hasArg("isOn")) {
-    bool val = server->arg("isOn").toInt();
-    if (val != isOn) {
-      isOn = val;
-      anyChanged = true;
-    }
-  }
+  anyChanged |= dimmer.handlerConfigArgs(server);
+  dimmer.handlerArgs();
 
   if (anyChanged) {
     configSave();
@@ -177,30 +156,17 @@ IotsaDimmerMod::handler() {
   }
   
   String message = "<html><head><title>Dimmer</title></head><body><h1>Dimmer</h1>";
-  if (error != "") {
-    message += "<p><em>" + error + "</em></p>";
-  }
-  message += "<form method='get'><input type='submit' name='identify' value='identify'></form>";
-  message += "<form method='get'>";
-  message += "<form method='get'><input type='hidden' name='isOn' value='1'><input type='submit' value='Turn On'></form>";
-  message += "<form method='get'>";
-  message += "<form method='get'><input type='hidden' name='isOn' value='0'><input type='submit' value='Turn Off'></form>";
-  message += "<form method='get'>";
-
-  message += "Illuminance (0..1): <input type='text' name='illuminance' value='" + String(illum) +"'><br>";
-  message += "Dimmer minimum (0..1): <input type='text' name='minLevel' value='" + String(minLevel) +"'><br>";
-  message += "Animation duration (ms): <input type='text' name='animation' value='" + String(millisAnimationDuration) +"'><br>";
-  message += "Gamma (1.0 or 2.2): <input type='text' name='gamma' value='" + String(gamma) +"'><br>";
-#ifdef ESP32
-  message += "PWM Frequency: <input type='text' name='pwmFrequency' value='" + String(pwmFrequency) +"'><br>";
-#endif
-  message += "<input type='submit' value='Set'></form></body></html>";
+  message += dimmer.handlerForm();
+  message += dimmer.handlerConfigForm();
+  message += "</body></html>";
   server->send(200, "text/html", message);
 }
 
 String IotsaDimmerMod::info() {
   // Return some information about this module, for the main page of the web server.
-  String rv = "<p>See <a href=\"/dimmer\">/dimmer</a> for setting the light level.";
+  String message = "<p>";
+  message += dimmer.info();
+  message += "See <a href=\"/dimmer\">/dimmer</a> for setting the light level.";
 #ifdef IOTSA_WITH_REST
   rv += " Or use REST api at <a href='/api/dimmer'>/api/dimmer</a>.";
 #endif
@@ -213,41 +179,22 @@ String IotsaDimmerMod::info() {
 #endif // IOTSA_WITH_WEB
 
 bool IotsaDimmerMod::getHandler(const char *path, JsonObject& reply) {
-  reply["illuminance"] = illum;
-  reply["isOn"] = isOn;
-  reply["animation"] = millisAnimationDuration;
-  reply["gamma"] = gamma;
-#ifdef ESP32
-  reply["pwmFrequency"] = pwmFrequency;
-#endif
-  return true;
+  return dimmer.getHandler(reply);
 }
 
 bool IotsaDimmerMod::putHandler(const char *path, const JsonVariant& request, JsonObject& reply) {
-  if (request["identify"]|0) identify();
-  millisAnimationDuration = request["animation"]|millisAnimationDuration;
-  if (request.containsKey("minLevel")) {
-    minLevel = request["minLevel"];
+  bool anyChanged = false;
+  bool configChanged = false;
+  JsonObject reqObj = request.as<JsonObject>();
+  if (!reqObj) return false;
+  if (dimmer.putHandler(reqObj)) anyChanged = true;
+  if (dimmer.putConfigHandler(reqObj)) configChanged = true;
+  if (configChanged) {
+    configSave();
   }
-  if (request.containsKey("gamma")) {
-    gamma = request["gamma"];
-  }
-  if (request.containsKey("illum")) {
-    illum = request["illum"];
-    isOn = true;
-  }
-  if (request.containsKey("isOn")) {
-    isOn = request["isOn"];
-  }
-#ifdef ESP32
-  if (request.containsKey("pwmFrequency")) {
-    pwmFrequency = request["pwmFrequency"];
-    setupPwm();
-  }
-#endif
-  configSave();
-  startAnimation();
-  return true;
+  if (anyChanged) dimmer.updateDimmer(); // xxxjack or is this called already?
+  return anyChanged|configChanged;
+
 }
 
 void IotsaDimmerMod::serverSetup() {
@@ -261,44 +208,21 @@ void IotsaDimmerMod::serverSetup() {
 
 
 void IotsaDimmerMod::configLoad() {
-  IotsaConfigFileLoad cf("/config/dimmer.cfg");
-  int value;
-  cf.get("isOn", value, 0);
-  isOn = value;
-  cf.get("illum", illum, 0.0);
-  cf.get("animation", millisAnimationDuration, 500);
-  cf.get("minLevel", minLevel, 0.1);
-  cf.get("gamma", gamma, 1.0);
-#ifdef ESP32
-  cf.get("pwmFrequency", pwmFrequency, 5000.0);
-#endif
+  IotsaConfigFileLoad cf("/config/pwmdimmer.cfg");
+  dimmer.configLoad(cf);
 }
 
 void IotsaDimmerMod::configSave() {
-  IotsaConfigFileSave cf("/config/dimmer.cfg");
+  IotsaConfigFileSave cf("/config/pwmdimmer.cfg");
+  dimmer.configSave(cf);
 
-  cf.put("illum", illum);
-  cf.put("isOn", isOn);
-  cf.put("animation", millisAnimationDuration);
-  cf.put("minLevel", minLevel);
-  cf.put("gamma", gamma);
-#ifdef ESP32
-  cf.put("pwmFrequency", pwmFrequency);
-#endif
 }
 
-void IotsaDimmerMod::setupPwm() {
-#ifdef ESP32
-  ledcSetup(CHANNEL_OUTPUT, pwmFrequency, 8);
-  ledcAttachPin(PIN_OUTPUT, CHANNEL_OUTPUT);
-#else
-  pinMode(PIN_OUTPUT, OUTPUT);
-#endif
-}
 
 void IotsaDimmerMod::setup() {
-  // Allow switching the dimmer to iotsa config mode over BLE.
+  // Allow switching the dimmer to iotsa config mode over BLE or with taps
   batteryMod.allowBLEConfigModeSwitch();
+  // Set pins for measuring battery voltage and disabling sleep.
 #ifdef PIN_VBAT
   batteryMod.setPinVBat(PIN_VBAT, VBAT_100_PERCENT);
 #endif
@@ -306,51 +230,17 @@ void IotsaDimmerMod::setup() {
   batteryMod.setPinDisableSleep(PIN_DISABLESLEEP);
 #endif
   configLoad();
-  setupPwm();
-  illumPrev = isOn ? illum : 0;
-  startAnimation();
-#ifdef WITH_UI
-  encoder.setCallback(std::bind(&IotsaDimmerMod::changedValue, this));
 #ifdef WITH_TOUCHPADS
-  // Bind up/down buttons to variable illum, ranging from minLevel to 1.0 in 25 steps
-  encoder.bindVar(illum, minLevel, 1.0, 0.02);
-  encoder.bindStateVar(isOn);
-  encoder.setStateCallback(std::bind(&IotsaDimmerMod::touchedOnOff, this));
-#endif // WITH_TOUCHPADS
-#ifdef WITH_ROTARY
-  button.setCallback(std::bind(&IotsaDimmerMod::touchedOnOff, this));
-  // Bind button to isOn (toggling it on every press)
-  button.bindVar(isOn, true);
-  // Bind rotary encoder to variable illum, ranging from minLevel to 1.0 in 100 steps
-  encoder.bindVar(illum, minLevel, 1.0, 0.01);
-  // And if the rotary encoder does more than 2 steps per second we speed up
-  encoder.setAcceleration(500);
-#endif // WITH_ROTARY
-#endif // WITH_UI
-
-#ifdef IOTSA_WITH_BLE
-  // Set default advertising interval to be between 200ms and 600ms
-  IotsaBLEServerMod::setAdvertisingInterval(300, 900);
-
-  bleApi.setup(serviceUUID, this);
-  static BLE2904 isOn2904;
-  isOn2904.setFormat(BLE2904::FORMAT_UINT8);
-  isOn2904.setUnit(0x2700);
-  static BLE2901 isOn2901("On/Off");
-  bleApi.addCharacteristic(isOnUUID, BLE_READ|BLE_WRITE, &isOn2904, &isOn2901);
-
-  static BLE2904 illum2904;
-  illum2904.setFormat(BLE2904::FORMAT_UINT8);
-  illum2904.setUnit(0x27AD);
-  static BLE2901 illum2901("Illumination");
-  bleApi.addCharacteristic(illumUUID, BLE_READ|BLE_WRITE, &illum2904, &illum2901);
-
-  static BLE2904 identify2904;
-  identify2904.setFormat(BLE2904::FORMAT_UINT8);
-  identify2904.setUnit(0x2700);
-  static BLE2901 identify2901("Identify");
-  bleApi.addCharacteristic(identifyUUID, BLE_WRITE, &identify2904, &identify2901);
+  iotsaConfig.allowRCMDescription("tap any touchpad 4 times");
+  dimmerUI.setUpDownButtons(encoder);
 #endif
+#ifdef WITH_ROTARY
+  iotsaConfig.allowRCMDescription("press button 4 times");
+  dimmerUI.setRotaryEncoder(encoder);
+#endif
+  dimmer.setup();
+  dimmerBLEServer.setup();
+  dimmer.updateDimmer();
 }
 
 void IotsaDimmerMod::loop() {
@@ -359,6 +249,8 @@ void IotsaDimmerMod::loop() {
     saveAtMillis = 0;
     configSave();
   }
+  dimmer.loop();
+#if 0
   // Quick return if we have nothing to do
   if (millisAnimationStart == 0 || millisAnimationEnd == 0) {
     // The dimmer shouldn't sleep if it is controlling the PWM output
@@ -384,12 +276,14 @@ void IotsaDimmerMod::loop() {
   if (curIllum > 1) curIllum = 1;
   if (gamma && gamma != 1.0) curIllum = powf(curIllum, gamma);
 #ifdef ESP32
-  ledcWrite(CHANNEL_OUTPUT, int(255*curIllum));
+  ledcWrite(CHANNEL_PWM_DIMMER, int(255*curIllum));
 #else
-  analogWrite(PIN_OUTPUT, int(255*curIllum));
+  analogWrite(PIN_PWM_DIMMER, int(255*curIllum));
+#endif
 #endif
 }
 
+#if 0
 bool IotsaDimmerMod::touchedOnOff() {
   // Start the animation to get to the wanted value
   startAnimation();
@@ -409,29 +303,7 @@ bool IotsaDimmerMod::changedValue() {
   saveAtMillis = millis() + 2000;
   return true;
 }
-
-void IotsaDimmerMod::identify() {
-#ifdef ESP32
-  ledcWrite(CHANNEL_OUTPUT, 128);
-  delay(100);
-  ledcWrite(CHANNEL_OUTPUT, 0);
-  delay(100);
-  ledcWrite(CHANNEL_OUTPUT, 128);
-  delay(100);
-  ledcWrite(CHANNEL_OUTPUT, 0);
-  delay(100);
-#else
-  analogWrite(PIN_OUTPUT, 128);
-  delay(100);
-  analogWrite(PIN_OUTPUT, 0);
-  delay(100);
-  analogWrite(PIN_OUTPUT, 128);
-  delay(100);
-  analogWrite(PIN_OUTPUT, 0);
-  delay(100);
 #endif
-  startAnimation();
-}
 
 // Instantiate the Led module, and install it in the framework
 IotsaDimmerMod dimmerMod(application);
