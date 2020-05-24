@@ -27,6 +27,7 @@ public:
   String info();
   bool getHandler(JsonObject& reply);
   bool putHandler(const JsonVariant& request);
+  bool putConfigHandler(const JsonVariant& request);
   bool handlerArgs(IotsaWebServer *server);
   bool handlerConfigArgs(IotsaWebServer *server);
   void configLoad(IotsaConfigFileLoad& cf);

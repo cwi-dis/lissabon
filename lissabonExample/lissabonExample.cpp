@@ -109,6 +109,7 @@ bool IotsaBLEDimmerMod::putHandler(const char *path, const JsonVariant& request,
   JsonVariant dimmer1Request = reqObj["dimmer1"];
   if (dimmer1Request) {
     if (dimmer1.putHandler(dimmer1Request)) anyChanged = true;
+    if (dimmer1.putConfigHandler(dimmer1Request)) anyChanged = true;
   }
   if (anyChanged) {
     configSave();

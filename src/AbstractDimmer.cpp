@@ -249,15 +249,13 @@ bool AbstractDimmer::getHandler(JsonObject& reply) {
 }
 
 bool AbstractDimmer::putHandler(const JsonVariant& request) {
-  bool configChanged = false;
+  bool anyChanged = false;
   bool dimmerChanged = false;
   JsonObject reqObj = request.as<JsonObject>();
   if (!reqObj) return false;
-  if (reqObj["identify"]|0) identify();
-  if (reqObj.containsKey("name")) {
-    // xxxjack check permission
-    String value = reqObj["name"].as<String>();
-    if (setName(name)) configChanged = true;
+  if (reqObj["identify"]|0) {
+    identify();
+    anyChanged = true;
   }
   if (reqObj.containsKey("isOn")) {
     isOn = reqObj["isOn"];
@@ -267,24 +265,9 @@ bool AbstractDimmer::putHandler(const JsonVariant& request) {
     level = reqObj["level"];
     dimmerChanged = true;
   }
-  if (reqObj.containsKey("minLevel")) {
-    // xxxjack check permission
-    minLevel = reqObj["minLevel"];
-    configChanged = true;
-  }
 #ifdef DIMMER_WITH_GAMMA
-  if (reqObj.containsKey("gamma")) {
-    // xxxjack check permission
-    gamma = reqObj["gamma"];
-    configChanged = true;
-  }
 #endif // DIMMER_WITH_GAMMA
 #ifdef DIMMER_WITH_ANIMATION
-  if (reqObj.containsKey("animation")) {
-    // xxxjack check permission
-    animation = reqObj["animation"];
-    configChanged = true;
-  }
 #endif // DIMMER_WITH_GAMMA
 #ifdef DIMMER_WITH_TEMPERATURE
   if (reqObj.containsKey("temperature")) {
@@ -293,15 +276,46 @@ bool AbstractDimmer::putHandler(const JsonVariant& request) {
   }
 #endif // DIMMER_WITH_TEMPERATURE
 #ifdef DIMMER_WITH_PWMFREQUENCY
+#endif // DIMMER_WITH_PWMFREQUENCY
+  if (dimmerChanged) {
+    updateDimmer();
+    anyChanged = true;
+  }
+  return anyChanged;
+}
+bool AbstractDimmer::putConfigHandler(const JsonVariant& request) {
+  bool configChanged = false;
+  JsonObject reqObj = request.as<JsonObject>();
+  if (!reqObj) return false;
+  // xxxjack check permission
+  if (reqObj.containsKey("name")) {
+    String value = reqObj["name"].as<String>();
+    if (setName(name)) configChanged = true;
+  }
+  if (reqObj.containsKey("minLevel")) {
+    minLevel = reqObj["minLevel"];
+    configChanged = true;
+  }
+#ifdef DIMMER_WITH_GAMMA
+  if (reqObj.containsKey("gamma")) {
+    gamma = reqObj["gamma"];
+    configChanged = true;
+  }
+#endif // DIMMER_WITH_GAMMA
+#ifdef DIMMER_WITH_ANIMATION
+  if (reqObj.containsKey("animation")) {
+    animation = reqObj["animation"];
+    configChanged = true;
+  }
+#endif // DIMMER_WITH_GAMMA
+#ifdef DIMMER_WITH_TEMPERATURE
+#endif // DIMMER_WITH_TEMPERATURE
+#ifdef DIMMER_WITH_PWMFREQUENCY
   if (reqObj.containsKey("pwmFrequency")) {
-    // xxxjack check permission
     pwmFrequency = reqObj["pwmFrequency"];
     configChanged = true;
   }
 #endif // DIMMER_WITH_PWMFREQUENCY
-  if (dimmerChanged) {
-    updateDimmer();
-  }
   return configChanged;
 }
 
