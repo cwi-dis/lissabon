@@ -25,17 +25,18 @@ public:
   virtual void updateDimmer() = 0;
   virtual bool available() = 0;
   String info();
-  virtual bool getHandler(JsonObject& reply);
-  virtual bool putHandler(const JsonVariant& request);
-  virtual bool handlerArgs(IotsaWebServer *server);
-  virtual bool handlerConfigArgs(IotsaWebServer *server);
-  virtual void configLoad(IotsaConfigFileLoad& cf);
-  virtual void configSave(IotsaConfigFileSave& cf);
-  virtual String handlerForm();
-  virtual String handlerConfigForm();
+  bool getHandler(JsonObject& reply);
+  bool putHandler(const JsonVariant& request);
+  bool handlerArgs(IotsaWebServer *server);
+  bool handlerConfigArgs(IotsaWebServer *server);
+  void configLoad(IotsaConfigFileLoad& cf);
+  void configSave(IotsaConfigFileSave& cf);
+  String handlerForm();
+  String handlerConfigForm();
   virtual bool setName(String value);
   String getUserVisibleName();
   bool hasName();
+  virtual void identify();
 public:
   int num;
   DimmerCallbacks *callbacks;
@@ -45,6 +46,9 @@ public:
 #ifdef DIMMER_WITH_GAMMA
   float gamma;
 #endif // DIMMER_WITH_GAMMA
+#ifdef DIMMER_WITH_ANIMATION
+  int animationDurationMillis;
+#endif // DIMMER_WITH_ANIMATION
 #ifdef DIMMER_WITH_TEMPERATURE
   float temperature;
 #endif // DIMMER_WITH_TEMPERATURE
