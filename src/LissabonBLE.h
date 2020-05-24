@@ -10,6 +10,7 @@ extern BLEUUID serviceUUID;
 extern BLEUUID isOnUUID;
 extern BLEUUID identifyUUID;
 extern BLEUUID brightnessUUID;
+extern BLEUUID tempUUID;
 extern BLEUUID intervalUUID;
 };
 };
