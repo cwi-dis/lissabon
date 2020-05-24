@@ -13,6 +13,13 @@
 #include "PWMDimmer.h"
 #include "DimmerUI.h"
 
+//
+// Device can be rebooted or configuration mode can be requested by quickly tapping any button.
+// TAP_DURATION sets the maximum time between press-release-press-etc.
+#define TAP_COUNT_MODE_CHANGE 4
+#define TAP_COUNT_REBOOT 8
+#define TAP_DURATION 1000
+
 // CHANGE: Add application includes and declarations here
 
 #define WITH_OTA    // Enable Over The Air updates from ArduinoIDE. Needs at least 1MB flash.
@@ -77,19 +84,21 @@ IotsaInputMod inputMod(application, inputs, sizeof(inputs)/sizeof(inputs[0]));
 
 #include "DimmerBLEServer.h"
 
+using namespace Lissabon;
+
 //
 // PWM Lighting module. 
 //
 
-class IotsaDimmerMod : public IotsaApiMod, public IotsaBLEApiProvider, public DimmerCallbacks {
+class IotsaDimmerMod : public IotsaApiMod, public DimmerCallbacks {
 public:
-  IotsaDimmerMod(IotsaApplication& _app, IotsaAUthenticationProvider *_auth=NULL)
+  IotsaDimmerMod(IotsaApplication& _app, IotsaAuthenticationProvider *_auth=NULL)
   : IotsaApiMod(_app, _auth),
     dimmer(1, PIN_PWM_DIMMER, CHANNEL_PWM_DIMMER, this),
   #ifdef WITH_UI
     dimmerUI(dimmer),
   #endif
-    dimmerBLEServer(dimmer),
+    dimmerBLEServer(dimmer)
   {
   }
   void setup();
@@ -118,7 +127,7 @@ private:
 };
 
 
-void LissabonRemoteMod::uiButtonChanged() {
+void IotsaDimmerMod::uiButtonChanged() {
   // Called whenever any button changed state.
   // Used to give visual feedback (led turning off) on presses and releases,
   // and to enable config mod after 4 taps and reboot after 8 taps
@@ -133,7 +142,6 @@ void LissabonRemoteMod::uiButtonChanged() {
     }
     if (buttonChangeCount == TAP_COUNT_REBOOT) {
       IFDEBUG IotsaSerial.println("tap mode reboot");
-      ledOffUntilMillis = now + 2000;
       iotsaConfig.requestReboot(1000);
     }
   } else {
@@ -148,11 +156,11 @@ void
 IotsaDimmerMod::handler() {
   bool anyChanged = false;
   anyChanged |= dimmer.handlerConfigArgs(server);
-  dimmer.handlerArgs();
+  dimmer.handlerArgs(server);
 
   if (anyChanged) {
     configSave();
-    startAnimation();
+    dimmer.updateDimmer();
   }
   
   String message = "<html><head><title>Dimmer</title></head><body><h1>Dimmer</h1>";
@@ -168,13 +176,13 @@ String IotsaDimmerMod::info() {
   message += dimmer.info();
   message += "See <a href=\"/dimmer\">/dimmer</a> for setting the light level.";
 #ifdef IOTSA_WITH_REST
-  rv += " Or use REST api at <a href='/api/dimmer'>/api/dimmer</a>.";
+  message += " Or use REST api at <a href='/api/dimmer'>/api/dimmer</a>.";
 #endif
 #ifdef IOTSA_WITH_BLE
-  rv += " Or use BLE service " + String(serviceUUID) + ".";
+  message += " Or use BLE service " + String(Lissabon::Dimmer::serviceUUIDstring) + ".";
 #endif
-  rv += "</p>";
-  return rv;
+  message += "</p>";
+  return message;
 }
 #endif // IOTSA_WITH_WEB
 

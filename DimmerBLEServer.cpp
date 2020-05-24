@@ -1,52 +1,53 @@
 #include "DimmerBLEServer.h"
 
+namespace Lissabon {
 
 void DimmerBLEServer::setup() {
 #ifdef IOTSA_WITH_BLE
   // Set default advertising interval to be between 200ms and 600ms
   IotsaBLEServerMod::setAdvertisingInterval(300, 900);
 
-  bleApi.setup(serviceUUID, this);
-  static BLE2904 isOn2904;
-  isOn2904.setFormat(BLE2904::FORMAT_UINT8);
-  isOn2904.setUnit(0x2700);
-  static BLE2901 isOn2901("On/Off");
-  bleApi.addCharacteristic(isOnUUID, BLE_READ|BLE_WRITE, &isOn2904, &isOn2901);
+  bleApi.setup(Lissabon::Dimmer::serviceUUIDstring, this);
 
-  static BLE2904 illum2904;
-  illum2904.setFormat(BLE2904::FORMAT_UINT8);
-  illum2904.setUnit(0x27AD);
-  static BLE2901 illum2901("Illumination");
-  bleApi.addCharacteristic(illumUUID, BLE_READ|BLE_WRITE, &illum2904, &illum2901);
+  static BLE2904 isOn2904;
+  isOn2904.setFormat(Lissabon::Dimmer::isOnUUID2904format);
+  isOn2904.setUnit(Lissabon::Dimmer::isOnUUID2904unit);
+  static BLE2901 isOn2901(Lissabon::Dimmer::isOnUUID2901);
+  bleApi.addCharacteristic(Lissabon::Dimmer::isOnUUIDstring, BLE_READ|BLE_WRITE, &isOn2904, &isOn2901);
+
+  static BLE2904 brightness2904;
+  brightness2904.setFormat(Lissabon::Dimmer::brightnessUUID2904format);
+  brightness2904.setUnit(Lissabon::Dimmer::brightnessUUID2904unit);
+  static BLE2901 brightness2901(Lissabon::Dimmer::brightnessUUID2901);
+  bleApi.addCharacteristic(Lissabon::Dimmer::brightnessUUIDstring, BLE_READ|BLE_WRITE, &brightness2904, &brightness2901);
 
   static BLE2904 identify2904;
-  identify2904.setFormat(BLE2904::FORMAT_UINT8);
-  identify2904.setUnit(0x2700);
-  static BLE2901 identify2901("Identify");
-  bleApi.addCharacteristic(identifyUUID, BLE_WRITE, &identify2904, &identify2901);
+  identify2904.setFormat(Lissabon::Dimmer::identifyUUID2904format);
+  identify2904.setUnit(Lissabon::Dimmer::identifyUUID2904unit);
+  static BLE2901 identify2901(Lissabon::Dimmer::identifyUUID2901);
+  bleApi.addCharacteristic(Lissabon::Dimmer::identifyUUIDstring, BLE_WRITE, &identify2904, &identify2901);
 #endif
 }
 
 bool DimmerBLEServer::blePutHandler(UUIDstring charUUID) {
 #ifdef IOTSA_WITH_BLE
   bool anyChanged = false;
-  if (charUUID == illumUUID) {
-      int level = bleApi.getAsInt(illumUUID);
+  if (charUUID == Lissabon::Dimmer::brightnessUUIDstring) {
+      int level = bleApi.getAsInt(Lissabon::Dimmer::brightnessUUIDstring);
       dimmer.level = float(level)/100.0;
-      IFDEBUG IotsaSerial.printf("xxxjack ble: wrote illum %s value %d %f\n", illumUUID, level, dimmer.level);
+      IFDEBUG IotsaSerial.printf("xxxjack ble: wrote brightness %s value %d %f\n", Lissabon::Dimmer::brightnessUUIDstring, level, dimmer.level);
       anyChanged = true;
   }
-  if (charUUID == isOnUUID) {
-    int value = bleApi.getAsInt(isOnUUID);
+  if (charUUID == Lissabon::Dimmer::isOnUUIDstring) {
+    int value = bleApi.getAsInt(Lissabon::Dimmer::isOnUUIDstring);
     dimmer.isOn = (bool)value;
     anyChanged = true;
   }
-  if (charUUID == identifyUUID) {
-    int value = bleApi.getAsInt(identifyUUID);
+  if (charUUID == Lissabon::Dimmer::identifyUUIDstring) {
+    int value = bleApi.getAsInt(Lissabon::Dimmer::identifyUUIDstring);
     if (value) dimmer.identify();
   }
   if (anyChanged) {
-    configSave();
     dimmer.updateDimmer();
     return true;
   }
@@ -57,18 +58,19 @@ bool DimmerBLEServer::blePutHandler(UUIDstring charUUID) {
 
 bool DimmerBLEServer::bleGetHandler(UUIDstring charUUID) {
 #ifdef IOTSA_WITH_BLE
-  if (charUUID == illumUUID) {
+  if (charUUID == Lissabon::Dimmer::brightnessUUIDstring) {
       int level = int(dimmer.level*100);
-      IFDEBUG IotsaSerial.printf("xxxjack ble: read level %s value %d\n", charUUID, level);
-      bleApi.set(illumUUID, (uint8_t)level);
+      IFDEBUG IotsaSerial.printf("xxxjack ble: read level %s value %d\n", Lissabon::Dimmer::brightnessUUIDstring, level);
+      bleApi.set(Lissabon::Dimmer::brightnessUUIDstring, (uint8_t)level);
       return true;
   }
-  if (charUUID == isOnUUID) {
-      IFDEBUG IotsaSerial.printf("xxxjack ble: read isOn %s value %d\n", charUUID, isOn);
-      bleApi.set(isOnUUID, (uint8_t)dimmer.isOn);
+  if (charUUID == Lissabon::Dimmer::isOnUUIDstring) {
+      IFDEBUG IotsaSerial.printf("xxxjack ble: read isOn %s value %d\n", Lissabon::Dimmer::isOnUUIDstring, dimmer.isOn);
+      bleApi.set(Lissabon::Dimmer::isOnUUIDstring, (uint8_t)dimmer.isOn);
       return true;
   }
   IotsaSerial.println("IotsaDimmerMod: ble: read unknown uuid");
 #endif
   return false;
+}
 }

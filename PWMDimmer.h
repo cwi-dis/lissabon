@@ -8,6 +8,7 @@ namespace Lissabon {
 class PWMDimmer : public AbstractDimmer {
 public:
   PWMDimmer(int _num, int pin, int channel, DimmerCallbacks *_callbacks);
+  void setup();
   void updateDimmer();
   bool available();
   void identify();
