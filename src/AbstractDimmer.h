@@ -42,6 +42,15 @@ public:
   bool isOn;
   float level;
   float minLevel;
+#ifdef DIMMER_WITH_GAMMA
+  float gamma;
+#endif // DIMMER_WITH_GAMMA
+#ifdef DIMMER_WITH_TEMPERATURE
+  float temperature;
+#endif // DIMMER_WITH_TEMPERATURE
+#ifdef DIMMER_WITH_PWMFREQUENCY
+  float pwmFrequency;
+#endif // DIMMER_WITH_PWMFREQUENCY
 protected:
   String name;
 };
