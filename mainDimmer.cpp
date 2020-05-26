@@ -244,7 +244,7 @@ void IotsaDimmerMod::setup() {
 #endif
 #ifdef WITH_ROTARY
   iotsaConfig.allowRCMDescription("press button 4 times");
-  dimmerUI.setRotaryEncoder(encoder);
+  dimmerUI.setRotaryEncoder(button, encoder);
 #endif
   dimmer.setup();
   dimmerBLEServer.setup();
@@ -291,28 +291,10 @@ void IotsaDimmerMod::loop() {
 #endif
 }
 
-#if 0
-bool IotsaDimmerMod::touchedOnOff() {
-  // Start the animation to get to the wanted value
-  startAnimation();
-  // And prepare for saving (because we don't want to wear out the Flash chip)
+void IotsaDimmerMod::dimmerValueChanged() {
   iotsaConfig.postponeSleep(2000);
-  saveAtMillis = millis() + 2000;
-  return true;
+  saveAtMillis = millis() + 1000;
 }
-
-bool IotsaDimmerMod::changedValue() {
-  // Changing the dimmer automatically turns on the lamp as well
-  isOn = true;
-  // Start the animation to get to the wanted value
-  startAnimation();
-  // And prepare for saving (because we don't want to wear out the Flash chip)
-  iotsaConfig.postponeSleep(2000);
-  saveAtMillis = millis() + 2000;
-  return true;
-}
-#endif
-
 // Instantiate the Led module, and install it in the framework
 IotsaDimmerMod dimmerMod(application);
 
