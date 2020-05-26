@@ -115,8 +115,8 @@ bool AbstractDimmer::handlerConfigArgs(IotsaWebServer *server){
   if (server->hasArg(n_animation)) {
     // xxxjack check permission
     int val = server->arg(n_animation).toInt();
-    if (val != animationDirationMillis) {
-      animationDirationMillis = val;
+    if (val != animationDurationMillis) {
+      animationDurationMillis = val;
       anyChanged = true;
     }
   }
@@ -170,7 +170,7 @@ void AbstractDimmer::configSave(IotsaConfigFileSave& cf) {
   cf.put(n_name + ".gamma", gamma);
 #endif // DIMMER_WITH_GAMMA
 #ifdef DIMMER_WITH_ANIMATION
-  cf.put(n_name + ".animation", animation);
+  cf.put(n_name + ".animation", animationDurationMillis);
 #endif // DIMMER_WITH_ANIMATION
 #ifdef DIMMER_WITH_TEMPERATURE
   cf.put(n_name + ".temperature", temperature);
@@ -243,7 +243,7 @@ bool AbstractDimmer::getHandler(JsonObject& reply) {
   reply["temperature"] = temperature;
 #endif // DIMMER_WITH_TEMPERATURE
 #ifdef DIMMER_WITH_PWMFREQUENCY
-  reply["pwmFrequency"]
+  reply["pwmFrequency"] = pwmFrequency;
 #endif // DIMMER_WITH_PWMFREQUENCY
   return true;
 }
@@ -304,7 +304,7 @@ bool AbstractDimmer::putConfigHandler(const JsonVariant& request) {
 #endif // DIMMER_WITH_GAMMA
 #ifdef DIMMER_WITH_ANIMATION
   if (reqObj.containsKey("animation")) {
-    animation = reqObj["animation"];
+    animationDurationMillis = reqObj["animation"];
     configChanged = true;
   }
 #endif // DIMMER_WITH_GAMMA
