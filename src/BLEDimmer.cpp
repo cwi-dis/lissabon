@@ -81,7 +81,7 @@ void BLEDimmer::loop() {
   }
 #ifdef DIMMER_WITH_TEMPERATURE
   IFDEBUG IotsaSerial.printf("xxxjack Transmit temperature %d\n", (int16_t)(temperature));
-  bool ok = dimmer->set(Lissabon::Dimmer::serviceUUID, Lissabon::Dimmer::temperatureUUID, (int16_t)temperature);
+  ok = dimmer->set(Lissabon::Dimmer::serviceUUID, Lissabon::Dimmer::temperatureUUID, (uint16_t)temperature);
   if (!ok) {
     IFDEBUG IotsaSerial.println("BLE: set(brightness) failed");
   }

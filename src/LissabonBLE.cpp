@@ -28,11 +28,11 @@ const char* brightnessUUID2901 = "Brightness";
 const uint8_t brightnessUUID2904format = BLE2904::FORMAT_UINT8;
 const uint16_t brightnessUUID2904unit = 0x27ad;
 
-const char* tempUUIDstring = "F3390005-F793-4D0C-91BB-C91EEB92A1A4";
-BLEUUID tempUUID(tempUUIDstring);
-const char* tempUUID2901 = "Color Temperature";
-const uint8_t tempUUID2904format = BLE2904::FORMAT_UINT16;
-const uint16_t tempUUID2904unit = 0x2700;
+const char* temperatureUUIDstring = "F3390005-F793-4D0C-91BB-C91EEB92A1A4";
+BLEUUID temperatureUUID(temperatureUUIDstring);
+const char* temperatureUUID2901 = "Color Temperature";
+const uint8_t temperatureUUID2904format = BLE2904::FORMAT_UINT16;
+const uint16_t temperatureUUID2904unit = 0x2700;
 
 const char* intervalUUIDstring = "F3390006-F793-4D0C-91BB-C91EEB92A1A4";
 BLEUUID intervalUUID(intervalUUIDstring);

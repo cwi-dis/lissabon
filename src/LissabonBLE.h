@@ -30,11 +30,11 @@ extern const char* brightnessUUID2901;
 extern const uint8_t brightnessUUID2904format;
 extern const uint16_t brightnessUUID2904unit;
 
-extern BLEUUID tempUUID;
-extern const char* tempUUIDstring;
-extern const char* tempUUID2901;
-extern const uint8_t tempUUID2904format;
-extern const uint16_t tempUUID2904unit;
+extern BLEUUID temperatureUUID;
+extern const char* temperatureUUIDstring;
+extern const char* temperatureUUID2901;
+extern const uint8_t temperatureUUID2904format;
+extern const uint16_t temperatureUUID2904unit;
 
 extern BLEUUID intervalUUID;
 extern const char* intervalUUIDstring;

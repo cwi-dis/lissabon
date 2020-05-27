@@ -14,7 +14,7 @@ public:
   void setRotaryEncoder(Button& button, RotaryEncoder& encoder);
 #ifdef DIMMER_WITH_TEMPERATURE
   void setTemperatureUpDownButtons(UpDownButtons& encoder);
-  void setTemperatureRotaryEncoder(Button& button, RotaryEncoder& encoder);
+  void setTemperatureRotaryEncoder(RotaryEncoder& encoder);
 #endif
 protected:
   bool touchedOnOff();
