@@ -1,4 +1,4 @@
-#include "PWMDImmer.h"
+#include "PWMDimmer.h"
 
 namespace Lissabon {
 
