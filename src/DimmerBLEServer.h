@@ -1,6 +1,7 @@
 #ifndef _DIMMERBLESERVER_H_
 #define _DIMMERBLESERVER_H_
 #include "iotsa.h"
+#ifdef IOTSA_WITH_BLE
 #include "iotsaBLEServer.h"
 #include "AbstractDimmer.h"
 #include "LissabonBLE.h"
@@ -13,11 +14,10 @@ public:
   void setup();
 protected:
   AbstractDimmer& dimmer;
-#ifdef IOTSA_WITH_BLE
   IotsaBleApiService bleApi;
   bool blePutHandler(UUIDstring charUUID);
   bool bleGetHandler(UUIDstring charUUID);
-#endif // IOTSA_WITH_BLE
 };
 }
+#endif // IOTSA_WITH_BLE
 #endif // _DIMMERBLESERVER_H_

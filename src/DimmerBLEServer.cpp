@@ -1,4 +1,5 @@
 #include "DimmerBLEServer.h"
+#ifdef IOTSA_WITH_BLE
 
 namespace Lissabon {
 
@@ -30,7 +31,6 @@ void DimmerBLEServer::setup() {
 }
 
 bool DimmerBLEServer::blePutHandler(UUIDstring charUUID) {
-#ifdef IOTSA_WITH_BLE
   bool anyChanged = false;
   if (charUUID == Lissabon::Dimmer::brightnessUUIDstring) {
       int level = bleApi.getAsInt(Lissabon::Dimmer::brightnessUUIDstring);
@@ -52,12 +52,10 @@ bool DimmerBLEServer::blePutHandler(UUIDstring charUUID) {
     return true;
   }
   IotsaSerial.println("IotsaDimmerMod: ble: write unknown uuid");
-#endif
   return false;
 }
 
 bool DimmerBLEServer::bleGetHandler(UUIDstring charUUID) {
-#ifdef IOTSA_WITH_BLE
   if (charUUID == Lissabon::Dimmer::brightnessUUIDstring) {
       int level = int(dimmer.level*100);
       IFDEBUG IotsaSerial.printf("xxxjack ble: read level %s value %d\n", Lissabon::Dimmer::brightnessUUIDstring, level);
@@ -70,7 +68,7 @@ bool DimmerBLEServer::bleGetHandler(UUIDstring charUUID) {
       return true;
   }
   IotsaSerial.println("IotsaDimmerMod: ble: read unknown uuid");
-#endif
   return false;
 }
 }
+#endif // IOTSA_WITH_BLE

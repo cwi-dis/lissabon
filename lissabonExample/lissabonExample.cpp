@@ -32,6 +32,10 @@ IotsaBLEClientMod bleClientMod(application);
 #include "BLEDimmer.h"
 #include "DimmerUI.h"
 
+#ifdef WITH_BLESERVER
+#include "DimmerBLEServer.h"
+#endif
+
 using namespace Lissabon;
 
 class IotsaBLEDimmerMod : public IotsaApiMod, public DimmerCallbacks {
@@ -39,6 +43,9 @@ public:
   IotsaBLEDimmerMod(IotsaApplication &_app, IotsaAuthenticationProvider *_auth=NULL)
   : IotsaRestApiMod(_app, _auth),
     dimmer1(1, bleClientMod, this),
+  #ifdef WITH_BLESERVER
+    dimmer1BLEServer(dimmer1),
+  #endif
     dimmer1ui(dimmer1)
   {
   }
@@ -58,6 +65,9 @@ private:
   void dimmerValueChanged();
   void handler();
   BLEDimmer dimmer1;
+#ifdef WITH_BLESERVER
+  DimmerBLEServer dimmer1BLEServer;
+#endif
   DimmerUI dimmer1ui;
   uint32_t saveAtMillis = 0;
   uint32_t ledOffUntilMillis = 0;
@@ -140,6 +150,14 @@ void IotsaBLEDimmerMod::setup() {
   dimmer1ui.setUpDownButtons(encoder1);
 
   bleClientMod.setServiceFilter(Lissabon::Dimmer::serviceUUID);
+
+  dimmer1.setup();
+
+#ifdef WITH_BLESERVER
+  dimmer1BLEServer.setup();
+#endif
+
+  dimmer1.updateDimmer();
 }
 
 void IotsaBLEDimmerMod::dimmerValueChanged() {

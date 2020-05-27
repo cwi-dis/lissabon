@@ -29,6 +29,9 @@ bool BLEDimmer::setName(String value) {
   return true;
 }
 
+void BLEDimmer::setup() {
+}
+
 void BLEDimmer::loop() {
   // If we don't have anything to transmit we bail out quickly...
   if (!needTransmit) {

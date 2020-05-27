@@ -20,7 +20,7 @@ public:
   void updateDimmer();
   bool available();
   bool setName(String value);
-
+  void setup();
   void loop();
 protected:
   IotsaBLEClientMod& bleClientMod;
