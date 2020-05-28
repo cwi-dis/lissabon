@@ -175,7 +175,8 @@ String LissabonLedstripMod::info() {
 #endif // IOTSA_WITH_WEB
 
 bool LissabonLedstripMod::getHandler(const char *path, JsonObject& reply) {
-  return dimmer.getHandler(reply);
+  bool ok = dimmer.getHandler(reply);
+  return ok;
 }
 
 bool LissabonLedstripMod::putHandler(const char *path, const JsonVariant& request, JsonObject& reply) {
@@ -241,6 +242,7 @@ void LissabonLedstripMod::loop() {
   // See if we have a value to save (because the user has been turning the dimmer)
   if (saveAtMillis > 0 && millis() > saveAtMillis) {
     saveAtMillis = 0;
+    IFDEBUG IotsaSerial.println("save ledstrip config");
     configSave();
   }
   dimmer.loop();

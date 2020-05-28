@@ -16,6 +16,16 @@ public:
   bool available();
   void identify();
   void loop();
+  // Overrides
+  virtual bool getHandler(JsonObject& reply) override;
+  virtual bool putHandler(const JsonVariant& request) override;
+  virtual bool putConfigHandler(const JsonVariant& request) override;
+  virtual bool handlerArgs(IotsaWebServer *server) override;
+  virtual bool handlerConfigArgs(IotsaWebServer *server) override;
+  virtual void configLoad(IotsaConfigFileLoad& cf) override;
+  virtual void configSave(IotsaConfigFileSave& cf) override;
+  virtual String handlerForm() override;
+  virtual String handlerConfigForm() override;
 
   void setHandler(uint8_t *_buffer, size_t _count, int bpp, IotsaPixelsourceHandler *handler);
 protected:

@@ -9,7 +9,6 @@ LedstripDimmer::LedstripDimmer(int _num, IotsaPixelstripMod& _mod, DimmerCallbac
 
 }
 
-
 void LedstripDimmer::setup() {
   mod.setPixelsource(this);
 }
@@ -23,42 +22,73 @@ void LedstripDimmer::updateDimmer() {
   millisAnimationStart = millis();
   millisAnimationEnd = millis() + thisDuration;
   iotsaConfig.postponeSleep(thisDuration+100);
+  callbacks->dimmerValueChanged();
 }
-
-#if 0
-
-bool LedstripDimmer::changedBrightness() {
-  isOn = true;
-  setTI(tempColor.Temperature, tempColor.Brightness);
-  updateDimmer(); // xxxjack quick=true
-  // And prepare for saving (because we don't want to wear out the Flash chip)
-  iotsaConfig.postponeSleep(2000);
-  saveAtMillis = millis() + 2000;
-  return true;
-}
-
-bool LedstripDimmer::changedOnOff() {
-  // Start the animation to get to the wanted value
-  updateDimmer();
-  // And prepare for saving (because we don't want to wear out the Flash chip)
-  iotsaConfig.postponeSleep(2000);
-  saveAtMillis = millis() + 2000;
-  return true;
-}
-
-void LedstripDimmer::setTI(float _temp, float _brightness) {
-  if (_temp < 1000 || _temp > 10000) _temp = rgbwSpace.WTemperature; // Cater for coming from RGB or HLS value
-  tempColor = TempFColor(_temp, _brightness);
-  color = rgbwSpace.toRgbw(tempColor);
-
-  IFDEBUG IotsaSerial.printf("setTI(%f, %f): r=%d g=%d b=%d w=%d\n", _temp, _brightness, color.R, color.G, color.B, color.W);
-}
-#endif
 
 bool LedstripDimmer::available() {
   return true;
 }
 
+bool LedstripDimmer::getHandler(JsonObject& reply) {
+  reply["whiteTemperature"] = rgbwSpace.WTemperature;
+  reply["whiteBrightness"] = rgbwSpace.WBrightness;
+  return AbstractDimmer::getHandler(reply);
+}
+bool LedstripDimmer::putHandler(const JsonVariant& request) {
+  return AbstractDimmer::putHandler(request);
+}
+bool LedstripDimmer::putConfigHandler(const JsonVariant& request) {
+  float whiteTemperature = request["whiteTemperature"]|rgbwSpace.WTemperature;
+  float whiteBrightness = request["whiteBrightness"]|rgbwSpace.WBrightness;
+  rgbwSpace = Colorspace(whiteTemperature, whiteBrightness, false, false);
+  return AbstractDimmer::putConfigHandler(request);
+}
+bool LedstripDimmer::handlerArgs(IotsaWebServer *server) {
+  return AbstractDimmer::handlerArgs(server);
+}
+bool LedstripDimmer::handlerConfigArgs(IotsaWebServer *server) {
+  bool anyChanged;
+  float whiteTemperature = rgbwSpace.WTemperature;
+  float whiteBrightness = rgbwSpace.WBrightness;
+  if( server->hasArg("whiteTemperature")) {
+    whiteTemperature = server->arg("whiteTemperature").toFloat();
+    anyChanged = true;
+  }
+  if( server->hasArg("whiteBrightness")) {
+    whiteBrightness = server->arg("whiteBrightness").toFloat();
+    anyChanged = true;
+  }
+  if (anyChanged) {
+    rgbwSpace = Colorspace(whiteTemperature, whiteBrightness, false, false);
+    updateDimmer();
+  }
+  return AbstractDimmer::handlerConfigArgs(server);
+}
+void LedstripDimmer::configLoad(IotsaConfigFileLoad& cf) {
+  float whiteTemperature, whiteBrightness;
+  cf.get("whiteTemperature", whiteTemperature, 4000);
+  cf.get("whiteBrightness", whiteBrightness, 1.0);
+  rgbwSpace = Colorspace(whiteTemperature, whiteBrightness, false, false);
+  AbstractDimmer::configLoad(cf);
+}
+void LedstripDimmer::configSave(IotsaConfigFileSave& cf) {
+  cf.put("whiteTemperature", rgbwSpace.WTemperature);
+  cf.put("whiteBrightness", rgbwSpace.WBrightness);
+  AbstractDimmer::configSave(cf);
+}
+String LedstripDimmer::handlerForm() {
+  return AbstractDimmer::handlerForm();
+}
+String LedstripDimmer::handlerConfigForm() {
+  String message = AbstractDimmer::handlerConfigForm();
+  String s_num = String(num);
+  String s_name = "dimmer" + s_num;
+  message += "<h2>Dimmer " + s_num + " RGBW configuration</h2><form method='get'>";
+  message += "White LED temperature: <input type='text' name='whiteTemperature' value='" + String(rgbwSpace.WTemperature) +"' ><br>";
+  message += "White LED brightness: <input type='text' name='whiteBrightness' value='" + String(rgbwSpace.WBrightness) +"' ><br>";
+  message += "<input type='submit'></form>";
+  return message;
+}
 
 void LedstripDimmer::identify() {
   if (!buffer) return;
