@@ -195,7 +195,7 @@ String AbstractDimmer::handlerForm() {
 #ifdef DIMMER_WITH_ANIMATION
 #endif // DIMMER_WITH_ANIMATION
 #ifdef DIMMER_WITH_TEMPERATURE
-  message += "Color Temperature: <input name='" + s_name +".temperature' value='" + String(temperature) + "'></br>";
+  message += "Color Temperature: <input name='" + s_name +".temperature' value='" + String(temperature) + "'>";
   message += "(3000.0 is warm, 4000.0 is neutral, 6000.0 is cool)<br>";
 #endif // DIMMER_WITH_TEMPERATURE
 #ifdef DIMMER_WITH_PWMFREQUENCY
@@ -211,7 +211,7 @@ String AbstractDimmer::handlerConfigForm() {
   message += "BLE name: <input name='" + s_name +".name' value='" + name + "'><br>";
   message += "Min Level (0.0..1.0): <input name='" + s_name +".minLevel' value='" + String(minLevel) + "'></br>";
 #ifdef DIMMER_WITH_GAMMA
-  message += "Gamma: <input name='" + s_name +".minLevel' value='" + String(minLevel) + "'></br>";
+  message += "Gamma: <input name='" + s_name +".gamma' value='" + String(gamma) + "'>";
   message += "(1.0 is linear, 2.2 is common for direct PWM LEDs)<br>";
 #endif // DIMMER_WITH_GAMMA
 #ifdef DIMMER_WITH_ANIMATION
@@ -220,7 +220,7 @@ String AbstractDimmer::handlerConfigForm() {
 #ifdef DIMMER_WITH_TEMPERATURE
 #endif // DIMMER_WITH_TEMPERATURE
 #ifdef DIMMER_WITH_PWMFREQUENCY
-  message += "PWM Frequency: <input name='" + s_name +".minLevel' value='" + String(minLevel) + "'></br>";
+  message += "PWM Frequency: <input name='" + s_name +".pwmFrequency' value='" + String(pwmFrequency) + "'>";
   message += "(Adapt when dimmed device flashes. 100 may be fine for dimmable LED lamps, 5000 for incandescent)<br>";
 #endif // DIMMER_WITH_PWMFREQUENCY
   message += "<input type='submit'></form>";
