@@ -19,7 +19,7 @@
 
 #define WITH_OTA    // Enable Over The Air updates from ArduinoIDE. Needs at least 1MB flash.
 
-IotsaApplication application("Iotsa Dimmer");
+IotsaApplication application("Lissabon Dimmer");
 IotsaWifiMod wifiMod(application);
 
 #ifdef WITH_OTA
@@ -85,9 +85,9 @@ using namespace Lissabon;
 // PWM Lighting module. 
 //
 
-class IotsaDimmerMod : public IotsaApiMod, public DimmerCallbacks {
+class LissabonDimmerMod : public IotsaApiMod, public DimmerCallbacks {
 public:
-  IotsaDimmerMod(IotsaApplication& _app, IotsaAuthenticationProvider *_auth=NULL)
+  LissabonDimmerMod(IotsaApplication& _app, IotsaAuthenticationProvider *_auth=NULL)
   : IotsaApiMod(_app, _auth),
     dimmer(1, PIN_PWM_DIMMER, CHANNEL_PWM_DIMMER, this),
   #ifdef WITH_UI
@@ -121,7 +121,7 @@ private:
   int buttonChangeCount = 0;
 };
 
-void IotsaDimmerMod::uiButtonChanged() {
+void LissabonDimmerMod::uiButtonChanged() {
   // Called whenever any button changed state.
   // Used to give visual feedback (led turning off) on presses and releases,
   // and to enable config mod after 4 taps and reboot after 8 taps
@@ -147,7 +147,7 @@ void IotsaDimmerMod::uiButtonChanged() {
 
 #ifdef IOTSA_WITH_WEB
 void
-IotsaDimmerMod::handler() {
+LissabonDimmerMod::handler() {
   bool anyChanged = false;
   anyChanged |= dimmer.handlerConfigArgs(server);
   dimmer.handlerArgs(server);
@@ -164,7 +164,7 @@ IotsaDimmerMod::handler() {
   server->send(200, "text/html", message);
 }
 
-String IotsaDimmerMod::info() {
+String LissabonDimmerMod::info() {
   // Return some information about this module, for the main page of the web server.
   String message = "<p>";
   message += dimmer.info();
@@ -180,11 +180,11 @@ String IotsaDimmerMod::info() {
 }
 #endif // IOTSA_WITH_WEB
 
-bool IotsaDimmerMod::getHandler(const char *path, JsonObject& reply) {
+bool LissabonDimmerMod::getHandler(const char *path, JsonObject& reply) {
   return dimmer.getHandler(reply);
 }
 
-bool IotsaDimmerMod::putHandler(const char *path, const JsonVariant& request, JsonObject& reply) {
+bool LissabonDimmerMod::putHandler(const char *path, const JsonVariant& request, JsonObject& reply) {
   bool anyChanged = false;
   bool configChanged = false;
   JsonObject reqObj = request.as<JsonObject>();
@@ -199,29 +199,29 @@ bool IotsaDimmerMod::putHandler(const char *path, const JsonVariant& request, Js
 
 }
 
-void IotsaDimmerMod::serverSetup() {
+void LissabonDimmerMod::serverSetup() {
   // Setup the web server hooks for this module.
 #ifdef IOTSA_WITH_WEB
-  server->on("/dimmer", std::bind(&IotsaDimmerMod::handler, this));
+  server->on("/dimmer", std::bind(&LissabonDimmerMod::handler, this));
 #endif // IOTSA_WITH_WEB
   api.setup("/api/dimmer", true, true);
   name = "dimmer";
 }
 
 
-void IotsaDimmerMod::configLoad() {
+void LissabonDimmerMod::configLoad() {
   IotsaConfigFileLoad cf("/config/pwmdimmer.cfg");
   dimmer.configLoad(cf);
 }
 
-void IotsaDimmerMod::configSave() {
+void LissabonDimmerMod::configSave() {
   IotsaConfigFileSave cf("/config/pwmdimmer.cfg");
   dimmer.configSave(cf);
 
 }
 
 
-void IotsaDimmerMod::setup() {
+void LissabonDimmerMod::setup() {
   // Allow switching the dimmer to iotsa config mode over BLE or with taps
   batteryMod.allowBLEConfigModeSwitch();
   // Set pins for measuring battery voltage and disabling sleep.
@@ -245,7 +245,7 @@ void IotsaDimmerMod::setup() {
   dimmer.updateDimmer();
 }
 
-void IotsaDimmerMod::loop() {
+void LissabonDimmerMod::loop() {
   // See if we have a value to save (because the user has been turning the dimmer)
   if (saveAtMillis > 0 && millis() > saveAtMillis) {
     saveAtMillis = 0;
@@ -254,12 +254,12 @@ void IotsaDimmerMod::loop() {
   dimmer.loop();
 }
 
-void IotsaDimmerMod::dimmerValueChanged() {
+void LissabonDimmerMod::dimmerValueChanged() {
   iotsaConfig.postponeSleep(2000);
   saveAtMillis = millis() + 1000;
 }
 // Instantiate the Led module, and install it in the framework
-IotsaDimmerMod dimmerMod(application);
+LissabonDimmerMod dimmerMod(application);
 
 // Standard setup() method, hands off most work to the application framework
 void setup(void){
