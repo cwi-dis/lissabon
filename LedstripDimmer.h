@@ -2,7 +2,7 @@
 #define _LEDSTRIPDIMMER_H_
 #include "iotsa.h"
 #include "AbstractDimmer.h"
-#include "iotsaPixelStrip.h"
+#include "iotsaPixelstrip.h"
 
 #include "NPBColorLib.h"
 
