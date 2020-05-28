@@ -107,13 +107,13 @@ void LedstripDimmer::loop() {
     progress = 1;
     millisAnimationStart = 0;
     prevColor = wanted;
-    IFDEBUG IotsaSerial.printf("IotsaLedstrip: isOn=%d r=%d, g=%d, b=%d, w=%d count=%d\n", isOn, color.R, color.G, color.B, color.W, count);
+    IFDEBUG IotsaSerial.printf("LedstripDimmer: isOn=%d r=%d, g=%d, b=%d, w=%d count=%d\n", isOn, color.R, color.G, color.B, color.W, count);
   }
   RgbwFColor cur = RgbwFColor::LinearBlend(prevColor, wanted, progress);
   RgbwColor pixelColor(cur);
 
 #if 0
-  IFDEBUG IotsaSerial.printf("IotsaLedstrip::loop: r=%d, g=%d, b=%d, w=%d, count=%d, progress=%f\n", _r, _g, _b, _w, count, progress);
+  IFDEBUG IotsaSerial.printf("LedstripDimmer::loop: r=%d, g=%d, b=%d, w=%d, count=%d, progress=%f\n", _r, _g, _b, _w, count, progress);
 #endif
   if (buffer != NULL && count != 0 && stripHandler != NULL) {
     bool change = false;
