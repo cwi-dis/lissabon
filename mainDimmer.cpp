@@ -1,9 +1,6 @@
 //
-// A Neopixel strip server, which allows control over a strip of neopixels, intended
-// to be used as lighting. Color can be set as fraction RGB or HSL, gamma can be changed,
-// interval between lit pixels can be changed. Control is through a web UI or
-// through REST calls (and/or, depending on Iotsa compile time options, COAP calls).
-// The web interface can be disabled by building iotsa with IOTSA_WITHOUT_WEB.
+// A dimmer server, which allows controling a PWM (pulse-width modulation)
+// DC dimmer.
 //
 
 #include "iotsa.h"
@@ -19,8 +16,6 @@
 #define TAP_COUNT_MODE_CHANGE 4
 #define TAP_COUNT_REBOOT 8
 #define TAP_DURATION 1000
-
-// CHANGE: Add application includes and declarations here
 
 #define WITH_OTA    // Enable Over The Air updates from ArduinoIDE. Needs at least 1MB flash.
 
