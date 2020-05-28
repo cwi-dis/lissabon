@@ -42,7 +42,7 @@ IotsaBLEServerMod bleserverMod(application);
 #include "iotsaBattery.h"
 #define PIN_DISABLESLEEP 0
 //#define PIN_VBAT 37
-#define VBAT_100_PERCENT (12.0/11.0) // 100K and 1M resistors divide by 11, not 10...
+//#define VBAT_100_PERCENT (12.0/11.0) // 100K and 1M resistors divide by 11, not 10...
 IotsaBatteryMod batteryMod(application);
 
 // Pin to which MOSFET is attached. Channel is only relevant for esp32.
@@ -125,7 +125,6 @@ private:
   uint32_t lastButtonChangeMillis = 0;
   int buttonChangeCount = 0;
 };
-
 
 void IotsaDimmerMod::uiButtonChanged() {
   // Called whenever any button changed state.
@@ -258,37 +257,6 @@ void IotsaDimmerMod::loop() {
     configSave();
   }
   dimmer.loop();
-#if 0
-  // Quick return if we have nothing to do
-  if (millisAnimationStart == 0 || millisAnimationEnd == 0) {
-    // The dimmer shouldn't sleep if it is controlling the PWM output
-    if (illum > 0 && isOn) iotsaConfig.postponeSleep(100);
-    return;
-  }
-  // Determine how far along the animation we are, and terminate the animation when done (or if it looks preposterous)
-  uint32_t thisDur = millisAnimationEnd - millisAnimationStart;
-  if (thisDur == 0) thisDur = 1;
-  float progress = float(millis() - millisAnimationStart) / float(thisDur);
-  float wantedIllum = illum;
-  if (!isOn) wantedIllum = 0;
-  if (progress < 0) progress = 0;
-  if (progress >= 1) {
-    progress = 1;
-    millisAnimationStart = 0;
-    illumPrev = wantedIllum;
-
-    IFDEBUG IotsaSerial.printf("IotsaDimmer: wantedIllum=%f illum=%f\n", wantedIllum, illum);
-  }
-  float curIllum = wantedIllum*progress + illumPrev*(1-progress);
-  if (curIllum < 0) curIllum = 0;
-  if (curIllum > 1) curIllum = 1;
-  if (gamma && gamma != 1.0) curIllum = powf(curIllum, gamma);
-#ifdef ESP32
-  ledcWrite(CHANNEL_PWM_DIMMER, int(255*curIllum));
-#else
-  analogWrite(PIN_PWM_DIMMER, int(255*curIllum));
-#endif
-#endif
 }
 
 void IotsaDimmerMod::dimmerValueChanged() {
