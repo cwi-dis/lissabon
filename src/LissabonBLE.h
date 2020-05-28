@@ -17,30 +17,28 @@ extern const char* isOnUUIDstring;
 extern const char* isOnUUID2901;
 extern const uint8_t isOnUUID2904format;
 extern const uint16_t isOnUUID2904unit;
+typedef uint8_t Type_isOn;
 
 extern BLEUUID identifyUUID;
 extern const char* identifyUUIDstring;
 extern const char* identifyUUID2901;
 extern const uint8_t identifyUUID2904format;
 extern const uint16_t identifyUUID2904unit;
+typedef uint8_t Type_identify;
 
 extern BLEUUID brightnessUUID;
 extern const char* brightnessUUIDstring;
 extern const char* brightnessUUID2901;
 extern const uint8_t brightnessUUID2904format;
 extern const uint16_t brightnessUUID2904unit;
+typedef uint16_t Type_brightness;
 
 extern BLEUUID temperatureUUID;
 extern const char* temperatureUUIDstring;
 extern const char* temperatureUUID2901;
 extern const uint8_t temperatureUUID2904format;
 extern const uint16_t temperatureUUID2904unit;
-
-extern BLEUUID intervalUUID;
-extern const char* intervalUUIDstring;
-extern const char* UUID2901;
-extern const uint8_t UUID2904format;
-extern const uint16_t UUID2904unit;
+typedef uint16_t Type_temperature;
 
 };
 };
