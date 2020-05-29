@@ -18,7 +18,8 @@ void LedstripDimmer::updateDimmer() {
   tempColor = TempFColor(temperature, newLevel);
   color = rgbwSpace.toRgbw(tempColor);
 
-  int thisDuration = int(millisAnimationDuration * fabs(newLevel-prevLevel));
+  int thisDuration = int(animationDurationMillis * fabs(newLevel-prevLevel));
+  IotsaSerial.printf("xxxjack prevlevel=%f newLevel=%f animationDurationMillis=%d thisDuration=%d\n", prevLevel, newLevel, animationDurationMillis, thisDuration);
   millisAnimationStart = millis();
   millisAnimationEnd = millis() + thisDuration;
   iotsaConfig.postponeSleep(thisDuration+100);
@@ -137,6 +138,7 @@ void LedstripDimmer::loop() {
     progress = 1;
     millisAnimationStart = 0;
     prevColor = wanted;
+    prevLevel = prevColor.CalculateBrightness()/255.0;
     IFDEBUG IotsaSerial.printf("LedstripDimmer: isOn=%d r=%d, g=%d, b=%d, w=%d count=%d\n", isOn, color.R, color.G, color.B, color.W, count);
   }
   RgbwFColor cur = RgbwFColor::LinearBlend(prevColor, wanted, progress);

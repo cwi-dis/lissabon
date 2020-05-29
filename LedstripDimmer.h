@@ -33,7 +33,6 @@ protected:
   float prevLevel;
   uint32_t millisAnimationStart;
   uint32_t millisAnimationEnd;
-  int millisAnimationDuration;
   uint8_t *buffer;
   int count;  // Number of LEDs
   int bpp; // Number of colors per LED (3 or 4)
@@ -44,20 +43,7 @@ protected:
 
   RgbwColor color;
   RgbwColor prevColor;
-#if 0
-  bool isOn;  // Master boolean: if false there is no light.
 
-
-
-  HslFColor hslColor;
-  bool hslColorIsValid;
-
-  uint32_t millisStartAnimation;
-  int millisAnimationDuration;
-  int millisThisAnimationDuration;
-
-  int darkPixels; // Number of unlit pixels between lit pixels
-#endif
 };
 };
 #endif // _LEDSTRIPDIMMER_H_
