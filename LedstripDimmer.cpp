@@ -19,7 +19,7 @@ void LedstripDimmer::updateDimmer() {
   float maxLevel = calculateMaxCorrectColorLevel();
   if (pixelLevels != NULL) {
     for(int i=0; i<count; i++) {
-      pixelLevels[i] = 1.0; 
+      pixelLevels[i] = levelFunc((float)i/(float)count); 
     }
   }
 }
@@ -37,6 +37,30 @@ float LedstripDimmer::calculateMaxCorrectColorLevel() {
   IotsaSerial.printf("xxxjack wTemp=%f wBright=%f wtdTemp=%f R=%f G=%f B=%f W=%f maxCorrect=%f\n", rgbwSpace.WTemperature, rgbwSpace.WTemperature, temperature, maxRgbwColor.R, maxRgbwColor.G, maxRgbwColor.B, maxRgbwColor.W, maxLevel);
   return maxLevel;
 }
+
+float LedstripDimmer::levelFunc(float x) {
+  // Light distribution function. Returns light level for position x (0<=x<1).
+  if (x < 0) x = 0;
+  if (x > 1) x = 1;
+  // First try: linear ramp
+  if (x < focalPoint - focalSharpness) return 0;
+  if (x > focalPoint + focalSharpness) return 0;
+  float delta = fabs(x - focalPoint);
+  if (focalSharpness == 0) return 1;
+  return 1-(delta / focalSharpness);
+}
+
+float LedstripDimmer::levelFuncCumulative(float x) {
+  // Culumative light function. Called only for x=0 and x=1. Provided
+  // so we can use mathematical formulas here and in levelFunc for functions
+  // functions that are not bounded to the range [0, 1)
+  if (x < 0) x = 0;
+  if (x > 1) x = 1;
+  // First try: linear ramp. Only correct at 0 and 1
+  if (x < focalPoint) return 0;
+  return focalSharpness;
+}
+
 
 bool LedstripDimmer::available() {
   return true;

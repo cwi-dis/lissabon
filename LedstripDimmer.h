@@ -42,6 +42,8 @@ protected:
 
   float focalPoint;  // Where the focus of the light is (0.0 .. 1.0)
   float focalSharpness;  // How wide the focus is (0.0 .. 1.0)
+  float levelFunc(float x); // Relative level at point (0..1)
+  float levelFuncCumulative(float x); // Cumulative level at point
 };
 };
 #endif // _LEDSTRIPDIMMER_H_
