@@ -46,6 +46,7 @@ void AbstractDimmer::calcCurLevel() {
     prevLevel = wantedLevel;
 
     IFDEBUG IotsaSerial.printf("IotsaDimmer: wantedLevel=%f level=%f\n", wantedLevel, level);
+    callbacks->dimmerValueChanged();
   }
   curLevel = wantedLevel*progress + prevLevel*(1-progress);
 #else

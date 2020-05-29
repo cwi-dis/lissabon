@@ -12,6 +12,7 @@ DimmerUI::touchedOnOff() {
 
 bool
 DimmerUI::levelChanged() {
+  dimmer.isOn = true;
   IFDEBUG IotsaSerial.printf("levelChanged %d: onOff=%d level=%f", dimmer.num, dimmer.isOn, dimmer.level);
 #ifdef DIMMER_WITH_TEMPERATURE
   IFDEBUG IotsaSerial.printf(" temperature=%f", dimmer.temperature);
