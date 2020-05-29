@@ -1,4 +1,8 @@
 #include "LedstripDimmer.h"
+#include <cmath>
+
+//const float PI = atan(1)*4;
+const float SQRT_HALF = sqrt(0.5);
 
 namespace Lissabon {
 
@@ -17,9 +21,20 @@ void LedstripDimmer::updateDimmer() {
   AbstractDimmer::updateDimmer();
   // Compute curve
   float maxLevel = calculateMaxCorrectColorLevel();
+  float beginValue = levelFuncCumulative(0);
+  float endValue = levelFuncCumulative(1);
+  float totalValue = endValue - beginValue;
+  IotsaSerial.printf("xxxjack maxLevel=%f totalValue=%f\n", maxLevel, totalValue);
+  float prevValue = beginValue;
   if (pixelLevels != NULL) {
     for(int i=0; i<count; i++) {
-      pixelLevels[i] = levelFunc((float)i/(float)count); 
+      float nextValue = levelFuncCumulative((float)(i+1)/count);
+      float peakValue = levelFunc((float)(i+1)/count);
+#if 0
+      IotsaSerial.printf("xxxjack %d: peak=%f value=%f cum=%f\n", i, peakValue, nextValue-prevValue, nextValue);
+#endif
+      pixelLevels[i] = peakValue;
+      prevValue = nextValue; 
     }
   }
 }
@@ -40,25 +55,28 @@ float LedstripDimmer::calculateMaxCorrectColorLevel() {
 
 float LedstripDimmer::levelFunc(float x) {
   // Light distribution function. Returns light level for position x (0<=x<1).
-  if (x < 0) x = 0;
-  if (x > 1) x = 1;
-  // First try: linear ramp
-  if (x < focalPoint - focalSharpness) return 0;
-  if (x > focalPoint + focalSharpness) return 0;
-  float delta = fabs(x - focalPoint);
-  if (focalSharpness == 0) return 1;
-  return 1-(delta / focalSharpness);
+#if 0
+  return x;
+#else
+  float s = tan(PI*0.5*pow(focalSharpness, 2));
+  float m = focalPoint;
+  float xprime = (x-m)/s;
+  return exp(-0.5 * powf(xprime, 2));
+#endif
 }
 
 float LedstripDimmer::levelFuncCumulative(float x) {
+#if 0
+  return x*x;
+#else
   // Culumative light function. Called only for x=0 and x=1. Provided
   // so we can use mathematical formulas here and in levelFunc for functions
   // functions that are not bounded to the range [0, 1)
-  if (x < 0) x = 0;
-  if (x > 1) x = 1;
-  // First try: linear ramp. Only correct at 0 and 1
-  if (x < focalPoint) return 0;
-  return focalSharpness;
+  float s = tan(PI*0.5*pow(focalSharpness, 2));
+  float m = focalPoint;
+  float xprime = (x-m)/s;
+  return erf(SQRT_HALF * xprime);
+#endif
 }
 
 
