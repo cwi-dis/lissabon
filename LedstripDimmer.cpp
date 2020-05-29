@@ -13,6 +13,16 @@ void LedstripDimmer::setup() {
   mod.setPixelsource(this);
 }
 
+void LedstripDimmer::updateDimmer() {
+  AbstractDimmer::updateDimmer();
+  // Compute curve
+  if (pixelLevels != NULL) {
+    for(int i=0; i<count; i++) {
+      pixelLevels[i] = 1.0; 
+    }
+  }
+}
+
 bool LedstripDimmer::available() {
   return true;
 }
@@ -100,6 +110,8 @@ void LedstripDimmer::setHandler(uint8_t *_buffer, size_t _count, int _bpp, Iotsa
   buffer = _buffer;
   count = _count;
   bpp = _bpp;
+  if (pixelLevels != NULL) free(pixelLevels);
+  pixelLevels = (float *)calloc(count, sizeof(float));
   stripHandler = _handler;
   updateDimmer(); // xxxjack quick=true
 }
@@ -117,7 +129,9 @@ void LedstripDimmer::loop() {
   // The color we want to go to
   TempFColor curTFColor = TempFColor(temperature, curLevel);
   RgbwFColor curRgbwColor = rgbwSpace.toRgbw(curTFColor);
-  RgbwColor pixelColor = curRgbwColor;
+#ifdef COMPUTE_8_BIT
+  RgbwColor curColor = curRgbwColor;
+#endif
 #if 0
   if (millisAnimationStart == 0) {
     IFDEBUG IotsaSerial.printf("LedstripDimmer: isOn=%d r=%d, g=%d, b=%d, w=%d count=%d\n", isOn, color.R, color.G, color.B, color.W, count);
@@ -127,7 +141,15 @@ void LedstripDimmer::loop() {
     bool change = false;
     uint8_t *p = buffer;
     for (int i=0; i<count; i++) {
-      RgbwColor thisPixelColor = pixelColor;
+#ifdef COMPUTE_8_BIT
+      RgbwColor thisPixelColor = curColor;
+      thisPixelColor = thisPixelColor.Dim((uint8_t)(255.0*pixelLevels[i]));
+#else
+      RgbwFColor thisPixelFColor = curRgbwColor;
+      thisPixelFColor = thisPixelFColor.Dim(pixelLevels[i]);
+      RgbwColor thisPixelColor = thisPixelFColor;
+#endif
+      //IotsaSerial.printf("xxxjack i=%d level=%f curW=%f thisW=%f\n", i, pixelLevels[i], curRgbwColor.W, thisPixelFColor.W);
       if (*p != thisPixelColor.R) {
         *p = thisPixelColor.R;
         change = true;

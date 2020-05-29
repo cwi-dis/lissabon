@@ -12,6 +12,7 @@ class LedstripDimmer : public AbstractDimmer, public IotsaPixelsource {
 public:
   LedstripDimmer(int _num, IotsaPixelstripMod& _mod, DimmerCallbacks *_callbacks);
   void setup();
+  virtual void updateDimmer() override;
   bool available() override;
   void identify();
   void loop();
@@ -29,23 +30,13 @@ public:
   void setHandler(uint8_t *_buffer, size_t _count, int bpp, IotsaPixelsourceHandler *handler);
 protected:
   IotsaPixelstripMod& mod;
-#if 0
-  float curLevel;   // current level
-  float prevLevel;  // current level, or level at start of current animation 
-  uint32_t millisAnimationStart;
-  uint32_t millisAnimationEnd;
-#endif
-  uint8_t *buffer;
   int count;  // Number of LEDs
   int bpp; // Number of colors per LED (3 or 4)
+  uint8_t *buffer = NULL; // per-pixel 8bit RGBW values (to pass to pixelstrip module)
+  float *pixelLevels = NULL; // per-pixel intensities
   IotsaPixelsourceHandler *stripHandler;
 
   Colorspace rgbwSpace;
-#if 0
-  RgbwColor color;
-  RgbwColor curColor;
-  RgbwColor prevColor;
-#endif
 
 };
 };
