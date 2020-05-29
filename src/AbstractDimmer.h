@@ -22,7 +22,8 @@ public:
     callbacks(_callbacks)
   {}
   virtual ~AbstractDimmer() {}
-  virtual void updateDimmer() = 0;
+  virtual void updateDimmer();
+  float calcCurLevel();
   virtual bool available() = 0;
   String info();
   virtual bool getHandler(JsonObject& reply);
@@ -41,14 +42,19 @@ public:
 public:
   int num;
   DimmerCallbacks *callbacks;
-  bool isOn;
-  float level;
-  float minLevel;
+  float level;      // Requested light level
+  bool isOn;        // if true we want to show level, if false we want to be off.
+  float curLevel;   // actual current light level (depends on level/isOn but also animation progress)
+  float minLevel;   // minimum light level through UI
 #ifdef DIMMER_WITH_GAMMA
   float gamma;
 #endif // DIMMER_WITH_GAMMA
 #ifdef DIMMER_WITH_ANIMATION
-  int animationDurationMillis;
+  float prevLevel;  // actual light level at millisAnimtationStart
+  int animationDurationMillis;  // Maximum duration of an animation (0-100% or reverse)
+  uint32_t millisAnimationStart;  // Time current animation started
+  uint32_t millisAnimationEnd;  // Time current animation should end
+
 #endif // DIMMER_WITH_ANIMATION
 #ifdef DIMMER_WITH_TEMPERATURE
   float temperature;
