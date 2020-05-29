@@ -13,19 +13,6 @@ void LedstripDimmer::setup() {
   mod.setPixelsource(this);
 }
 
-void LedstripDimmer::updateDimmer() {
-  float newLevel = isOn ? level : 0;
-  tempColor = TempFColor(temperature, newLevel);
-  color = rgbwSpace.toRgbw(tempColor);
-
-  int thisDuration = int(animationDurationMillis * fabs(newLevel-prevLevel));
-  IotsaSerial.printf("xxxjack prevlevel=%f newLevel=%f animationDurationMillis=%d thisDuration=%d\n", prevLevel, newLevel, animationDurationMillis, thisDuration);
-  millisAnimationStart = millis();
-  millisAnimationEnd = millis() + thisDuration;
-  iotsaConfig.postponeSleep(thisDuration+100);
-  callbacks->dimmerValueChanged();
-}
-
 bool LedstripDimmer::available() {
   return true;
 }
@@ -121,31 +108,20 @@ void LedstripDimmer::loop() {
   // Quick return if we have nothing to do
   if (millisAnimationStart == 0 || millisAnimationEnd == 0) return;
 
-  // The color we want to go to
-  RgbwFColor wanted = RgbwFColor(0);
-  if (isOn) wanted = color;
+  // Compute current level (taking into account isOn and animation progress)
+  calcCurLevel();
 
   // Enable power to the led strip, if needed
-  if (wanted.CalculateBrightness() > 0 || prevColor.CalculateBrightness() > 0) stripHandler->powerOn();
+  if (curLevel > 0 || prevLevel > 0) stripHandler->powerOn();
 
-  // Determine how far along the animation we are, and terminate the animation when done (or if it looks preposterous)
-  uint32_t thisDur = millisAnimationEnd - millisAnimationStart;
-  if (thisDur == 0) thisDur = 1;
-  float progress = float(millis() - millisAnimationStart) / float(thisDur);
-
-  if (progress < 0) progress = 0;
-  if (progress > 1) {
-    progress = 1;
-    millisAnimationStart = 0;
-    prevColor = wanted;
-    prevLevel = prevColor.CalculateBrightness()/255.0;
+  // The color we want to go to
+  TempFColor curTFColor = TempFColor(temperature, curLevel);
+  RgbwFColor curRgbwColor = rgbwSpace.toRgbw(curTFColor);
+  RgbwColor pixelColor = curRgbwColor;
+#if 0
+  if (millisAnimationStart == 0) {
     IFDEBUG IotsaSerial.printf("LedstripDimmer: isOn=%d r=%d, g=%d, b=%d, w=%d count=%d\n", isOn, color.R, color.G, color.B, color.W, count);
   }
-  RgbwFColor cur = RgbwFColor::LinearBlend(prevColor, wanted, progress);
-  RgbwColor pixelColor(cur);
-
-#if 0
-  IFDEBUG IotsaSerial.printf("LedstripDimmer::loop: r=%d, g=%d, b=%d, w=%d, count=%d, progress=%f\n", _r, _g, _b, _w, count, progress);
 #endif
   if (buffer != NULL && count != 0 && stripHandler != NULL) {
     bool change = false;
@@ -180,7 +156,7 @@ void LedstripDimmer::loop() {
     }
   }
   // Disable power to the led strip, if we can
-  if ( millisAnimationStart == 0 && prevColor.CalculateBrightness() == 0) stripHandler->powerOff();
+  if ( millisAnimationStart == 0 && curLevel == 0) stripHandler->powerOff();
 }
 
 }
