@@ -28,7 +28,7 @@ void AbstractDimmer::updateDimmer() {
 #endif
 }
 
-float AbstractDimmer::calcCurLevel() {
+void AbstractDimmer::calcCurLevel() {
   float wantedLevel = level;
   if (!isOn) wantedLevel = 0;
 

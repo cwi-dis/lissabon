@@ -71,12 +71,14 @@ bool DimmerBLEServer::bleGetHandler(UUIDstring charUUID) {
       bleApi.set(Lissabon::Dimmer::brightnessUUIDstring, (Lissabon::Dimmer::Type_brightness)level);
       return true;
   }
+#ifdef DIMMER_WITH_TEMPERATURE
   if (charUUID == Lissabon::Dimmer::temperatureUUIDstring) {
       int temperature = dimmer.temperature;
       IFDEBUG IotsaSerial.printf("xxxjack ble: read temperature %s value %d\n", Lissabon::Dimmer::isOnUUIDstring, temperature);
       bleApi.set(Lissabon::Dimmer::temperatureUUIDstring, (Lissabon::Dimmer::Type_temperature)temperature);
       return true;
   }
+#endif // DIMMER_WITH_TEMPERATURE
   if (charUUID == Lissabon::Dimmer::isOnUUIDstring) {
       IFDEBUG IotsaSerial.printf("xxxjack ble: read isOn %s value %d\n", Lissabon::Dimmer::isOnUUIDstring, dimmer.isOn);
       bleApi.set(Lissabon::Dimmer::isOnUUIDstring, (Lissabon::Dimmer::Type_isOn)dimmer.isOn);

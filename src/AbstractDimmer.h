@@ -23,7 +23,7 @@ public:
   {}
   virtual ~AbstractDimmer() {}
   virtual void updateDimmer();
-  float calcCurLevel();
+  void calcCurLevel();
   virtual bool available() = 0;
   String info();
   virtual bool getHandler(JsonObject& reply);
