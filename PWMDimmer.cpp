@@ -20,14 +20,6 @@ void PWMDimmer::setup() {
 #endif
 }
 
-void PWMDimmer::updateDimmer() {
-  float newLevel = isOn ? level : 0;
-  int thisDuration = int(millisAnimationDuration * fabs(newLevel-prevLevel));
-  millisAnimationStart = millis();
-  millisAnimationEnd = millis() + thisDuration;
-  iotsaConfig.postponeSleep(thisDuration+100);
-}
-
 bool PWMDimmer::available() {
   return true;
 }
@@ -63,24 +55,7 @@ void PWMDimmer::loop() {
     if (level > 0 && isOn) iotsaConfig.postponeSleep(100);
     return;
   }
-  // Determine how far along the animation we are, and terminate the animation when done (or if it looks preposterous)
-  uint32_t thisDur = millisAnimationEnd - millisAnimationStart;
-  if (thisDur == 0) thisDur = 1;
-  float progress = float(millis() - millisAnimationStart) / float(thisDur);
-  float wantedLevel = level;
-  if (!isOn) wantedLevel = 0;
-  if (progress < 0) progress = 0;
-  if (progress >= 1) {
-    progress = 1;
-    millisAnimationStart = 0;
-    prevLevel = wantedLevel;
-
-    IFDEBUG IotsaSerial.printf("IotsaDimmer: wantedLevel=%f level=%f\n", wantedLevel, level);
-  }
-  float curLevel = wantedLevel*progress + prevLevel*(1-progress);
-  if (curLevel < 0) curLevel = 0;
-  if (curLevel > 1) curLevel = 1;
-  if (gamma && gamma != 1.0) curLevel = powf(curLevel, gamma);
+  calcCurLevel();
 #ifdef ESP32
   ledcWrite(channel, int(255*curLevel));
 #else
