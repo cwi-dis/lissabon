@@ -30,6 +30,7 @@ void AbstractDimmer::updateDimmer() {
 
 void AbstractDimmer::calcCurLevel() {
   float wantedLevel = level;
+  if (overrideLevel > 0) wantedLevel = overrideLevel;
   if (!isOn) wantedLevel = 0;
 
 #ifdef DIMMER_WITH_ANIMATION

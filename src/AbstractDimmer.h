@@ -44,6 +44,7 @@ public:
   DimmerCallbacks *callbacks;
   float level;      // Requested light level
   bool isOn;        // if true we want to show level, if false we want to be off.
+  float overrideLevel = -1; // If > 0 this is the _actual_ level we want to output, because a LED curve will cause it to be perceived as level.
   float curLevel;   // actual current light level (depends on level/isOn but also animation progress)
   float minLevel;   // minimum light level through UI
 #ifdef DIMMER_WITH_GAMMA
