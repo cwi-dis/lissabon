@@ -24,12 +24,16 @@ void LedstripDimmer::updateDimmer() {
   // 
   // First determine the maximum output level at which no color distortion happens.
   // If we want more light than this we have to use all LEDs.
+  // Also if the spread is very wide we ignore it and light up all LEDs.
   //
   float maxOutputLevel = maxLevelCorrectColor();
-  if (level > maxOutputLevel) {
+  if (level == 0 || level >= maxOutputLevel || focalSpread > 0.9) {
     for(int i=0; i<count; i++) pixelLevels[i] = 1.0;
+    overrideLevel = -1; // We use the level as provided
     return;
   }
+  // We will compute the per-pixel level, so we set the overrideLevel to maximum color-preserving.
+  overrideLevel = maxOutputLevel;
   //
   // Now determine how much light we can produce with the preferred curve
   //
@@ -37,24 +41,25 @@ void LedstripDimmer::updateDimmer() {
   float beginValue = levelFuncCumulative(0, curSpread);
   float endValue = levelFuncCumulative(1, curSpread);
   float cumulativeValue = endValue - beginValue;
-  IotsaSerial.printf("xxxjack focalSpread=%f maxLevel=%f totalValue=%f\n", curSpread, maxOutputLevel, cumulativeValue);
+  IotsaSerial.printf("xxxjack level=%f focalSpread=%f maxLevel=%f totalValue=%f\n", level, curSpread, maxOutputLevel, cumulativeValue);
   //
   // With this curve we can produce cumulativeValue*maxOutputLevel light.
   // If that is not enough we widen the curve.
   //
-  if (level > cumulativeValue*maxOutputLevel) {
-    curSpread = level;
+  while (level > cumulativeValue*maxOutputLevel && curSpread < 1) {
+    curSpread = curSpread + 0.05;
     beginValue = levelFuncCumulative(0, curSpread);
     endValue = levelFuncCumulative(1, curSpread);
     cumulativeValue = endValue - beginValue;
     IotsaSerial.printf("xxxjack curSpread=%f maxLevel=%f totalValue=%f\n", curSpread, maxOutputLevel, cumulativeValue);
   }
+  //
+  // cumulativeValue*maxOutputLevel is the amount of light produced. We need to
+  // correct this so level is what is actually produced.
+  float correction = level / cumulativeValue*maxOutputLevel;
   if (pixelLevels != NULL) {
     for(int i=0; i<count; i++) {
-      float peakValue = levelFunc((float)(i+1)/count, curSpread);
-#if 0
-      IotsaSerial.printf("xxxjack %d: peak=%f value=%f cum=%f\n", i, peakValue, nextValue-prevValue, nextValue);
-#endif
+      float peakValue = levelFunc((float)(i+1)/count, curSpread) * correction;
       pixelLevels[i] = peakValue;
     }
   }
