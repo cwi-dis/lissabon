@@ -41,7 +41,7 @@ void LedstripDimmer::updateDimmer() {
   float beginValue = levelFuncCumulative(0, curSpread);
   float endValue = levelFuncCumulative(1, curSpread);
   float cumulativeValue = endValue - beginValue;
-  IotsaSerial.printf("xxxjack level=%f focalSpread=%f maxLevel=%f totalValue=%f\n", level, curSpread, maxOutputLevel, cumulativeValue);
+  //IotsaSerial.printf("xxxjack level=%f focalSpread=%f maxLevel=%f totalValue=%f\n", level, curSpread, maxOutputLevel, cumulativeValue);
   //
   // With this curve we can produce cumulativeValue*maxOutputLevel light.
   // If that is not enough we widen the curve.
@@ -51,7 +51,7 @@ void LedstripDimmer::updateDimmer() {
     beginValue = levelFuncCumulative(0, curSpread);
     endValue = levelFuncCumulative(1, curSpread);
     cumulativeValue = endValue - beginValue;
-    IotsaSerial.printf("xxxjack curSpread=%f maxLevel=%f totalValue=%f\n", curSpread, maxOutputLevel, cumulativeValue);
+    //IotsaSerial.printf("xxxjack curSpread=%f maxLevel=%f totalValue=%f\n", curSpread, maxOutputLevel, cumulativeValue);
   }
   //
   // cumulativeValue*maxOutputLevel is the amount of light produced. We need to
@@ -165,7 +165,7 @@ void LedstripDimmer::configLoad(IotsaConfigFileLoad& cf) {
   cf.get("whiteTemperature", whiteTemperature, 4000);
   cf.get("whiteBrightness", whiteBrightness, 1.0);
   cf.get("focalPoint", focalPoint, 0.5);
-  cf.get("focalSpread", focalSpread, 0);
+  cf.get("focalSpread", focalSpread, 1.0);
   updateColorspace(whiteTemperature, whiteBrightness);
   AbstractDimmer::configLoad(cf);
 }
@@ -218,7 +218,7 @@ void LedstripDimmer::setHandler(uint8_t *_buffer, size_t _count, int _bpp, Iotsa
   if (pixelLevels != NULL) free(pixelLevels);
   pixelLevels = (float *)calloc(count, sizeof(float));
   stripHandler = _handler;
-  updateDimmer(); // xxxjack quick=true
+  updateDimmer();
 }
 
 void LedstripDimmer::loop() {
