@@ -37,7 +37,7 @@ protected:
   IotsaPixelsourceHandler *stripHandler;
 
   void updateColorspace(float whiteTemperature, float whiteBrightness);
-  float calculateMaxCorrectColorLevel();
+  float maxLevelCorrectColor();
   Colorspace rgbwSpace;
 
   float focalPoint;  // Where the focus of the light is (0.0 .. 1.0)

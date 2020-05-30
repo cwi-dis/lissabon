@@ -18,28 +18,44 @@ void LedstripDimmer::setup() {
 }
 
 void LedstripDimmer::updateDimmer() {
+  // Compute level and animation duration
   AbstractDimmer::updateDimmer();
   // Compute curve.
   // 
   // First determine the maximum output level at which no color distortion happens.
+  // If we want more light than this we have to use all LEDs.
   //
-  float maxOutputLevel = calculateMaxCorrectColorLevel();
+  float maxOutputLevel = maxLevelCorrectColor();
+  if (level > maxOutputLevel) {
+    for(int i=0; i<count; i++) pixelLevels[i] = 1.0;
+    return;
+  }
   //
-  // Now determine 
-  float beginValue = levelFuncCumulative(0);
-  float endValue = levelFuncCumulative(1);
+  // Now determine how much light we can produce with the preferred curve
+  //
+  float curSpread = focalSpread;
+  float beginValue = levelFuncCumulative(0, curSpread);
+  float endValue = levelFuncCumulative(1, curSpread);
   float cumulativeValue = endValue - beginValue;
-  IotsaSerial.printf("xxxjack maxLevel=%f totalValue=%f\n", maxOutputLevel, cumulativeValue);
-  float prevValue = beginValue;
+  IotsaSerial.printf("xxxjack focalSpread=%f maxLevel=%f totalValue=%f\n", curSpread, maxOutputLevel, cumulativeValue);
+  //
+  // With this curve we can produce cumulativeValue*maxOutputLevel light.
+  // If that is not enough we widen the curve.
+  //
+  if (level > cumulativeValue*maxOutputLevel) {
+    curSpread = level;
+    beginValue = levelFuncCumulative(0, curSpread);
+    endValue = levelFuncCumulative(1, curSpread);
+    cumulativeValue = endValue - beginValue;
+    IotsaSerial.printf("xxxjack curSpread=%f maxLevel=%f totalValue=%f\n", curSpread, maxOutputLevel, cumulativeValue);
+  }
   if (pixelLevels != NULL) {
     for(int i=0; i<count; i++) {
-      float nextValue = levelFuncCumulative((float)(i+1)/count);
-      float peakValue = levelFunc((float)(i+1)/count);
+      float peakValue = levelFunc((float)(i+1)/count, curSpread);
 #if 0
       IotsaSerial.printf("xxxjack %d: peak=%f value=%f cum=%f\n", i, peakValue, nextValue-prevValue, nextValue);
 #endif
       pixelLevels[i] = peakValue;
-      prevValue = nextValue; 
     }
   }
 }
@@ -48,13 +64,13 @@ void LedstripDimmer::updateColorspace(float whiteTemperature, float whiteBrightn
   rgbwSpace = Colorspace(whiteTemperature, whiteBrightness, false, false);
 }
 
-float LedstripDimmer::calculateMaxCorrectColorLevel() {
+float LedstripDimmer::maxLevelCorrectColor() {
     // Check the maximum brightness we can correctly render and remember that
   Colorspace rgbwSpaceCorrect = Colorspace(rgbwSpace.WTemperature, rgbwSpace.WBrightness, true, false);
   TempFColor maxTFColor(temperature, 1.0);
   RgbwFColor maxRgbwColor = rgbwSpaceCorrect.toRgbw(maxTFColor);
   float maxLevel = maxRgbwColor.CalculateTrueBrightness(rgbwSpace.WBrightness);
-  IotsaSerial.printf("xxxjack wTemp=%f wBright=%f wtdTemp=%f R=%f G=%f B=%f W=%f maxCorrect=%f\n", rgbwSpace.WTemperature, rgbwSpace.WTemperature, temperature, maxRgbwColor.R, maxRgbwColor.G, maxRgbwColor.B, maxRgbwColor.W, maxLevel);
+  //IotsaSerial.printf("xxxjack wTemp=%f wBright=%f wtdTemp=%f R=%f G=%f B=%f W=%f maxCorrect=%f\n", rgbwSpace.WTemperature, rgbwSpace.WTemperature, temperature, maxRgbwColor.R, maxRgbwColor.G, maxRgbwColor.B, maxRgbwColor.W, maxLevel);
   return maxLevel;
 }
 
@@ -83,7 +99,7 @@ float LedstripDimmer::levelFuncCumulative(float x, float spreadOverride) {
   spread = (1/(1-powf(spread, 2)))-1;
   // Now we can compute the level function. Similar shape to a normal distribution.
   float xprime = (x-focalPoint)/spread;
-  return 0.5*sqrt(PI)*spread*erf(-xprime);
+  return -0.5*sqrt(PI)*spread*erf(-xprime);
 }
 
 
@@ -96,6 +112,7 @@ bool LedstripDimmer::getHandler(JsonObject& reply) {
   reply["whiteBrightness"] = rgbwSpace.WBrightness;
   reply["focalPoint"] = focalPoint;
   reply["focalSpread"] = focalSpread;
+  reply["maxLevelCorrectColor"] = maxLevelCorrectColor();
   return AbstractDimmer::getHandler(reply);
 }
 bool LedstripDimmer::putHandler(const JsonVariant& request) {
@@ -165,8 +182,9 @@ String LedstripDimmer::handlerConfigForm() {
   message += "White LED temperature: <input type='text' name='whiteTemperature' value='" + String(rgbwSpace.WTemperature) +"' ><br>";
   message += "White LED brightness: <input type='text' name='whiteBrightness' value='" + String(rgbwSpace.WBrightness) +"' ><br>";
   message += "Focal point: <input type='text' name='focalPoint' value='" + String(focalPoint) +"' > (0.0 is first LED, 1.0 is last LED)<br>";
-  message += "Focal sharpness: <input type='text' name='focalSpread' value='" + String(focalSpread) +"' > (0.0 is no focal point, 1.0 is as sharp as possible)<br>";
+  message += "Focal spread: <input type='text' name='focalSpread' value='" + String(focalSpread) +"' > (0.0 is narrow, 1.0 is as full width)<br>";
   message += "<input type='submit'></form>";
+  message += "<p>Maximum level with correct color: " + String(maxLevelCorrectColor()) + " (at temperature " + String(temperature) + ")</p>";
   return message;
 }
 
