@@ -19,12 +19,17 @@ void LedstripDimmer::setup() {
 
 void LedstripDimmer::updateDimmer() {
   AbstractDimmer::updateDimmer();
-  // Compute curve
-  float maxLevel = calculateMaxCorrectColorLevel();
+  // Compute curve.
+  // 
+  // First determine the maximum output level at which no color distortion happens.
+  //
+  float maxOutputLevel = calculateMaxCorrectColorLevel();
+  //
+  // Now determine 
   float beginValue = levelFuncCumulative(0);
   float endValue = levelFuncCumulative(1);
-  float totalValue = endValue - beginValue;
-  IotsaSerial.printf("xxxjack maxLevel=%f totalValue=%f\n", maxLevel, totalValue);
+  float cumulativeValue = endValue - beginValue;
+  IotsaSerial.printf("xxxjack maxLevel=%f totalValue=%f\n", maxOutputLevel, cumulativeValue);
   float prevValue = beginValue;
   if (pixelLevels != NULL) {
     for(int i=0; i<count; i++) {
@@ -53,30 +58,32 @@ float LedstripDimmer::calculateMaxCorrectColorLevel() {
   return maxLevel;
 }
 
-float LedstripDimmer::levelFunc(float x) {
+float LedstripDimmer::levelFunc(float x, float spreadOverride) {
   // Light distribution function. Returns light level for position x (0<=x<1).
-#if 0
-  return x;
-#else
-  float s = tan(PI*0.5*pow(focalSharpness, 2));
-  float m = focalPoint;
-  float xprime = (x-m)/s;
-  return exp(-0.5 * powf(xprime, 2));
-#endif
+  // First determine which spread we want to use
+  float spread = spreadOverride;
+  if (spread < 0) spread = focalSpread;
+  // If spread is close to 1.0 we use all lights
+  if (spread > 0.99) return 1;
+  // We turn spread into a [0, inf) number
+  spread = (1/(1-powf(spread, 2)))-1;
+  // Now we can compute the level function. Similar shape to a normal distribution.
+  float xprime = (x-focalPoint)/spread;
+  return exp(-powf(xprime, 2));
 }
 
-float LedstripDimmer::levelFuncCumulative(float x) {
-#if 0
-  return x*x;
-#else
-  // Culumative light function. Called only for x=0 and x=1. Provided
-  // so we can use mathematical formulas here and in levelFunc for functions
-  // functions that are not bounded to the range [0, 1)
-  float s = tan(PI*0.5*pow(focalSharpness, 2));
-  float m = focalPoint;
-  float xprime = (x-m)/s;
-  return erf(SQRT_HALF * xprime);
-#endif
+float LedstripDimmer::levelFuncCumulative(float x, float spreadOverride) {
+  // Culumative light function, integral of levelFunc. See levelFunc for details.
+  // First determine which spread we want to use
+  float spread = spreadOverride;
+  if (spread < 0) spread = focalSpread;
+  // If spread is close to 1.0 we use all lights
+  if (spread > 0.99) return 1;
+  // We turn spread into a [0, inf) number
+  spread = (1/(1-powf(spread, 2)))-1;
+  // Now we can compute the level function. Similar shape to a normal distribution.
+  float xprime = (x-focalPoint)/spread;
+  return 0.5*sqrt(PI)*spread*erf(-xprime);
 }
 
 
@@ -88,7 +95,7 @@ bool LedstripDimmer::getHandler(JsonObject& reply) {
   reply["whiteTemperature"] = rgbwSpace.WTemperature;
   reply["whiteBrightness"] = rgbwSpace.WBrightness;
   reply["focalPoint"] = focalPoint;
-  reply["focalSharpness"] = focalSharpness;
+  reply["focalSpread"] = focalSpread;
   return AbstractDimmer::getHandler(reply);
 }
 bool LedstripDimmer::putHandler(const JsonVariant& request) {
@@ -98,7 +105,7 @@ bool LedstripDimmer::putConfigHandler(const JsonVariant& request) {
   float whiteTemperature = request["whiteTemperature"]|rgbwSpace.WTemperature;
   float whiteBrightness = request["whiteBrightness"]|rgbwSpace.WBrightness;
   focalPoint = request["focalPoint"] | focalPoint;
-  focalSharpness = request["focalSharpness"] | focalSharpness;
+  focalSpread = request["focalSpread"] | focalSpread;
   updateColorspace(whiteTemperature, whiteBrightness);
   return AbstractDimmer::putConfigHandler(request);
 }
@@ -121,8 +128,8 @@ bool LedstripDimmer::handlerConfigArgs(IotsaWebServer *server) {
     focalPoint = server->arg("focalPoint").toFloat();
     anyChanged = true;
   }
-  if( server->hasArg("focalSharpness")) {
-    focalSharpness = server->arg("focalSharpness").toFloat();
+  if( server->hasArg("focalSpread")) {
+    focalSpread = server->arg("focalSpread").toFloat();
     anyChanged = true;
   }
   if (anyChanged) {
@@ -136,7 +143,7 @@ void LedstripDimmer::configLoad(IotsaConfigFileLoad& cf) {
   cf.get("whiteTemperature", whiteTemperature, 4000);
   cf.get("whiteBrightness", whiteBrightness, 1.0);
   cf.get("focalPoint", focalPoint, 0.5);
-  cf.get("focalSharpness", focalSharpness, 0);
+  cf.get("focalSpread", focalSpread, 0);
   updateColorspace(whiteTemperature, whiteBrightness);
   AbstractDimmer::configLoad(cf);
 }
@@ -144,7 +151,7 @@ void LedstripDimmer::configSave(IotsaConfigFileSave& cf) {
   cf.put("whiteTemperature", rgbwSpace.WTemperature);
   cf.put("whiteBrightness", rgbwSpace.WBrightness);
   cf.put("focalPoint", focalPoint);
-  cf.put("focalSharpness", focalSharpness);
+  cf.put("focalSpread", focalSpread);
   AbstractDimmer::configSave(cf);
 }
 String LedstripDimmer::handlerForm() {
@@ -158,7 +165,7 @@ String LedstripDimmer::handlerConfigForm() {
   message += "White LED temperature: <input type='text' name='whiteTemperature' value='" + String(rgbwSpace.WTemperature) +"' ><br>";
   message += "White LED brightness: <input type='text' name='whiteBrightness' value='" + String(rgbwSpace.WBrightness) +"' ><br>";
   message += "Focal point: <input type='text' name='focalPoint' value='" + String(focalPoint) +"' > (0.0 is first LED, 1.0 is last LED)<br>";
-  message += "Focal sharpness: <input type='text' name='focalSharpness' value='" + String(focalSharpness) +"' > (0.0 is no focal point, 1.0 is as sharp as possible)<br>";
+  message += "Focal sharpness: <input type='text' name='focalSpread' value='" + String(focalSpread) +"' > (0.0 is no focal point, 1.0 is as sharp as possible)<br>";
   message += "<input type='submit'></form>";
   return message;
 }
