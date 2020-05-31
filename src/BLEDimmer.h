@@ -14,7 +14,7 @@ namespace Lissabon {
 class BLEDimmer : public AbstractDimmer {
 public:
   BLEDimmer(int _num, IotsaBLEClientMod &_bleClientMod, DimmerCallbacks *_callbacks)
-  : AbstractDimmer(num, _callbacks), 
+  : AbstractDimmer(_num, _callbacks), 
     bleClientMod(_bleClientMod)
   {}
   void updateDimmer();
