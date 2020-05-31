@@ -1,37 +1,47 @@
 #include "iotsaBLEClientConnection.h"
 
-IotsaBLEClientConnection::IotsaBLEClientConnection(std::string& _name)
+IotsaBLEClientConnection::IotsaBLEClientConnection(std::string& _name, std::string _address)
 : name(_name),
-  device(NULL),
+  address(_address),
+  addressType(BLE_ADDR_TYPE_PUBLIC),
+  addressValid(false),
   client(NULL)
-{}
+{
+  if (_address != "") {
+    // address and addressType have already been set
+    addressValid = true;
+  }
+}
+
+std::string IotsaBLEClientConnection::getAddress() {
+  if (!addressValid || addressType != BLE_ADDR_TYPE_PUBLIC) return "";
+  return address.toString();
+}
 
 bool IotsaBLEClientConnection::setDevice(BLEAdvertisedDevice& _device) {
-  if (device != NULL) {
-    // Check whether the address is the same, then we don't have to add anything.
-    if (_device.getAddressType() == device->getAddressType() && _device.getAddress().equals(device->getAddress())) {
-      return false;
-    }
+  // Check whether the address is the same, then we don't have to add anything.
+  if (addressValid && _device.getAddressType() == addressType && _device.getAddress().equals(address)) {
+    return false;
   }
-  if (device != NULL) delete device;
-  device = new BLEAdvertisedDevice(_device);
+  address = _device.getAddress();
+  addressType = _device.getAddressType();
+  addressValid = true;
   return true;
 }
 
 void IotsaBLEClientConnection::clearDevice() {
-  if (device != NULL) delete device;
-  device = NULL;
+  addressValid = false;
 }
 
 bool IotsaBLEClientConnection::available() {
-  return device != NULL;
+  return addressValid;
 }
 
 bool IotsaBLEClientConnection::connect() {
-  if (device == NULL) return false;
+  if (!addressValid) return false;
   if (client != NULL) return true;
   client = BLEDevice::createClient();
-  bool ok = client->connect(device);
+  bool ok = client->connect(address, addressType);
   if (!ok) {
     delete client;
     client = NULL;

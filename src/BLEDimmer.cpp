@@ -28,6 +28,38 @@ bool BLEDimmer::setName(String value) {
   if (value) bleClientMod.addDevice(name);
   return true;
 }
+void BLEDimmer::extendHandlerConfigForm(String& message) {
+  String s_num = String(num);
+  String s_name = "dimmer" + s_num;
+  message += "BLE name: <input name='" + s_name +".name' value='" + name + "'><br>";
+  IotsaBLEClientConnection *dimmer = bleClientMod.getDevice(name);
+  if (dimmer) message += "BLE public address: " + String(dimmer->getAddress().c_str()) + "<br>";
+}
+
+void BLEDimmer::BLEDimmer::configLoad(IotsaConfigFileLoad& cf) {
+  // xxxjack to be done...
+  AbstractDimmer::configLoad(cf);
+}
+
+void BLEDimmer::configSave(IotsaConfigFileSave& cf) {
+  String s_num = String(num);
+  String s_name = "dimmer" + s_num;
+  IotsaBLEClientConnection *dimmer = bleClientMod.getDevice(name);
+  if (dimmer) {
+    String address = String(dimmer->getAddress().c_str());
+    if (address != "") cf.put(s_name + "address", address);
+  }
+  AbstractDimmer::configSave(cf);
+}
+
+bool BLEDimmer::getHandler(JsonObject& reply) {
+  IotsaBLEClientConnection *dimmer = bleClientMod.getDevice(name);
+  if (dimmer) {
+    std::string address = dimmer->getAddress();
+    if (address != "") reply["address"] = String(address.c_str());
+  }
+  return AbstractDimmer::getHandler(reply);
+}
 
 void BLEDimmer::setup() {
 }

@@ -43,6 +43,9 @@ public:
   String getUserVisibleName();
   bool hasName();
   virtual void identify();
+protected:
+  virtual void extendHandlerConfigForm(String& message);
+  virtual void extendHandlerConfigArgs(IotsaWebServer *server);
 public:
   int num;
   DimmerCallbacks *callbacks;

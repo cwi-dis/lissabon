@@ -264,11 +264,13 @@ String AbstractDimmer::handlerForm() {
   return message;
 }
 
+void AbstractDimmer::extendHandlerConfigForm(String& message) {}
+void AbstractDimmer::extendHandlerConfigArgs(IotsaWebServer *server) {}
 String AbstractDimmer::handlerConfigForm() {
   String s_num = String(num);
   String s_name = "dimmer" + s_num;
   String message = "<h2>Dimmer " + s_num + " configuration</h2><form method='get'>";
-  message += "BLE name: <input name='" + s_name +".name' value='" + name + "'><br>";
+  extendHandlerConfigForm(message);
 #ifdef DIMMER_WITH_LEVEL
   message += "Min Level (0.0..1.0): <input name='" + s_name +".minLevel' value='" + String(minLevel) + "'></br>";
 #endif
