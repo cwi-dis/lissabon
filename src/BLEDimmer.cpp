@@ -73,13 +73,16 @@ void BLEDimmer::loop() {
     bleClientMod.deviceNotSeen(name);
     return;
   }
+  bool ok;
+#ifdef DIMMER_WITH_LEVEL
   // Connected to dimmer.
   int levelValue = level * ((1<<sizeof(Lissabon::Dimmer::Type_brightness)*8)-1);
   IFDEBUG IotsaSerial.printf("xxxjack Transmit brightness %d\n", levelValue);
-  bool ok = dimmer->set(Lissabon::Dimmer::serviceUUID, Lissabon::Dimmer::brightnessUUID, (Lissabon::Dimmer::Type_brightness)levelValue);
+  ok = dimmer->set(Lissabon::Dimmer::serviceUUID, Lissabon::Dimmer::brightnessUUID, (Lissabon::Dimmer::Type_brightness)levelValue);
   if (!ok) {
     IFDEBUG IotsaSerial.println("BLE: set(brightness) failed");
   }
+#endif
 #ifdef DIMMER_WITH_TEMPERATURE
   int temperatureValue = temperature;
   IFDEBUG IotsaSerial.printf("xxxjack Transmit temperature %d\n", temperatureValue);

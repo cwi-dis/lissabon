@@ -12,6 +12,7 @@ public:
   DimmerUI(AbstractDimmer& _dimmer) : dimmer(_dimmer) {}
   void setUpDownButtons(UpDownButtons& encoder);
   void setRotaryEncoder(Button& button, RotaryEncoder& encoder);
+  void setOnOffButton(Button& button);
 #ifdef DIMMER_WITH_TEMPERATURE
   void setTemperatureUpDownButtons(UpDownButtons& encoder);
   void setTemperatureRotaryEncoder(RotaryEncoder& encoder);

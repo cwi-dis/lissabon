@@ -29,6 +29,7 @@ void AbstractDimmer::updateDimmer() {
 }
 
 void AbstractDimmer::calcCurLevel() {
+#ifdef DIMMER_WITH_LEVEL
   float wantedLevel = level;
   if (overrideLevel > 0) wantedLevel = overrideLevel;
   if (!isOn) wantedLevel = 0;
@@ -60,7 +61,7 @@ void AbstractDimmer::calcCurLevel() {
 #ifdef DIMMER_WITH_GAMMA
   if (gamma && gamma != 1.0) curLevel = powf(curLevel, gamma);
 #endif // DIMMER_WITH_GAMMA
-
+#endif // DIMMER_WITH_LEVEL
 }
 
 void AbstractDimmer::identify() {}
@@ -71,7 +72,10 @@ String AbstractDimmer::info() {
   if (!isOn) {
     message += " off";
   } else {
-    message += " on (" + String(int(level*100)) + "%)";
+    message += " on";
+#ifdef DIMMER_WITH_LEVEL
+    message += "(" + String(int(level*100)) + "%)";
+#endif
 #ifdef DIMMER_WITH_TEMPERATURE
     message += String(temperature) + "K";
 #endif // DIMMER_WITH_TEMPERATURE
@@ -99,6 +103,7 @@ bool AbstractDimmer::handlerArgs(IotsaWebServer *server) {
       anyChanged = true;
     }
   }
+#ifdef DIMMER_WITH_LEVEL
   if (server->hasArg(n_level)) {
     float val = server->arg(n_level).toFloat();
     if (val != level) {
@@ -107,6 +112,7 @@ bool AbstractDimmer::handlerArgs(IotsaWebServer *server) {
       anyChanged = true;
     }
   }
+#endif
 #ifdef DIMMER_WITH_GAMMA
 #endif // DIMMER_WITH_GAMMA
 #ifdef DIMMER_WITH_ANIMATION
@@ -137,6 +143,7 @@ bool AbstractDimmer::handlerConfigArgs(IotsaWebServer *server){
     String value = server->arg(n_name);
     anyChanged = setName(value);
   }
+#ifdef DIMMER_WITH_LEVEL
   if (server->hasArg(n_minLevel)) {
     // xxxjack check permission
     float val = server->arg(n_minLevel).toFloat();
@@ -145,6 +152,7 @@ bool AbstractDimmer::handlerConfigArgs(IotsaWebServer *server){
       anyChanged = true;
     }
   }
+#endif
 #ifdef DIMMER_WITH_GAMMA
   String n_gamma = n_dimmer + ".gamma";
   if (server->hasArg(n_gamma)) {
@@ -190,8 +198,10 @@ void AbstractDimmer::configLoad(IotsaConfigFileLoad& cf) {
   setName(strval);
   cf.get(n_name + ".isOn", value, 0);
   isOn = value;
+#ifdef DIMMER_WITH_LEVEL
   cf.get(n_name + ".level", level, 0.0);
   cf.get(n_name + ".minLevel", minLevel, 0.1);
+#endif
 #ifdef DIMMER_WITH_GAMMA
   cf.get(n_name + ".gamma", gamma, 1.0);
 #endif // DIMMER_WITH_GAMMA
@@ -209,9 +219,11 @@ void AbstractDimmer::configLoad(IotsaConfigFileLoad& cf) {
 void AbstractDimmer::configSave(IotsaConfigFileSave& cf) {
   String n_name = "dimmer" + String(num);
   cf.put(n_name + ".name", name);
-  cf.put(n_name + ".level", level);
   cf.put(n_name + ".isOn", isOn);
+#ifdef DIMMER_WITH_LEVEL
+  cf.put(n_name + ".level", level);
   cf.put(n_name + ".minLevel", minLevel);
+#endif // DIMMER_WITH_LEVEL
 #ifdef DIMMER_WITH_GAMMA
   cf.put(n_name + ".gamma", gamma);
 #endif // DIMMER_WITH_GAMMA
@@ -235,7 +247,9 @@ String AbstractDimmer::handlerForm() {
   String checkedOn = isOn ? "checked" : "";
   String checkedOff = !isOn ? "checked " : "";
   message += "<input type='radio' name='" + s_name +".isOn'" + checkedOff + " value='0'>Off <input type='radio' " + checkedOn + " name='" + s_name + ".isOn' value='1'>On</br>";
+#ifdef DIMMER_WITH_LEVEL
   message += "Level (0.0..1.0): <input name='" + s_name +".level' value='" + String(level) + "'></br>";
+#endif
 #ifdef DIMMER_WITH_GAMMA
 #endif // DIMMER_WITH_GAMMA
 #ifdef DIMMER_WITH_ANIMATION
@@ -255,7 +269,9 @@ String AbstractDimmer::handlerConfigForm() {
   String s_name = "dimmer" + s_num;
   String message = "<h2>Dimmer " + s_num + " configuration</h2><form method='get'>";
   message += "BLE name: <input name='" + s_name +".name' value='" + name + "'><br>";
+#ifdef DIMMER_WITH_LEVEL
   message += "Min Level (0.0..1.0): <input name='" + s_name +".minLevel' value='" + String(minLevel) + "'></br>";
+#endif
 #ifdef DIMMER_WITH_GAMMA
   message += "Gamma: <input name='" + s_name +".gamma' value='" + String(gamma) + "'>";
   message += "(1.0 is linear, 2.2 is common for direct PWM LEDs)<br>";
@@ -277,8 +293,10 @@ bool AbstractDimmer::getHandler(JsonObject& reply) {
   reply["name"] = name;
   reply["available"] = available();
   reply["isOn"] = isOn;
+#ifdef DIMMER_WITH_LEVEL
   reply["level"] = level;
   reply["minLevel"] = minLevel;
+#endif // DIMMER_WITH_LEVEL
 #ifdef DIMMER_WITH_GAMMA
   reply["gamma"] = gamma;
 #endif // DIMMER_WITH_GAMMA
@@ -307,10 +325,12 @@ bool AbstractDimmer::putHandler(const JsonVariant& request) {
     isOn = reqObj["isOn"];
     dimmerChanged = true;
   }
+#ifdef DIMMER_WITH_LEVEL
   if (reqObj.containsKey("level")) {
     level = reqObj["level"];
     dimmerChanged = true;
   }
+#endif // DIMMER_WITH_LEVEL
 #ifdef DIMMER_WITH_GAMMA
 #endif // DIMMER_WITH_GAMMA
 #ifdef DIMMER_WITH_ANIMATION
@@ -338,10 +358,12 @@ bool AbstractDimmer::putConfigHandler(const JsonVariant& request) {
     String value = reqObj["name"].as<String>();
     if (setName(name)) configChanged = true;
   }
+#ifdef DIMMER_WITH_LEVEL
   if (reqObj.containsKey("minLevel")) {
     minLevel = reqObj["minLevel"];
     configChanged = true;
   }
+#endif // DIMMER_WITH_LEVEL
 #ifdef DIMMER_WITH_GAMMA
   if (reqObj.containsKey("gamma")) {
     gamma = reqObj["gamma"];
