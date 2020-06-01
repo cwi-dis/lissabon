@@ -93,18 +93,26 @@ private:
   void uiButtonChanged();
   void dimmerValueChanged();
   void handler();
+  void startScanUnknown();
   BLEDimmer dimmer1;
   DimmerUI dimmer1ui;
 #ifdef WITH_SECOND_DIMMER
   BLEDimmer dimmer2;
   DimmerUI dimmer2ui;
 #endif
+  uint32_t scanUnknownUntilMillis = 0;
   std::set<std::string> unknownDimmers;
   uint32_t saveAtMillis = 0;
   uint32_t ledOffUntilMillis = 0;
   uint32_t lastButtonChangeMillis = 0;
   int buttonChangeCount = 0;
 };
+
+void LissabonRemoteMod::startScanUnknown() {
+  bleClientMod.findUnknownDevices(true);
+  scanUnknownUntilMillis = millis() + 20000;
+  iotsaConfig.postponeSleep(21000);
+}
 
 void LissabonRemoteMod::uiButtonChanged() {
   // Called whenever any button changed state.
@@ -119,6 +127,7 @@ void LissabonRemoteMod::uiButtonChanged() {
     // A button change that was quick enough for a tap
     lastButtonChangeMillis = now;
     buttonChangeCount++;
+    IFDEBUG IotsaSerial.printf("tap mode count=%d\n", buttonChangeCount);
     if (buttonChangeCount == TAP_COUNT_MODE_CHANGE) {
       IFDEBUG IotsaSerial.println("tap mode change");
       iotsaConfig.allowRequestedConfigurationMode();
@@ -132,6 +141,7 @@ void LissabonRemoteMod::uiButtonChanged() {
     // Either the first change, or too late. Reset.
     lastButtonChangeMillis = millis();
     buttonChangeCount = 0;
+    IFDEBUG IotsaSerial.println("tap mode 0");
   }
 }
 #ifdef IOTSA_WITH_WEB
@@ -147,6 +157,7 @@ LissabonRemoteMod::handler() {
   if (anyChanged) {
     configSave();
   }
+  if (server->hasArg("scanUnknown")) startScanUnknown();
 
   String message = "<html><head><title>BLE Dimmers</title></head><body><h1>BLE Dimmers</h1>";
   message += dimmer1.handlerForm();
@@ -158,7 +169,8 @@ LissabonRemoteMod::handler() {
 #ifdef WITH_SECOND_DIMMER
   message += dimmer2.handlerConfigForm();
 #endif // WITH_SECOND_DIMMER
-  message += "<h2>Available BLE dimmer devices</h2>";
+  message += "<h2>Available Unknown/new BLE dimmer devices</h2>";
+  message += "<form><input type='submit' name='scanUnknown' value='Scan for 20 seconds'></form>";
   if (unknownDimmers.size() == 0) {
     message += "<p>No unassigned BLE dimmer devices seen recently.</p>";
   } else {
@@ -206,6 +218,7 @@ bool LissabonRemoteMod::putHandler(const char *path, const JsonVariant& request,
   // xxxjack need to distinguish between config and operational parameters
   bool anyChanged = false;
   JsonObject reqObj = request.as<JsonObject>();
+  if (reqObj["scanUnknown"]|0) startScanUnknown();
   JsonVariant dimmer1Request = reqObj["dimmer1"];
   if (dimmer1Request) {
     if (dimmer1.putHandler(dimmer1Request)) anyChanged = true;
@@ -260,16 +273,13 @@ void LissabonRemoteMod::setup() {
   batteryMod.setPinDisableSleep(PIN_DISABLESLEEP);
 #endif
   dimmer1ui.setUpDownButtons(encoder1);
-  bool wantUnknownDevices = !dimmer1.hasName();
 #ifdef WITH_SECOND_DIMMER
-  dimmer2ui.setEncoder(encoder2);
-  if (!dimmer2.hasName()) wantUnknownDevices = true;
+  dimmer2ui.setUpDownButtons(encoder2);
 #endif // WITH_SECOND_DIMMER
 
   auto callback = std::bind(&LissabonRemoteMod::unknownDeviceFound, this, std::placeholders::_1);
   bleClientMod.setUnknownDeviceFoundCallback(callback);
   bleClientMod.setServiceFilter(Lissabon::Dimmer::serviceUUID);
-  bleClientMod.findUnknownDevices(wantUnknownDevices);
 }
 
 void LissabonRemoteMod::unknownDeviceFound(BLEAdvertisedDevice& deviceAdvertisement) {
@@ -285,6 +295,10 @@ void LissabonRemoteMod::loop() {
 #ifdef DEBUG_PRINT_HEAP_SPACE
   { static uint32_t last; if (millis() > last+1000) { iotsaConfig.printHeapSpace(); last = millis(); }}
 #endif
+  if (scanUnknownUntilMillis != 0 && millis() > scanUnknownUntilMillis) {
+    bleClientMod.findUnknownDevices(false);
+    scanUnknownUntilMillis = 0;
+  }
   // See whether we have a value to save (because the user has been turning the dimmer)
   if (saveAtMillis > 0 && millis() > saveAtMillis) {
     saveAtMillis = 0;
