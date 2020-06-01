@@ -67,6 +67,8 @@ void BLEDimmer::setup() {
 void BLEDimmer::loop() {
   // If we don't have anything to transmit we bail out quickly...
   if (!needTransmit) {
+#ifdef IOTSA_BLEDIMMER_KEEPOPEN_MILLIS
+
     // But we first disconnect if we are connected-idle for long enough.
     if (disconnectAtMillis > 0 && millis() > disconnectAtMillis) {
       disconnectAtMillis = 0;
@@ -74,9 +76,9 @@ void BLEDimmer::loop() {
       if (dimmer) {
         IFDEBUG IotsaSerial.println("xxxjack disconnecting");
         dimmer->disconnect();
-        IFDEBUG IotsaSerial.println("xxxjack disconnected");
       }
     }
+  #endif
     return;
   }
   // We have something to transmit. Check whether our dimmer actually exists.
@@ -128,8 +130,13 @@ void BLEDimmer::loop() {
   if (!ok) {
     IFDEBUG IotsaSerial.println("BLE: set(isOn) failed");
   }
+#ifdef IOTSA_BLEDIMMER_KEEPOPEN_MILLIS
   disconnectAtMillis = millis() + IOTSA_BLEDIMMER_KEEPOPEN_MILLIS;
   iotsaConfig.postponeSleep(IOTSA_BLEDIMMER_KEEPOPEN_MILLIS+100);
+#else
+  IFDEBUG IotsaSerial.println("xxxjack disconnecting");
+  dimmer->disconnect();
+#endif
   needTransmit = false;
 }
 }

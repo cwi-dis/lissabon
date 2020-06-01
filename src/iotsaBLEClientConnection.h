@@ -32,6 +32,6 @@ protected:
   BLEAddress address;
   esp_ble_addr_type_t addressType;
   bool addressValid;
-  BLEClient *client;
+  BLEClient client;
 };
 #endif

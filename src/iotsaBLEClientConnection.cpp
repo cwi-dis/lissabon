@@ -5,7 +5,7 @@ IotsaBLEClientConnection::IotsaBLEClientConnection(std::string& _name, std::stri
   address(_address),
   addressType(BLE_ADDR_TYPE_PUBLIC),
   addressValid(false),
-  client(NULL)
+  client()
 {
   if (_address != "") {
     // address and addressType have already been set
@@ -23,6 +23,7 @@ bool IotsaBLEClientConnection::setDevice(BLEAdvertisedDevice& _device) {
   if (addressValid && _device.getAddressType() == addressType && _device.getAddress().equals(address)) {
     return false;
   }
+  disconnect();
   address = _device.getAddress();
   addressType = _device.getAddressType();
   addressValid = true;
@@ -31,6 +32,7 @@ bool IotsaBLEClientConnection::setDevice(BLEAdvertisedDevice& _device) {
 
 void IotsaBLEClientConnection::clearDevice() {
   addressValid = false;
+  disconnect();
 }
 
 bool IotsaBLEClientConnection::available() {
@@ -39,27 +41,18 @@ bool IotsaBLEClientConnection::available() {
 
 bool IotsaBLEClientConnection::connect() {
   if (!addressValid) return false;
-  if (client != NULL) return true;
-  client = BLEDevice::createClient();
-  bool ok = client->connect(address, addressType);
-  if (!ok) {
-    delete client;
-    client = NULL;
-  }
-  return ok;
+  if (client.isConnected()) return true;
+  return client.connect(address, addressType);
 }
 
 void IotsaBLEClientConnection::disconnect() {
-  if (client != NULL) {
-    client->disconnect();
-    delete client;
-    client = NULL;
+  if (client.isConnected()) {
+    client.disconnect();
   }
 }
 
 BLERemoteCharacteristic *IotsaBLEClientConnection::_getCharacteristic(BLEUUID& serviceUUID, BLEUUID& charUUID) {
-  if (client == NULL) return NULL;
-  BLERemoteService *service = client->getService(serviceUUID);
+  BLERemoteService *service = client.getService(serviceUUID);
   if (service == NULL) return NULL;
   BLERemoteCharacteristic *characteristic = service->getCharacteristic(charUUID);
   return characteristic;
