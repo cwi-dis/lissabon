@@ -94,6 +94,8 @@ private:
   void dimmerValueChanged();
   void handler();
   void startScanUnknown();
+  void ledOn();
+  void ledOff();
   BLEDimmer dimmer1;
   DimmerUI dimmer1ui;
 #ifdef WITH_SECOND_DIMMER
@@ -108,6 +110,19 @@ private:
   int buttonChangeCount = 0;
 };
 
+void LissabonRemoteMod::ledOn() {
+#ifdef LED_PIN
+  digitalWrite(LED_PIN, LOW);
+#endif
+}
+
+void LissabonRemoteMod::ledOff() {
+#ifdef LED_PIN
+  digitalWrite(LED_PIN, HIGH);
+#endif
+  
+}
+
 void LissabonRemoteMod::startScanUnknown() {
   bleClientMod.findUnknownDevices(true);
   scanUnknownUntilMillis = millis() + 20000;
@@ -119,10 +134,7 @@ void LissabonRemoteMod::uiButtonChanged() {
   // Used to give visual feedback (led turning off) on presses and releases,
   // and to enable config mod after 4 taps and reboot after 8 taps
   uint32_t now = millis();
-#ifdef LED_PIN
-  digitalWrite(LED_PIN, HIGH);
-  ledOffUntilMillis = now + 100;
-#endif
+  ledOn();
   if (lastButtonChangeMillis > 0 && now < lastButtonChangeMillis + TAP_DURATION) {
     // A button change that was quick enough for a tap
     lastButtonChangeMillis = now;
@@ -267,8 +279,8 @@ void LissabonRemoteMod::setup() {
   iotsaConfig.allowRCMDescription("tap any touchpad 4 times");
 #ifdef LED_PIN
   pinMode(LED_PIN, OUTPUT);
-  digitalWrite(LED_PIN, LOW);
 #endif
+  ledOn();
 #ifdef PIN_DISABLESLEEP
   batteryMod.setPinDisableSleep(PIN_DISABLESLEEP);
 #endif
@@ -280,6 +292,7 @@ void LissabonRemoteMod::setup() {
   auto callback = std::bind(&LissabonRemoteMod::unknownDeviceFound, this, std::placeholders::_1);
   bleClientMod.setUnknownDeviceFoundCallback(callback);
   bleClientMod.setServiceFilter(Lissabon::Dimmer::serviceUUID);
+  ledOff();
 }
 
 void LissabonRemoteMod::unknownDeviceFound(BLEAdvertisedDevice& deviceAdvertisement) {
@@ -289,6 +302,7 @@ void LissabonRemoteMod::unknownDeviceFound(BLEAdvertisedDevice& deviceAdvertisem
 
 void LissabonRemoteMod::dimmerValueChanged() {
   saveAtMillis = millis() + 1000;
+  ledOn();
 }
 
 void LissabonRemoteMod::loop() {
@@ -303,14 +317,8 @@ void LissabonRemoteMod::loop() {
   if (saveAtMillis > 0 && millis() > saveAtMillis) {
     saveAtMillis = 0;
     configSave();
+    ledOff();
   }
-#ifdef LED_PIN
-  // See whether we have to turn on the LED again (after a short off-period as feedback for user interaction)
-  if (ledOffUntilMillis > 0 && millis() > ledOffUntilMillis) {
-    digitalWrite(LED_PIN, LOW);
-    ledOffUntilMillis = 0;
-  }
-#endif
   dimmer1.loop();
 #ifdef WITH_SECOND_DIMMER
   dimmer2.loop();
