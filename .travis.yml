@@ -1,0 +1,12 @@
+language: python
+python:
+- '3.7'
+install:
+- pip install -U platformio
+script:
+- (cd libLissabon ; platformio run)
+- (cd lissabonController ; platformio run)
+- (cd lissabonDimmer ; platformio run)
+- (cd lissabonLedstrip ; platformio run)
+- (cd lissabonRemote ; platformio run)
+
