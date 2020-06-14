@@ -36,15 +36,30 @@ When the installation has to be reconfigured all components are sent a BLE instr
 
 ## Components
 
-This repository contains common shared modules for all components. Documentation
-is still missing.
+### libLissabon
 
-Existing components live in separate repositories:
+This is a shared library containing iotsa modules used by multiple other components. Various options are set using C-preprocessor defines, so the library is included as source in the components that actually use it.
 
-- [lissabonDimmer](https://github.com/cwi-dis/lissabonDimmer) is a dimmer, with buttons, touchpads, rotary control or neither. It is intended for LED lights, monochrome ledstrips or incandescant lights.
-- [lissabonLedstrip](https://github.com/cwi-dis/lissabonLedstrip) is a dimmer with buttons, touchpads or neither for smart (neopixel) RGB or RGBW ledstrips.
-- [lissabonRemote](https://github.com/cwi-dis/lissabonRemote) is a wireless LiPo-powered remote control that can control a predefined set of dimmers.
-- [lissabonController](https://github.com/cwi-dis/lissabonController) is a more elaborate remote control with a display.
+When building _libLissabon_ using `platformio run` it will actually build two test components:
+
+- _lissabonExample_ does not do anything useful, really, but tries to include all common modules. It is built both with "minimal" and "maximal" _CPP_ sets of defines.
+- _lissabonSwitch_ may actually be useful, at some point: a pushbutton that is used as on/off switch for one dimmer or ledstrip.
+
+### lissabonDimmer
+
+A dimmer, with buttons, touchpads, rotary control or neither. It is intended for LED lights, monochrome ledstrips or incandescant lights.
+
+### lissabonLedstrip
+
+A dimmer with buttons, touchpads or neither for smart (neopixel) RGB or RGBW ledstrips.
+
+### lissabonRemote
+
+A wireless LiPo-powered remote control that can control a predefined set of dimmers.
+
+### lissabonController
+
+A more elaborate remote control with a display. Incomplete. 
 
 ## Pictures
 
