@@ -60,6 +60,17 @@ Input* inputs[] = {
   &encoder
 };
 #endif // WITH_TOUCHPADS
+#ifdef WITH_BUTTONS
+#define WITH_UI
+// Two touchpad pins: off/decrement (long press), on/increment (long press)
+Touchpad buttondown(12, true, true, true);
+Touchpad buttonup(13, true, true, true);
+UpDownButtons encoder(buttondown, buttonup, true);
+
+Input* inputs[] = {
+  &encoder
+};
+#endif // WITH_BUTTONS
 #ifdef WITH_ROTARY
 #define WITH_UI
 // A rotary encoder for increment/decrement and a button for on/off.
@@ -234,6 +245,10 @@ void LissabonDimmerMod::setup() {
   configLoad();
 #ifdef WITH_TOUCHPADS
   iotsaConfig.allowRCMDescription("tap any touchpad 4 times");
+  dimmerUI.setUpDownButtons(encoder);
+#endif
+#ifdef WITH_BUTTONS
+  iotsaConfig.allowRCMDescription("press button 4 times");
   dimmerUI.setUpDownButtons(encoder);
 #endif
 #ifdef WITH_ROTARY
