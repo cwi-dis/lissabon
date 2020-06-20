@@ -63,8 +63,8 @@ Input* inputs[] = {
 #ifdef WITH_BUTTONS
 #define WITH_UI
 // Two touchpad pins: off/decrement (long press), on/increment (long press)
-Touchpad buttondown(12, true, true, true);
-Touchpad buttonup(13, true, true, true);
+Button buttondown(16, true, true, true);
+Button buttonup(17, true, true, true);
 UpDownButtons encoder(buttondown, buttonup, true);
 
 Input* inputs[] = {
