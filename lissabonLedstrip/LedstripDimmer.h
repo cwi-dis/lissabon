@@ -30,6 +30,7 @@ public:
   void setHandler(uint8_t *_buffer, size_t _count, int bpp, IotsaPixelsourceHandler *handler);
 protected:
   IotsaPixelstripMod& mod;
+  bool calibrationMode; // When true, alternate pixels use RGBW and RGB
   int count;  // Number of LEDs
   int bpp; // Number of colors per LED (3 or 4)
   uint8_t *buffer = NULL; // per-pixel 8bit RGBW values (to pass to pixelstrip module)
