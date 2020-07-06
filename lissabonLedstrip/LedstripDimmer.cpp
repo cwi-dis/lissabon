@@ -155,7 +155,7 @@ bool LedstripDimmer::handlerConfigArgs(IotsaWebServer *server) {
     anyChanged = true;
   }
   if( server->hasArg("calibrationMode")) {
-    calibrationMode = server->arg("calibrationMode").toInt();
+    calibrationMode = (CalibrationMode)server->arg("calibrationMode").toInt();
     anyChanged = true;
   }
   if (anyChanged) {
@@ -172,7 +172,7 @@ void LedstripDimmer::configLoad(IotsaConfigFileLoad& cf) {
   cf.get("focalSpread", focalSpread, 1.0);
   int value;
   cf.get("calibrationMode", value, 0);
-  calibrationMode = value;
+  calibrationMode = (CalibrationMode)value;
   updateColorspace(whiteTemperature, whiteBrightness);
   AbstractDimmer::configLoad(cf);
 }
@@ -196,9 +196,10 @@ String LedstripDimmer::handlerConfigForm() {
   message += "White LED brightness: <input type='text' name='whiteBrightness' value='" + String(rgbwSpace.WBrightness) +"' ><br>";
   message += "Focal point: <input type='text' name='focalPoint' value='" + String(focalPoint) +"' > (0.0 is first LED, 1.0 is last LED)<br>";
   message += "Focal spread: <input type='text' name='focalSpread' value='" + String(focalSpread) +"' > (0.0 is narrow, 1.0 is as full width)<br>";
-  String checkedOn = calibrationMode ? "checked" : "";
-  String checkedOff = calibrationMode ? "" : "checked";
-  message += "RGBW calibration mode: <input type='radio' name='calibrationMode' value='1' " + checkedOn + "> On <input type='radio' name='calibrationMode' value='0' " + checkedOff + "> Off<br>";
+  String checkedNormal = calibrationMode == calibration_normal ? "checked" : "";
+  String checkedRGB = calibrationMode == calibration_rgb ? "checked" : "";
+  String checkedAlternate = calibrationMode ==calibration_alternating ? "checked" : "";
+  message += "RGBW calibration mode: <input type='radio' name='calibrationMode' value='0' " + checkedNormal + "> Normal mode <input type='radio' name='calibrationMode' value='1' " + checkedRGB + "> RGB only <input type='radio' name='calibrationMode' value='2' " + checkedAlternate + "> Alternate RGB and RGBW LEDs<br>";
   message += "<input type='submit'></form>";
   message += "<p>Maximum level with correct color: " + String(maxLevelCorrectColor()) + " (at temperature " + String(temperature) + ")</p>";
   return message;
@@ -263,8 +264,9 @@ void LedstripDimmer::loop() {
       thisPixelColor = thisPixelColor.Dim((uint8_t)(255.0*pixelLevels[i]));
 #else
       RgbwFColor thisPixelFColor = curRgbwColor;
-      if (calibrationMode && (i&1)) {
-        // In calibration mode, odd pixels show the RGB color and even pixels the RGBW color. This
+      if (calibrationMode == calibration_rgb || (calibrationMode == calibration_alternating && (i&1))) {
+        // In calibration_rgb mode we do not use the white channel.
+        // In calibration_alternating mode, odd pixels show the RGB color and even pixels the RGBW color. This
         // checking the white led temperature and intensity, because for levels that are attainable
         // using only the RGB LEDs the resulting light should be the same intensity and color.
         thisPixelFColor = curRgbCalibrationColor;
