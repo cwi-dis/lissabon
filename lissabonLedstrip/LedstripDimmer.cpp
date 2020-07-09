@@ -79,6 +79,21 @@ float LedstripDimmer::maxLevelCorrectColor() {
   return maxLevel;
 }
 
+String LedstripDimmer::colorDump() {
+  String rv;
+  rv += "<h2>Calibration information</h2>";
+  float maxLevel = maxLevelCorrectColor();
+  rv += "<p>Maximum level with correct color: " + String(maxLevel) + " (at temperature " + String(temperature) + ")<br>";
+  TempFColor maxColor(temperature, maxLevel);
+  RgbFColor maxFColor(maxColor);
+  RgbColor maxColor8bit(maxFColor);
+  HtmlColor htmlColor(maxColor8bit);
+  rv += "RGB Levels: r=" + String(maxColor8bit.R) + ", g=" + String(maxColor8bit.G) + ", b=" + String(maxColor8bit.B) + ", hex 0x" + String(htmlColor.Color, HEX) + "<br>";
+  rv += "Looks like: <svg width='40' height='40'><rect width='40' height='40' style='fill:#" + String(htmlColor.Color, HEX) + ";stroke-width:23;stroke:rgb(0,0,0)' /></svg>";
+  rv += "</p>";
+  return rv;
+}
+
 float LedstripDimmer::levelFunc(float x, float spreadOverride) {
   // Light distribution function. Returns light level for position x (0<=x<1).
   // First determine which spread we want to use
@@ -201,7 +216,7 @@ String LedstripDimmer::handlerConfigForm() {
   String checkedAlternate = calibrationMode ==calibration_alternating ? "checked" : "";
   message += "RGBW calibration mode: <input type='radio' name='calibrationMode' value='0' " + checkedNormal + "> Normal mode <input type='radio' name='calibrationMode' value='1' " + checkedRGB + "> RGB only <input type='radio' name='calibrationMode' value='2' " + checkedAlternate + "> Alternate RGB and RGBW LEDs<br>";
   message += "<input type='submit'></form>";
-  message += "<p>Maximum level with correct color: " + String(maxLevelCorrectColor()) + " (at temperature " + String(temperature) + ")</p>";
+  message += colorDump();
   return message;
 }
 
@@ -273,6 +288,9 @@ void LedstripDimmer::loop() {
       }
       thisPixelFColor = thisPixelFColor.Dim(pixelLevels[i]);
       RgbwColor thisPixelColor = thisPixelFColor;
+      if (calibrationMode && i <= 1) {
+        IotsaSerial.printf("pixel %d: r=%d g=%d b=%d w=%d\n", i, thisPixelColor.R, thisPixelColor.G, thisPixelColor.B, thisPixelColor.W);
+      }
 #endif
       //IotsaSerial.printf("xxxjack i=%d level=%f curW=%f thisW=%f\n", i, pixelLevels[i], curRgbwColor.W, thisPixelFColor.W);
       if (*p != thisPixelColor.R) {

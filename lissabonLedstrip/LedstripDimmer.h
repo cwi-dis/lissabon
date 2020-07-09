@@ -40,6 +40,7 @@ protected:
 
   void updateColorspace(float whiteTemperature, float whiteBrightness);
   float maxLevelCorrectColor();
+  String colorDump();
   Colorspace rgbwSpace;
 
   float focalPoint;  // Where the focus of the light is (0.0 .. 1.0)
