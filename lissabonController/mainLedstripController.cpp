@@ -155,18 +155,49 @@ IotsaLedstripControllerMod::encoderChanged() {
 void
 IotsaLedstripControllerMod::handler() {
   // xxxjack update settings for remotes?
+  bool changed = false;
   if (server->hasArg("scanUnknown")) startScanUnknown();
+  if (server->hasArg("add")) {
+    String newDimmerName_ = server->arg("add");
+    std::string newDimmerName(newDimmerName_.c_str());
+    if (newDimmerName != "" && knownDimmers.find(newDimmerName) == knownDimmers.end()) {
+      BLEDimmer *newDimmer = NULL;
+      knownDimmers[newDimmerName] = newDimmer;
+      changed = true;
+    }
+    for (auto it: knownDimmers) {
+      BLEDimmer *dimmer = it.second;
+      if (dimmer) {
+        dimmer->handlerArgs(server);
+        if (dimmer->handlerConfigArgs(server)) changed = true;
+      }
+    }
+    if (changed) configSave();
+  }
 
   String message = "<html><head><title>BLE Dimmers</title></head><body><h1>BLE Dimmers</h1>";
-  message += "<p>TBD</p>";
-    message += "<h2>Available Unknown/new BLE dimmer devices</h2>";
+  for(auto it: knownDimmers) {
+    std::string name = it.first;
+    BLEDimmer *dimmer = it.second;
+    if (dimmer) {
+      message += dimmer->handlerForm();
+      message += dimmer->handlerConfigForm();
+    } else {
+      message += "<h2>" + String(name.c_str()) + "</h2><p>No info</p>";
+    }
+  }
+  message += "<h2>Available Unknown/new BLE dimmer devices</h2>";
   message += "<form><input type='submit' name='scanUnknown' value='Scan for 20 seconds'></form>";
   if (unknownDimmers.size() == 0) {
     message += "<p>No unassigned BLE dimmer devices seen recently.</p>";
   } else {
     message += "<ul>";
     for (auto it: unknownDimmers) {
-      message += "<li>" + String(it.c_str()) + "</li>";
+      message += "<li>" + String(it.c_str());
+      if (it != "") {
+        message += "<form><input type='hidden' name='add' value='" + String(it.c_str()) + "><input type='submit' value='Add'>";
+      }
+      message += "</li>";
     }
     message += "</ul>";
   }
