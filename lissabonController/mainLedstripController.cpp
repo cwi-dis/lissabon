@@ -10,6 +10,7 @@
 #include "iotsaWifi.h"
 #include "iotsaLed.h"
 #include "iotsaConfigFile.h"
+#include <set>
 
 #include "display.h"
 Display *display;
@@ -54,12 +55,12 @@ IotsaInputMod touchMod(application, inputs, sizeof(inputs)/sizeof(inputs[0]));
 #include "iotsaBLEClient.h"
 IotsaBLEClientMod bleClientMod(application);
 
-// UUID of service advertised by iotsaLedstrip devices
-BLEUUID ledstripServiceUUID("153C0001-D28E-40B8-84EB-7F64B56D4E2E");
+#include "BLEDimmer.h"
 
 //
 // LED Lighting control module. 
 //
+using namespace Lissabon;
 
 class IotsaLedstripControllerMod : public IotsaApiMod {
 public:
@@ -75,7 +76,7 @@ protected:
   void _setupDisplay();
   bool getHandler(const char *path, JsonObject& reply);
   bool putHandler(const char *path, const JsonVariant& request, JsonObject& reply);
-  void deviceFound(BLEAdvertisedDevice& device);
+  void unknownDeviceFound(BLEAdvertisedDevice& device);
 private:
   void handler();
   bool touch12();
@@ -85,19 +86,23 @@ private:
   bool buttonPress();
   bool encoderChanged();
   void updateDisplay();
+  void startScanUnknown();
+  uint32_t scanUnknownUntilMillis = 0;
+  std::set<std::string> unknownDimmers;
+  std::map<std::string, BLEDimmer *> knownDimmers;
 };
 
 void 
 IotsaLedstripControllerMod::updateDisplay() {
-  IotsaSerial.print(bleClientMod.devices.size());
+  IotsaSerial.print(knownDimmers.size());
   IotsaSerial.println(" strips:");
 
   display->clearStrips();
   int index = 0;
-  for (auto& elem : bleClientMod.devices) {
+  for (auto& elem : knownDimmers) {
     index++;
     std::string name = elem.first;
-    IotsaBLEClientConnection* conn = elem.second;
+    BLEDimmer* conn = elem.second;
     IotsaSerial.printf("device %s, available=%d\n", name.c_str(), conn->available());
     display->addStrip(index, name, conn->available());
   }
@@ -149,10 +154,30 @@ IotsaLedstripControllerMod::encoderChanged() {
 #ifdef IOTSA_WITH_WEB
 void
 IotsaLedstripControllerMod::handler() {
+  // xxxjack update settings for remotes?
+  if (server->hasArg("scanUnknown")) startScanUnknown();
+
+  String message = "<html><head><title>BLE Dimmers</title></head><body><h1>BLE Dimmers</h1>";
+  message += "<p>TBD</p>";
+    message += "<h2>Available Unknown/new BLE dimmer devices</h2>";
+  message += "<form><input type='submit' name='scanUnknown' value='Scan for 20 seconds'></form>";
+  if (unknownDimmers.size() == 0) {
+    message += "<p>No unassigned BLE dimmer devices seen recently.</p>";
+  } else {
+    message += "<ul>";
+    for (auto it: unknownDimmers) {
+      message += "<li>" + String(it.c_str()) + "</li>";
+    }
+    message += "</ul>";
+  }
+  message += "</body></html>";
+  server->send(200, "text/html", message);
 }
 
 String IotsaLedstripControllerMod::info() {
-  return "";
+  String message = "<p>See <a href='/blecontroller'>/blecontroller</a> to change settings or <a href='/api/blecontroller'>/api/blecontroller</a> for REST API.<br>";
+
+  return message;
 }
 #endif // IOTSA_WITH_WEB
 
@@ -165,13 +190,21 @@ bool IotsaLedstripControllerMod::putHandler(const char *path, const JsonVariant&
 }
 
 void IotsaLedstripControllerMod::serverSetup() {
+#ifdef IOTSA_WITH_WEB
+  server->on("/blecontroller", std::bind(&IotsaLedstripControllerMod::handler, this));
+#endif
+  api.setup("/api/blecontroller", true, true);
+  name = "blecontroller";
 }
 
-
 void IotsaLedstripControllerMod::configLoad() {
+  IotsaConfigFileLoad cf("/config/blecontroller.cfg");
+  // xxxjack load known dimmers
 }
 
 void IotsaLedstripControllerMod::configSave() {
+  IotsaConfigFileSave cf("/config/bledimmer.cfg");
+  // xxxjack save known dimmers
 }
 
 void IotsaLedstripControllerMod::setup() {
@@ -185,9 +218,9 @@ void IotsaLedstripControllerMod::setup() {
   touchpad15.setCallback(std::bind(&IotsaLedstripControllerMod::touch15, this));
   button.setCallback(std::bind(&IotsaLedstripControllerMod::buttonPress, this));
   encoder.setCallback(std::bind(&IotsaLedstripControllerMod::encoderChanged, this));
-  auto callback = std::bind(&IotsaLedstripControllerMod::deviceFound, this, std::placeholders::_1);
-  bleClientMod.setDeviceFoundCallback(callback);
-  bleClientMod.setServiceFilter(ledstripServiceUUID);
+  auto callback = std::bind(&IotsaLedstripControllerMod::unknownDeviceFound, this, std::placeholders::_1);
+  bleClientMod.setUnknownDeviceFoundCallback(callback);
+  bleClientMod.setServiceFilter(Lissabon::Dimmer::serviceUUID);
 }
 
 void IotsaLedstripControllerMod::_setupDisplay() {
@@ -195,16 +228,23 @@ void IotsaLedstripControllerMod::_setupDisplay() {
   updateDisplay();
 }
 
-void IotsaLedstripControllerMod::deviceFound(BLEAdvertisedDevice& device) {
-  IFDEBUG IotsaSerial.printf("Found iotsaLedstrip %s\n", device.getName().c_str());
-  // Add the device, or update the connection information
-  if (bleClientMod.addDevice(device.getName(), device)) {
-    updateDisplay();
-  }
+void IotsaLedstripControllerMod::startScanUnknown() {
+  bleClientMod.findUnknownDevices(true);
+  scanUnknownUntilMillis = millis() + 20000;
+  iotsaConfig.postponeSleep(21000);
+}
+
+
+void IotsaLedstripControllerMod::unknownDeviceFound(BLEAdvertisedDevice& deviceAdvertisement) {
+  IFDEBUG IotsaSerial.printf("unknownDeviceFound: iotsaLedstrip/iotsaDimmer \"%s\"\n", deviceAdvertisement.getName().c_str());
+  unknownDimmers.insert(deviceAdvertisement.getName());
 }
 
 void IotsaLedstripControllerMod::loop() {
-
+  if (scanUnknownUntilMillis != 0 && millis() > scanUnknownUntilMillis) {
+    bleClientMod.findUnknownDevices(false);
+    scanUnknownUntilMillis = 0;
+  }
 }
 
 // Instantiate the Led module, and install it in the framework
