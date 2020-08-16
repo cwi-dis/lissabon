@@ -30,8 +30,9 @@ public:
   void setHandler(uint8_t *_buffer, size_t _count, int bpp, IotsaPixelsourceHandler *handler);
 protected:
   IotsaPixelstripMod& mod;
-  typedef enum {calibration_normal, calibration_rgb, calibration_alternating} CalibrationMode;
+  typedef enum {calibration_normal, calibration_rgb, calibration_alternating, calibration_hard} CalibrationMode;
   CalibrationMode calibrationMode; // When true, alternate pixels use RGBW and RGB
+  float calibrationData[8];
   int count;  // Number of LEDs
   int bpp; // Number of colors per LED (3 or 4)
   uint8_t *buffer = NULL; // per-pixel 8bit RGBW values (to pass to pixelstrip module)

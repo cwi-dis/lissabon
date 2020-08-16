@@ -18,6 +18,8 @@ void LedstripDimmer::setup() {
 }
 
 void LedstripDimmer::updateDimmer() {
+  // Reset RGBW-based color levels.
+  if (calibrationMode == calibration_hard) calibrationMode = calibration_normal;
   // Compute level and animation duration
   AbstractDimmer::updateDimmer();
   // Compute curve.
@@ -143,8 +145,23 @@ bool LedstripDimmer::putConfigHandler(const JsonVariant& request) {
   float whiteBrightness = request["whiteBrightness"]|rgbwSpace.WBrightness;
   focalPoint = request["focalPoint"] | focalPoint;
   focalSpread = request["focalSpread"] | focalSpread;
+  if (request.containsKey("calibrationData")) {
+    JsonArray _calibrationData = request["calibrationData"];
+    int size = _calibrationData.size();
+    if (_calibrationData && (size == 4 || size == 8)) {
+      for (int i =0; i<8; i++) {
+        calibrationData[i] = _calibrationData[i % size];
+      }
+      calibrationMode = calibration_hard;
+      millisAnimationStart = millisAnimationEnd = millis();
+      IFDEBUG IotsaSerial.println("Got calibrationData");
+    } else {
+      IFDEBUG IotsaSerial.println("Bad calibrationData");
+    }
+  }
   updateColorspace(whiteTemperature, whiteBrightness);
-  return AbstractDimmer::putConfigHandler(request);
+  (void)AbstractDimmer::putConfigHandler(request);
+  return true;
 }
 bool LedstripDimmer::handlerArgs(IotsaWebServer *server) {
   return AbstractDimmer::handlerArgs(server);
@@ -185,9 +202,13 @@ void LedstripDimmer::configLoad(IotsaConfigFileLoad& cf) {
   cf.get("whiteBrightness", whiteBrightness, 1.0);
   cf.get("focalPoint", focalPoint, 0.5);
   cf.get("focalSpread", focalSpread, 1.0);
+#if 1
+  calibrationMode = calibration_normal;
+#else
   int value;
   cf.get("calibrationMode", value, 0);
   calibrationMode = (CalibrationMode)value;
+#endif
   updateColorspace(whiteTemperature, whiteBrightness);
   AbstractDimmer::configLoad(cf);
 }
@@ -196,7 +217,9 @@ void LedstripDimmer::configSave(IotsaConfigFileSave& cf) {
   cf.put("whiteBrightness", rgbwSpace.WBrightness);
   cf.put("focalPoint", focalPoint);
   cf.put("focalSpread", focalSpread);
+#if 0
   cf.put("calibrationMode", (int)calibrationMode);
+#endif
   AbstractDimmer::configSave(cf);
 }
 String LedstripDimmer::handlerForm() {
@@ -215,6 +238,7 @@ String LedstripDimmer::handlerConfigForm() {
   String checkedRGB = calibrationMode == calibration_rgb ? "checked" : "";
   String checkedAlternate = calibrationMode ==calibration_alternating ? "checked" : "";
   message += "RGBW calibration mode: <input type='radio' name='calibrationMode' value='0' " + checkedNormal + "> Normal mode <input type='radio' name='calibrationMode' value='1' " + checkedRGB + "> RGB only <input type='radio' name='calibrationMode' value='2' " + checkedAlternate + "> Alternate RGB and RGBW LEDs<br>";
+  message += "(hard color calibration can only be set through REST interface calibrationData)<br>";
   message += "<input type='submit'></form>";
   message += colorDump();
   return message;
@@ -279,7 +303,13 @@ void LedstripDimmer::loop() {
       thisPixelColor = thisPixelColor.Dim((uint8_t)(255.0*pixelLevels[i]));
 #else
       RgbwFColor thisPixelFColor = curRgbwColor;
-      if (calibrationMode == calibration_rgb || (calibrationMode == calibration_alternating && (i&1))) {
+      if (calibrationMode == calibration_hard) {
+        if (i&1) {
+          thisPixelFColor = RgbwFColor(calibrationData[4], calibrationData[5], calibrationData[6], calibrationData[7]);
+        } else {
+          thisPixelFColor = RgbwFColor(calibrationData[0], calibrationData[1], calibrationData[2], calibrationData[3]);
+        }
+      } else if (calibrationMode == calibration_rgb || (calibrationMode == calibration_alternating && (i&1))) {
         // In calibration_rgb mode we do not use the white channel.
         // In calibration_alternating mode, odd pixels show the RGB color and even pixels the RGBW color. This
         // checking the white led temperature and intensity, because for levels that are attainable
