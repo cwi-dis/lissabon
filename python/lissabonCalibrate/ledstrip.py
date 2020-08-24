@@ -1,12 +1,15 @@
-class Ledstrip:
+from .common import Common
+
+class Ledstrip(Common):
     def __init__(self, hostname):
-        pass
+        Common.__init__(self, hostname)
     
-    def open(self):
+    def post_open(self):
+        self.service = self.device.ledstrip
         return True
 
     def close(self):
         pass
 
     def setColor(self, r=0, g=0, b=0, w=0):
-        pass
+        self.service.set('calibrationData', [r, g, b, w])
