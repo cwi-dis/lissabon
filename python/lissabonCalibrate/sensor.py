@@ -10,3 +10,7 @@ class Sensor(Common):
     def post_open(self):
         self.service = self.device.rgbw
         return True
+
+    def setInterval(self, interval):
+        if interval != None:
+            self.service.set('integrationInterval', interval)
