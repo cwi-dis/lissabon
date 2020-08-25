@@ -43,7 +43,7 @@ def main():
         g_factor = g_factor * args.g_hack
     if args.b_hack:
         b_factor = b_factor * args.b_hack
-    ofp = csv.DictWriter(outputFile, ['requested', 'w_white', 'rgb_white', 'rgbw_white', 'w_lux', 'rgb_lux', 'rgbw_lux', 'w_cct', 'rgb_cct', 'rgbw_cct', 'parameter', 'value'])
+    ofp = csv.DictWriter(outputFile, ['requested', 'w_white', 'rgb_white', 'rgbw_white', 'rgb_r', 'rgb_g', 'rgb_b', 'w_lux', 'rgb_lux', 'rgbw_lux', 'w_cct', 'rgb_cct', 'rgbw_cct', 'parameter', 'value'])
     ofp.writeheader()
     for requested in VALUES:
         result = {'requested' : requested}
@@ -60,15 +60,18 @@ def main():
         result['rgb_white'] = sResult['w']
         result['rgb_lux'] = sResult['lux']
         result['rgb_cct'] = sResult['cct']
+        result['rgb_r'] = sResult['r']
+        result['rgb_g'] = sResult['g']
+        result['rgb_b'] = sResult['b']
         # Do W-only color
-        lObj.setColor(w=w_wanted)
+        lObj.setColor(w=w_wanted*w_factor)
         time.sleep(1)
         sResult = sObj.get()
         result['w_white'] = sResult['w']
         result['w_lux'] = sResult['lux']
         result['w_cct'] = sResult['cct']
         # Do RGBW color
-        lObj.setColor(r=rgb_wanted*r_factor, g=rgb_wanted*g_factor, b=rgb_wanted*b_factor, w=w_wanted*w_factor)
+        lObj.setColor(r=rgb_wanted*r_factor*0.5, g=rgb_wanted*g_factor*0.5, b=rgb_wanted*b_factor*0.5, w=w_wanted*w_factor*0.5)
         time.sleep(1)
         sResult = sObj.get()
         result['rgbw_white'] = sResult['w']
