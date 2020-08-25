@@ -6,6 +6,7 @@ class Ledstrip(Common):
     
     def post_open(self):
         self.service = self.device.ledstrip
+        self.service.set('isOn', True)
         # Disable automatic sleep for a few minutes
         self.device.battery.set('postponeSleep', 120000)
         return True
