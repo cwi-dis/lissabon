@@ -16,6 +16,8 @@ def main():
     parser.add_argument('--w_gamma', action='store', type=float, metavar='GAMMA', help='Gamma value for W channel (default 1.0)')
     parser.add_argument('--w_brightness', action='store', type=float, metavar='W', help='Treat W channel as having this brightness relative to RGB  (default 1.0)')
     parser.add_argument('--rgb_gamma', action='store', type=float, metavar='GAMMA', help='Gamma value for W channel (default 1.0)')
+    parser.add_argument('--g_hack', action='store', type=float, metavar='FACTOR', help='G-channel multiplication factor (default 1.0)')
+    parser.add_argument('--b_hack', action='store', type=float, metavar='FACTOR', help='B-channel multiplication factor (default 1.0)')
     parser.add_argument('--rgb_temperature', action='store', type=float, metavar='KELVIN', help='Color temperature for RGB (default: no correction)')
     
     parser.add_argument('--output', '-o', action='store', metavar='OUTPUT', help='CSV output filename')
@@ -37,6 +39,10 @@ def main():
         w_factor = 1 / args.w_brightness
     if args.rgb_temperature:
         r_factor, g_factor, b_factor = convert_K_to_RGB(args.rgb_temperature)
+    if args.g_hack:
+        g_factor = g_factor * args.g_hack
+    if args.b_hack:
+        b_factor = b_factor * args.b_hack
     ofp = csv.DictWriter(outputFile, ['requested', 'w_white', 'rgb_white', 'rgbw_white', 'w_lux', 'rgb_lux', 'rgbw_lux', 'w_cct', 'rgb_cct', 'rgbw_cct', 'parameter', 'value'])
     ofp.writeheader()
     for requested in VALUES:
