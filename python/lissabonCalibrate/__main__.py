@@ -26,38 +26,30 @@ def main():
     else:
         outputFile = sys.stdout
 
-    ofp = csv.DictWriter(outputFile, ['w_req', 'wrgb_req', 'ctrgb_req', 'r', 'g', 'b', 'w', 'lux', 'cct'])
+    ofp = csv.DictWriter(outputFile, ['requested', 'w_lux', 'rgb_lux', 'rgbw_lux', 'w_cct', 'rgb_cct', 'rgbw_cct', 'lux'])
     ofp.writeheader()
-    for w in VALUES:
-        result = {'w_req' : 0, 'wrgb_req' : w, 'ctrgb_req' : 0}
-        lObj.setColor(r=w, g=w, b=w)
+    for requested in VALUES:
+        result = {'requested' : requested}
+        # Do RGB-only color
+        lObj.setColor(r=requested, g=requested, b=requested)
         time.sleep(1)
         sResult = sObj.get()
-        del sResult['integrationInterval']
-        if sResult['w'] >= 0.99:
-            print('Warning: --interval too large', file=sys.stderr)
-        result.update(sResult)
-        ofp.writerow(result)
-    for w in VALUES:
-        result = {'w_req' : w, 'wrgb_req' : 0, 'ctrgb_req' : 0}
-        lObj.setColor(w=w)
+        result['rgb_lux'] = sResult['lux']
+        result['rgb_cct'] = sResult['cct']
+        # Do W-only color
+        lObj.setColor(w=requested)
         time.sleep(1)
         sResult = sObj.get()
-        del sResult['integrationInterval']
-        if sResult['w'] >= 0.99:
-            print('Warning: --interval too large', file=sys.stderr)
-        result.update(sResult)
-        ofp.writerow(result)
-    for w in VALUES:
-        result = {'w_req' : w, 'wrgb_req' : w, 'ctrgb_req' : 0}
-        lObj.setColor(r=w, g=w, b=w, w=w)
+        result['w_lux'] = sResult['lux']
+        result['w_cct'] = sResult['cct']
+        # Do RGBW color
+        lObj.setColor(r=requested, g=requested, b=requested, w=requested)
         time.sleep(1)
         sResult = sObj.get()
-        del sResult['integrationInterval']
-        if sResult['w'] >= 0.99:
-            print('Warning: --interval too large', file=sys.stderr)
-        result.update(sResult)
+        result['rgbw_lux'] = sResult['lux']
+        result['rgbw_cct'] = sResult['cct']
         ofp.writerow(result)
+
     outputFile.flush()
     if args.output:
         outputFile.close()
