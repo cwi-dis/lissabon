@@ -13,9 +13,9 @@ def main():
     parser.add_argument('--ledstrip', '-l', action='store', required=True, metavar='IP', help='Ledstrip hostname')
     parser.add_argument('--sensor', '-s', action='store', required=True, metavar='IP', help='Ledstrip sensor')
     parser.add_argument('--interval', action='store', type=int, metavar='DUR', help='Sensor integration duration (ms, between 40 and 1280)')
-    parser.add_argument('--w_gamma', action='store', type=float, metavar='GAMMA', help='Gamma value for W channel (default 1.0)')
+    parser.add_argument('--w_gamma', action='store', default=1, type=float, metavar='GAMMA', help='Gamma value for W channel (default 1.0)')
     parser.add_argument('--w_brightness', action='store', type=float, metavar='W', help='Treat W channel as having this brightness relative to RGB  (default 1.0)')
-    parser.add_argument('--rgb_gamma', action='store', type=float, metavar='GAMMA', help='Gamma value for W channel (default 1.0)')
+    parser.add_argument('--rgb_gamma', action='store', default=1, type=float, metavar='GAMMA', help='Gamma value for W channel (default 1.0)')
     parser.add_argument('--g_hack', action='store', type=float, metavar='FACTOR', help='G-channel multiplication factor (default 1.0)')
     parser.add_argument('--b_hack', action='store', type=float, metavar='FACTOR', help='B-channel multiplication factor (default 1.0)')
     parser.add_argument('--rgb_temperature', action='store', type=float, metavar='KELVIN', help='Color temperature for RGB (default: no correction)')
@@ -49,12 +49,11 @@ def main():
         result = {'requested' : requested}
         w_wanted = requested
         rgb_wanted = requested
-        if args.w_gamma:
-            w_wanted = w_wanted ** args.w_gamma
-        if args.rgb_gamma:
-            rgb_wanted = rgb_wanted ** args.rgb_gamma
         # Do RGB-only color
-        lObj.setColor(r=rgb_wanted*r_factor, g=rgb_wanted*g_factor, b=rgb_wanted*b_factor)
+        this_r = (rgb_wanted*r_factor) ** args.rgb_gamma
+        this_g = (rgb_wanted*g_factor) ** args.rgb_gamma
+        this_b = (rgb_wanted*b_factor) ** args.rgb_gamma
+        lObj.setColor(r=this_r, g=this_g, b=this_b)
         time.sleep(1)
         sResult = sObj.get()
         result['rgb_white'] = sResult['w']
@@ -64,14 +63,19 @@ def main():
         result['rgb_g'] = sResult['g']
         result['rgb_b'] = sResult['b']
         # Do W-only color
-        lObj.setColor(w=w_wanted*w_factor)
+        this_w = (w_wanted*w_factor) ** args.w_gamma
+        lObj.setColor(w=this_w)
         time.sleep(1)
         sResult = sObj.get()
         result['w_white'] = sResult['w']
         result['w_lux'] = sResult['lux']
         result['w_cct'] = sResult['cct']
         # Do RGBW color
-        lObj.setColor(r=rgb_wanted*r_factor*0.5, g=rgb_wanted*g_factor*0.5, b=rgb_wanted*b_factor*0.5, w=w_wanted*w_factor*0.5)
+        this_r = (rgb_wanted*r_factor*0.5) ** args.rgb_gamma
+        this_g = (rgb_wanted*g_factor*0.5) ** args.rgb_gamma
+        this_b = (rgb_wanted*b_factor*0.5) ** args.rgb_gamma
+        this_w = (w_wanted*w_factor*0.5) ** args.w_gamma
+        lObj.setColor(r=this_r, g=this_g, b=this_b, w=this_w)
         time.sleep(1)
         sResult = sObj.get()
         result['rgbw_white'] = sResult['w']
