@@ -6,10 +6,10 @@ from .sensor import Sensor
 from .ledstrip import Ledstrip
 from .colorconvert import convert_K_to_RGB
 from .calibrator import Calibrator
-
+from .plot import plot_lines
 
 def write_csv(fp, keys, values, parameters):
-    ofp = csv.DictWriter(fp, keys + ['parameter', 'value'])
+    ofp = csv.DictWriter(fp, keys + ['parameter', 'value'], quoting=csv.QUOTE_NONNUMERIC)
     ofp.writeheader()
     for v in values:
         ofp.writerow(v)
@@ -19,7 +19,7 @@ def write_csv(fp, keys, values, parameters):
     fp.flush()
 
 def read_csv(fp):
-    reader = csv.DictReader(fp)
+    reader = csv.DictReader(fp, quoting=csv.QUOTE_NONNUMERIC)
     keys = None
     values = []
     parameters = {}
@@ -41,6 +41,7 @@ def read_csv(fp):
         
 def main():
     parser = argparse.ArgumentParser(description="Calibrate lissabonLedstrip using iotsaRGBWSensor")
+    parser.add_argument('--measurement', '-m', action='store', choices=['rgbw_lux'], help='Type of mesurement to do')
     parser.add_argument('--ledstrip', '-l', action='store', metavar='IP', help='Ledstrip hostname')
     parser.add_argument('--sensor', '-s', action='store', metavar='IP', help='Ledstrip sensor')
     parser.add_argument('--interval', action='store', type=int, metavar='DUR', help='Sensor integration duration (ms, between 40 and 1280)')
@@ -53,18 +54,24 @@ def main():
     parser.add_argument('--rgb_temperature', action='store', type=float, metavar='KELVIN', help='Color temperature for RGB (default: no correction)')
     
     parser.add_argument('--input', action='store', metavar='INPUT', help="CSV input filename, skips measurement but reads previous data from previous run")
-    parser.add_argument('--output', '-o', action='store', metavar='OUTPUT', help='CSV output filename')
+    parser.add_argument('--csv', '-o', action='store', metavar='OUTPUT', help='CSV output filename')
+    parser.add_argument('--plot', action='store_true', help='Show output as a plot')
+    
     args = parser.parse_args()
 
+    if not args.input and not (args.measurement and args.sensor and args.ledstrip):
+            parser.print_usage(sys.stderr)
+            print('Either --input or all of --measurement, --ledstrip and --sensor must be specified', file=sys.stderr)
+            return -1
+    if not args.csv and not args.plot:
+            parser.print_usage(sys.stderr)
+            print('Either --csv or --plot must be specified', file=sys.stderr)
+            return -1
     sObj = None
     lObj = None
     if args.input:
         keys, values, parameters = read_csv(open(args.input))
     else:
-        if not args.sensor or not args.ledstrip:
-            parser.print_usage(sys.stderr)
-            print('Either --input or both --ledstrip and --sensor must be specified', file=sys.stderr)
-            return -1
         sObj = Sensor(args.sensor)
         if not sObj.open(): return -1
         if args.interval:
@@ -76,16 +83,22 @@ def main():
 
         calibrator = Calibrator(sObj, lObj)
     
-        keys, values, parameters = calibrator.run_rgbw_lux(args.steps, args)
+        if args.measurement == 'rgbw_lux':
+            keys, values, parameters = calibrator.run_rgbw_lux(args.steps, args)
+        else:
+            assert False, f'Unknown measurement type {args.measurement}'
     
-    if args.output:
-        outputFile = open(args.output, 'w')
-    else:
-        outputFile = sys.stdout
-    write_csv(outputFile, keys, values, parameters)
-    
-    if args.output:
+    if args.csv:
+        outputFile = open(args.csv, 'w')
+        write_csv(outputFile, keys, values, parameters)
         outputFile.close()
+        
+    if args.plot:
+        if parameters['measurement'] == 'rgbw_lux':
+            plot_lines(values, 'requested', ['w_lux', 'rgb_lux', 'rgbw_lux'])
+        else:
+            assert False, f'Unknown measurement type {args.measurement}'
+
     if sObj: sObj.close()
     if lObj: lObj.close()
     return 0

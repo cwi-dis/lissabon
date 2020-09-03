@@ -62,6 +62,7 @@ class Calibrator:
             result['rgbw_cct'] = sResult['cct']
             values.append(result)        
         parameters = dict(
+            measurement='rgbw_lux',
             interval=args.interval,
             w_gamma=args.w_gamma,
             rgb_gamma=args.rgb_gamma,
