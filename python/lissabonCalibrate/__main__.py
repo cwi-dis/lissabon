@@ -99,7 +99,7 @@ def main():
         if parameters['measurement'] == 'rgbw_lux':
             plot_lines(values, parameters, 'requested', ['w_lux', 'rgb_lux', 'rgbw_lux'])
         else:
-            assert False, f'Unknown measurement type {args.measurement}'
+            assert False, f'Unknown measurement type {parameters["measurement"]}'
 
     if sObj: sObj.close()
     if lObj: lObj.close()
