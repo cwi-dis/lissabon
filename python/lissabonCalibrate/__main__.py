@@ -5,14 +5,25 @@ import argparse
 from .sensor import Sensor
 from .ledstrip import Ledstrip
 from .colorconvert import convert_K_to_RGB
+from .calibrator import Calibrator
 
-VALUES = list(map(lambda x : x / 16, range(17)))
+
+def write_csv(fp, keys, values, parameters):
+    ofp = csv.DictWriter(fp, keys + ['parameter', 'value'])
+    ofp.writeheader()
+    for v in values:
+        ofp.writerow(v)
+    # Finally dump parameters and values
+    for k, v in parameters.items():
+        ofp.writerow(dict(parameter=k, value=v))
+    fp.flush()
 
 def main():
     parser = argparse.ArgumentParser(description="Calibrate lissabonLedstrip using iotsaRGBWSensor")
     parser.add_argument('--ledstrip', '-l', action='store', required=True, metavar='IP', help='Ledstrip hostname')
     parser.add_argument('--sensor', '-s', action='store', required=True, metavar='IP', help='Ledstrip sensor')
     parser.add_argument('--interval', action='store', type=int, metavar='DUR', help='Sensor integration duration (ms, between 40 and 1280)')
+    parser.add_argument('--steps', action='store', type=int, default=16, metavar='N', help='Use N steps for calibration (default 16)')
     parser.add_argument('--w_gamma', action='store', default=1, type=float, metavar='GAMMA', help='Gamma value for W channel (default 1.0)')
     parser.add_argument('--w_brightness', action='store', type=float, metavar='W', help='Treat W channel as having this brightness relative to RGB  (default 1.0)')
     parser.add_argument('--rgb_gamma', action='store', default=1, type=float, metavar='GAMMA', help='Gamma value for W channel (default 1.0)')
@@ -27,74 +38,23 @@ def main():
     if not sObj.open(): return -1
     if args.interval:
         sObj.setInterval(args.interval)
+
     lObj = Ledstrip(args.ledstrip)
     if not lObj.open(): return -1
+    
     if args.output:
         outputFile = open(args.output, 'w')
     else:
         outputFile = sys.stdout
+
+    calibrator = Calibrator(sObj, lObj)
     
-    r_factor = g_factor = b_factor = w_factor = 1
-    if args.w_brightness:
-        w_factor = 1 / args.w_brightness
-    if args.rgb_temperature:
-        r_factor, g_factor, b_factor = convert_K_to_RGB(args.rgb_temperature)
-    if args.g_hack:
-        g_factor = g_factor * args.g_hack
-    if args.b_hack:
-        b_factor = b_factor * args.b_hack
-    ofp = csv.DictWriter(outputFile, ['requested', 'w_white', 'rgb_white', 'rgbw_white', 'rgb_r', 'rgb_g', 'rgb_b', 'w_lux', 'rgb_lux', 'rgbw_lux', 'w_cct', 'rgb_cct', 'rgbw_cct', 'parameter', 'value'])
-    ofp.writeheader()
-    for requested in VALUES:
-        result = {'requested' : requested}
-        w_wanted = requested
-        rgb_wanted = requested
-        # Do RGB-only color
-        this_r = (rgb_wanted*r_factor) ** args.rgb_gamma
-        this_g = (rgb_wanted*g_factor) ** args.rgb_gamma
-        this_b = (rgb_wanted*b_factor) ** args.rgb_gamma
-        lObj.setColor(r=this_r, g=this_g, b=this_b)
-        time.sleep(1)
-        sResult = sObj.get()
-        result['rgb_white'] = sResult['w']
-        result['rgb_lux'] = sResult['lux']
-        result['rgb_cct'] = sResult['cct']
-        result['rgb_r'] = sResult['r']
-        result['rgb_g'] = sResult['g']
-        result['rgb_b'] = sResult['b']
-        # Do W-only color
-        this_w = (w_wanted*w_factor) ** args.w_gamma
-        lObj.setColor(w=this_w)
-        time.sleep(1)
-        sResult = sObj.get()
-        result['w_white'] = sResult['w']
-        result['w_lux'] = sResult['lux']
-        result['w_cct'] = sResult['cct']
-        # Do RGBW color
-        this_r = (rgb_wanted*r_factor*0.5) ** args.rgb_gamma
-        this_g = (rgb_wanted*g_factor*0.5) ** args.rgb_gamma
-        this_b = (rgb_wanted*b_factor*0.5) ** args.rgb_gamma
-        this_w = (w_wanted*w_factor*0.5) ** args.w_gamma
-        lObj.setColor(r=this_r, g=this_g, b=this_b, w=this_w)
-        time.sleep(1)
-        sResult = sObj.get()
-        result['rgbw_white'] = sResult['w']
-        result['rgbw_lux'] = sResult['lux']
-        result['rgbw_cct'] = sResult['cct']
-        ofp.writerow(result)
-    # Finally dump parameters and values
-    ofp.writerow(dict(parameter='interval', value=args.interval))
-    ofp.writerow(dict(parameter='w_gamma', value=args.w_gamma))
-    ofp.writerow(dict(parameter='rgb_gamma', value=args.rgb_gamma))
-    ofp.writerow(dict(parameter='rgb_temperature', value=args.rgb_temperature))
-    ofp.writerow(dict(parameter='r_factor', value=r_factor))
-    ofp.writerow(dict(parameter='g_factor', value=g_factor))
-    ofp.writerow(dict(parameter='b_factor', value=b_factor))
-    ofp.writerow(dict(parameter='w_factor', value=w_factor))
-    outputFile.flush()
+    keys, values, parameters = calibrator.run_rgbw_lux(args.steps, args)
+    
+    write_csv(outputFile, keys, values, parameters)
+    
     if args.output:
         outputFile.close()
-    del ofp
     sObj.close()
     lObj.close()
     return 0
