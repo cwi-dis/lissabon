@@ -24,3 +24,6 @@ def plot_lines(values, parameters, xlabel, ylabels):
     ax.text(0.95, 0.05, '\n'.join(p_text), transform=ax.transAxes, bbox=dict(boxstyle='round'), multialignment='left', horizontalalignment='right', verticalalignment='bottom')
     ax.legend()
     plt.show()
+    
+def plot_colors(values, parameters):
+    pass
