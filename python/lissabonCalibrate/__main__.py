@@ -18,10 +18,31 @@ def write_csv(fp, keys, values, parameters):
         ofp.writerow(dict(parameter=k, value=v))
     fp.flush()
 
+def read_csv(fp):
+    reader = csv.DictReader(fp)
+    keys = None
+    values = []
+    parameters = {}
+    for row in reader:
+        # Initialize keys, if not done yet
+        if keys == None:
+            keys = list(row.keys())
+            keys.remove('parameter')
+            keys.remove('value')
+        # Check whether this is a parameter
+        if row['parameter']:
+            parameters[row['parameter']] = row['value']
+            continue
+        # Remove empty parameter/value fields
+        del row['parameter']
+        del row['value']
+        values.append(row)
+    return keys, values, parameters
+        
 def main():
     parser = argparse.ArgumentParser(description="Calibrate lissabonLedstrip using iotsaRGBWSensor")
-    parser.add_argument('--ledstrip', '-l', action='store', required=True, metavar='IP', help='Ledstrip hostname')
-    parser.add_argument('--sensor', '-s', action='store', required=True, metavar='IP', help='Ledstrip sensor')
+    parser.add_argument('--ledstrip', '-l', action='store', metavar='IP', help='Ledstrip hostname')
+    parser.add_argument('--sensor', '-s', action='store', metavar='IP', help='Ledstrip sensor')
     parser.add_argument('--interval', action='store', type=int, metavar='DUR', help='Sensor integration duration (ms, between 40 and 1280)')
     parser.add_argument('--steps', action='store', type=int, default=16, metavar='N', help='Use N steps for calibration (default 16)')
     parser.add_argument('--w_gamma', action='store', default=1, type=float, metavar='GAMMA', help='Gamma value for W channel (default 1.0)')
@@ -31,32 +52,42 @@ def main():
     parser.add_argument('--b_hack', action='store', type=float, metavar='FACTOR', help='B-channel multiplication factor (default 1.0)')
     parser.add_argument('--rgb_temperature', action='store', type=float, metavar='KELVIN', help='Color temperature for RGB (default: no correction)')
     
+    parser.add_argument('--input', action='store', metavar='INPUT', help="CSV input filename, skips measurement but reads previous data from previous run")
     parser.add_argument('--output', '-o', action='store', metavar='OUTPUT', help='CSV output filename')
     args = parser.parse_args()
 
-    sObj = Sensor(args.sensor)
-    if not sObj.open(): return -1
-    if args.interval:
-        sObj.setInterval(args.interval)
+    sObj = None
+    lObj = None
+    if args.input:
+        keys, values, parameters = read_csv(open(args.input))
+    else:
+        if not args.sensor or not args.ledstrip:
+            parser.print_usage(sys.stderr)
+            print('Either --input or both --ledstrip and --sensor must be specified', file=sys.stderr)
+            return -1
+        sObj = Sensor(args.sensor)
+        if not sObj.open(): return -1
+        if args.interval:
+            sObj.setInterval(args.interval)
 
-    lObj = Ledstrip(args.ledstrip)
-    if not lObj.open(): return -1
+        lObj = Ledstrip(args.ledstrip)
+        if not lObj.open(): return -1
+    
+
+        calibrator = Calibrator(sObj, lObj)
+    
+        keys, values, parameters = calibrator.run_rgbw_lux(args.steps, args)
     
     if args.output:
         outputFile = open(args.output, 'w')
     else:
         outputFile = sys.stdout
-
-    calibrator = Calibrator(sObj, lObj)
-    
-    keys, values, parameters = calibrator.run_rgbw_lux(args.steps, args)
-    
     write_csv(outputFile, keys, values, parameters)
     
     if args.output:
         outputFile.close()
-    sObj.close()
-    lObj.close()
+    if sObj: sObj.close()
+    if lObj: lObj.close()
     return 0
 
 

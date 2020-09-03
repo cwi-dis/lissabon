@@ -1,0 +1,4 @@
+iotsa
+colour-science
+colour-science[plotting]
+colour-science[optional]
