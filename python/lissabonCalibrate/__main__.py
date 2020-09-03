@@ -6,7 +6,7 @@ from .sensor import Sensor
 from .ledstrip import Ledstrip
 from .colorconvert import convert_K_to_RGB
 from .calibrator import Calibrator
-from .plot import plot_lines
+from .plot import plot_lines, plot_colors
 
 def write_csv(fp, keys, values, parameters):
     ofp = csv.DictWriter(fp, keys + ['parameter', 'value'], quoting=csv.QUOTE_NONNUMERIC)
@@ -98,6 +98,8 @@ def main():
     if args.plot:
         if parameters['measurement'] == 'rgbw_lux':
             plot_lines(values, parameters, 'requested', ['w_lux', 'rgb_lux', 'rgbw_lux'])
+        elif parameters['measurement'] == 'rgb_cct':
+            plot_colors(values, parameters, ['rgb_cct_10', 'rgb_cct_20', 'rgb_cct_50', 'rgb_cct_100'])
         else:
             assert False, f'Unknown measurement type {parameters["measurement"]}'
 
