@@ -1,4 +1,5 @@
 iotsa
+matplotlib
 colour-science
 colour-science[plotting]
 colour-science[optional]
