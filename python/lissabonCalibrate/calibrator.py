@@ -9,6 +9,7 @@ class Calibrator:
     def __init__(self, sensor, ledstrip):
         self.sensor = sensor
         self.ledstrip = ledstrip
+        self.verbose = True
         
     def run_rgbw_lux(self, nsteps, args):
         VALUES = list(map(lambda x : x / nsteps, range(nsteps+1)))
@@ -29,6 +30,7 @@ class Calibrator:
             w_wanted = requested
             rgb_wanted = requested
             # Do RGB-only color
+            if self.verbose: print(f'Measure RGB lux level={requested}', file=sys.stderr)
             this_r = (rgb_wanted*r_factor) ** args.rgb_gamma
             this_g = (rgb_wanted*g_factor) ** args.rgb_gamma
             this_b = (rgb_wanted*b_factor) ** args.rgb_gamma
@@ -42,6 +44,7 @@ class Calibrator:
             result['rgb_g'] = sResult['g']
             result['rgb_b'] = sResult['b']
             # Do W-only color
+            if self.verbose: print(f'Measure W lux level={requested}', file=sys.stderr)
             this_w = (w_wanted*w_factor) ** args.w_gamma
             self.ledstrip.setColor(w=this_w)
             time.sleep(1)
@@ -50,6 +53,7 @@ class Calibrator:
             result['w_lux'] = sResult['lux']
             result['w_cct'] = sResult['cct']
             # Do RGBW color
+            if self.verbose: print(f'Measure RGBW lux level={requested}', file=sys.stderr)
             this_r = (rgb_wanted*r_factor*0.5) ** args.rgb_gamma
             this_g = (rgb_wanted*g_factor*0.5) ** args.rgb_gamma
             this_b = (rgb_wanted*b_factor*0.5) ** args.rgb_gamma
@@ -71,5 +75,41 @@ class Calibrator:
             g_factor=g_factor,
             b_factor=b_factor,
             w_factor=w_factor,
+            )
+        return keys, values, parameters
+            
+    def run_rgb_cct(self, nsteps, args):
+        MIN_CCT = 2000
+        MAX_CCT = 7000
+        VALUES = []
+        for i in range(nsteps+1):
+            VALUES.append(MIN_CCT + (i/nsteps*(MAX_CCT-MIN_CCT)))
+
+        keys = ['requested']
+        for percent in [10, 20, 50, 100]:
+            keys.append(f'rgb_lux_{percent}')
+            keys.append(f'rgb_cct_{percent}')
+        values = []
+
+        for requested in VALUES:
+            result = {'requested' : requested}
+            r_wanted, g_wanted, b_wanted = convert_K_to_RGB(requested)
+            for percent in [10, 20, 50, 100]:
+                level = percent / 100
+                if self.verbose: print(f'Measure RGB CCT level={level} cct={requested}', file=sys.stderr)
+                # Do RGB-only color
+                this_r = (r_wanted*level) ** args.rgb_gamma
+                this_g = (g_wanted*level) ** args.rgb_gamma
+                this_b = (b_wanted*level) ** args.rgb_gamma
+                self.ledstrip.setColor(r=this_r, g=this_g, b=this_b)
+                time.sleep(1)
+                sResult = self.sensor.get()
+                result[f'rgb_lux_{percent}'] = sResult['lux']
+                result[f'rgb_cct_{percent}'] = sResult['cct']
+            values.append(result)        
+        parameters = dict(
+            measurement='rgb_cct',
+            interval=args.interval,
+            rgb_gamma=args.rgb_gamma,
             )
         return keys, values, parameters

@@ -41,7 +41,7 @@ def read_csv(fp):
         
 def main():
     parser = argparse.ArgumentParser(description="Calibrate lissabonLedstrip using iotsaRGBWSensor")
-    parser.add_argument('--measurement', '-m', action='store', choices=['rgbw_lux'], help='Type of mesurement to do')
+    parser.add_argument('--measurement', '-m', action='store', choices=['rgbw_lux', 'rgb_cct'], help='Type of mesurement to do')
     parser.add_argument('--ledstrip', '-l', action='store', metavar='IP', help='Ledstrip hostname')
     parser.add_argument('--sensor', '-s', action='store', metavar='IP', help='Ledstrip sensor')
     parser.add_argument('--interval', action='store', type=int, metavar='DUR', help='Sensor integration duration (ms, between 40 and 1280)')
@@ -85,6 +85,8 @@ def main():
     
         if args.measurement == 'rgbw_lux':
             keys, values, parameters = calibrator.run_rgbw_lux(args.steps, args)
+        elif args.measurement == 'rgb_cct':
+            keys, values, parameters = calibrator.run_rgb_cct(args.steps, args)
         else:
             assert False, f'Unknown measurement type {args.measurement}'
     
