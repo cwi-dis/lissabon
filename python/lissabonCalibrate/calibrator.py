@@ -89,6 +89,10 @@ class Calibrator:
         for percent in [10, 20, 50, 100]:
             keys.append(f'rgb_lux_{percent}')
             keys.append(f'rgb_cct_{percent}')
+            keys.append(f'rgb_r_{percent}')
+            keys.append(f'rgb_g_{percent}')
+            keys.append(f'rgb_b_{percent}')
+            keys.append(f'rgb_w_{percent}')
         values = []
 
         for requested in VALUES:
@@ -106,6 +110,11 @@ class Calibrator:
                 sResult = self.sensor.get()
                 result[f'rgb_lux_{percent}'] = sResult['lux']
                 result[f'rgb_cct_{percent}'] = sResult['cct']
+                result[f'rgb_r_{percent}'] = sResult['r']
+                result[f'rgb_g_{percent}'] = sResult['g']
+                result[f'rgb_b_{percent}'] = sResult['b']
+                result[f'rgb_w_{percent}'] = sResult['w']
+
             values.append(result)        
         parameters = dict(
             measurement='rgb_cct',

@@ -27,7 +27,7 @@ def plot_lines(values, parameters, xlabel, ylabels):
     ax.legend()
     matplotlib.pyplot.show()
     
-def plot_colors(values, parameters, ylabels):
+def plot_colors_bycct(values, parameters, ylabels):
     fig, ax = colour.plotting.plot_chromaticity_diagram_CIE1931(standalone=False)
     mincct = values[0]['requested']
     maxcct = values[-1]['requested']
@@ -37,11 +37,56 @@ def plot_colors(values, parameters, ylabels):
         yvalues = []
         for value in values:
             cct_requested = value['requested']
-            cct_measured = value[ylabel]
+            cct_measured = value[f'rgb_cct_{ylabel}']
             x, y = colour.CCT_to_xy(cct_measured)
             xvalues.append(x)
             yvalues.append(y)
-        matplotlib.pyplot.plot(xvalues, yvalues, '.', label=ylabel)
+        matplotlib.pyplot.plot(xvalues, yvalues, '.-', label=ylabel)
+    ax.legend()
+#        matplotlib.pyplot.annotate(str(cct_requested), 
+#            xy=(x, y),
+#            xytext=(-50, 30),
+#            textcoords='offset points',
+#            arrowprops=dict(arrowstyle='->', connectionstyle='arc3, rad=-0.2'))
+    matplotlib.pyplot.show()
+
+def plot_colors(values, parameters, ylabels):
+    #fig, ax = colour.plotting.plot_chromaticity_diagram_CIE1931(standalone=False)
+    fig, ax = colour.plotting.plot_planckian_locus_in_chromaticity_diagram_CIE1931([], standalone=False)
+    mincct = values[0]['requested']
+    maxcct = values[-1]['requested']
+    ax.set_title(f'CCT measured for RGB LED, {int(mincct)} to {int(maxcct)}')
+
+    sRGB = colour.RGB_COLOURSPACES['sRGB']
+
+    plotcoloridx = 0
+    for value in values:
+        plotcolor = f'C{plotcoloridx}'
+        plotcoloridx += 1
+        cct_requested = value['requested']
+#       for ylabel in ylabels:
+        x_req, y_req = colour.CCT_to_xy(cct_requested)
+        rgb_xvalues = []
+        rgb_yvalues = []
+        cct_xvalues = []
+        cct_yvalues = []
+        for ylabel in ylabels:
+            r = value[f'rgb_r_{ylabel}']
+            g = value[f'rgb_g_{ylabel}']
+            b = value[f'rgb_b_{ylabel}']
+            RGB = np.array([r, g, b])
+            XYZ = colour.RGB_to_XYZ(RGB, sRGB.whitepoint, sRGB.whitepoint, sRGB.RGB_to_XYZ_matrix)
+            xy = colour.XYZ_to_xy(XYZ)
+            x, y = xy
+            rgb_xvalues.append(x)
+            rgb_yvalues.append(y)
+            cct_measured = value[f'rgb_cct_{ylabel}']
+            x, y = colour.CCT_to_xy(cct_measured)
+            cct_xvalues.append(x)
+            cct_yvalues.append(y)
+        matplotlib.pyplot.plot(rgb_xvalues, rgb_yvalues, color=plotcolor, marker='.', linestyle='', label=str(cct_requested))
+        matplotlib.pyplot.plot(cct_xvalues, cct_yvalues, color=plotcolor, marker='x', linestyle='')
+        matplotlib.pyplot.plot([x_req], [y_req], color=plotcolor, marker='X')
     ax.legend()
 #        matplotlib.pyplot.annotate(str(cct_requested), 
 #            xy=(x, y),

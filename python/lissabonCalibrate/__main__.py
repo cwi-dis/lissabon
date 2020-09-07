@@ -99,7 +99,8 @@ def main():
         if parameters['measurement'] == 'rgbw_lux':
             plot_lines(values, parameters, 'requested', ['w_lux', 'rgb_lux', 'rgbw_lux'])
         elif parameters['measurement'] == 'rgb_cct':
-            plot_colors(values, parameters, ['rgb_cct_10', 'rgb_cct_20', 'rgb_cct_50', 'rgb_cct_100'])
+            plot_colors(values, parameters, ['100', '50', '20', '10'])
+            #plot_colors(values, parameters, ['100'])
         else:
             assert False, f'Unknown measurement type {parameters["measurement"]}'
 
