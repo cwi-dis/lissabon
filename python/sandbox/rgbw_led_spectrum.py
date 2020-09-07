@@ -960,4 +960,6 @@ sd_white = colour.SpectralDistribution({
 
 
 #colour.plotting.plot_multi_sds([sd_r, sd_g, sd_b])
-colour.plotting.plot_multi_illuminant_sds([sd_white, sd_r, sd_g, sd_b])
+#colour.plotting.plot_multi_illuminant_sds([sd_white, sd_r, sd_g, sd_b])
+colour.plotting.diagrams.plot_sds_in_chromaticity_diagram([sd_white, sd_r, sd_g, sd_b])
+
