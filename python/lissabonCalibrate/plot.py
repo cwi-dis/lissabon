@@ -41,7 +41,12 @@ def plot_colors_bycct(values, parameters, ylabels):
             x, y = colour.CCT_to_xy(cct_measured)
             xvalues.append(x)
             yvalues.append(y)
-        matplotlib.pyplot.plot(xvalues, yvalues, '.-', label=ylabel)
+        matplotlib.pyplot.plot(xvalues, yvalues, '.', label=ylabel)
+    p_text = []
+    for k, v in parameters.items():
+        if k in  ('measurement', 'interval'): continue
+        p_text.append(f'{k} = {v}')
+    ax.text(0.95, 0.05, '\n'.join(p_text), transform=ax.transAxes, bbox=dict(boxstyle='round'), multialignment='left', horizontalalignment='right', verticalalignment='bottom')
     ax.legend()
 #        matplotlib.pyplot.annotate(str(cct_requested), 
 #            xy=(x, y),
@@ -84,9 +89,14 @@ def plot_colors(values, parameters, ylabels):
             x, y = colour.CCT_to_xy(cct_measured)
             cct_xvalues.append(x)
             cct_yvalues.append(y)
-        matplotlib.pyplot.plot(rgb_xvalues, rgb_yvalues, color=plotcolor, marker='.', linestyle='', label=str(cct_requested))
-        matplotlib.pyplot.plot(cct_xvalues, cct_yvalues, color=plotcolor, marker='x', linestyle='')
+        matplotlib.pyplot.plot(rgb_xvalues, rgb_yvalues, color=plotcolor, marker='o', linestyle='', label=str(cct_requested))
+        matplotlib.pyplot.plot(cct_xvalues, cct_yvalues, color=plotcolor, marker='.', linestyle='')
         matplotlib.pyplot.plot([x_req], [y_req], color=plotcolor, marker='X')
+    p_text = []
+    for k, v in parameters.items():
+        if k in  ('measurement', 'interval'): continue
+        p_text.append(f'{k} = {v}')
+    ax.text(0.95, 0.05, '\n'.join(p_text), transform=ax.transAxes, bbox=dict(boxstyle='round'), multialignment='left', horizontalalignment='right', verticalalignment='bottom')
     ax.legend()
 #        matplotlib.pyplot.annotate(str(cct_requested), 
 #            xy=(x, y),

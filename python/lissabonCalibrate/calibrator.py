@@ -3,6 +3,7 @@ import sys
 import time
 from .ledstrip import Ledstrip
 from .colorconvert import convert_K_to_RGB
+from .colourscience_cc import cs_convert_K_to_RGB
 
 
 class Calibrator:
@@ -79,6 +80,9 @@ class Calibrator:
         return keys, values, parameters
             
     def run_rgb_cct(self, nsteps, args):
+        convertfunc = convert_K_to_RGB
+        if args.cs_cct:
+            convertfunc = cs_convert_K_to_RGB
         MIN_CCT = 2000
         MAX_CCT = 7000
         VALUES = []
@@ -97,8 +101,9 @@ class Calibrator:
 
         for requested in VALUES:
             result = {'requested' : requested}
-            r_wanted, g_wanted, b_wanted = convert_K_to_RGB(requested)
-            for percent in [10, 20, 50, 100]:
+            r_wanted, g_wanted, b_wanted = convertfunc(requested)
+            #for percent in [10, 20, 50, 100]:
+            for percent in [50]:
                 level = percent / 100
                 if self.verbose: print(f'Measure RGB CCT level={level} cct={requested}', file=sys.stderr)
                 # Do RGB-only color
@@ -120,5 +125,6 @@ class Calibrator:
             measurement='rgb_cct',
             interval=args.interval,
             rgb_gamma=args.rgb_gamma,
+            cs_cct=args.cs_cct
             )
         return keys, values, parameters

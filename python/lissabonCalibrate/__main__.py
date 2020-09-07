@@ -52,6 +52,7 @@ def main():
     parser.add_argument('--g_hack', action='store', type=float, metavar='FACTOR', help='G-channel multiplication factor (default 1.0)')
     parser.add_argument('--b_hack', action='store', type=float, metavar='FACTOR', help='B-channel multiplication factor (default 1.0)')
     parser.add_argument('--rgb_temperature', action='store', type=float, metavar='KELVIN', help='Color temperature for RGB (default: no correction)')
+    parser.add_argument('--cs_cct', action='store_true', help='Use colourscience for CCT to RGB conversion')
     
     parser.add_argument('--input', action='store', metavar='INPUT', help="CSV input filename, skips measurement but reads previous data from previous run")
     parser.add_argument('--csv', '-o', action='store', metavar='OUTPUT', help='CSV output filename')
@@ -99,7 +100,7 @@ def main():
         if parameters['measurement'] == 'rgbw_lux':
             plot_lines(values, parameters, 'requested', ['w_lux', 'rgb_lux', 'rgbw_lux'])
         elif parameters['measurement'] == 'rgb_cct':
-            plot_colors(values, parameters, ['100', '50', '20', '10'])
+            plot_colors(values, parameters, ['50'])
             #plot_colors(values, parameters, ['100'])
         else:
             assert False, f'Unknown measurement type {parameters["measurement"]}'
