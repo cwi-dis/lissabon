@@ -3,3 +3,4 @@ matplotlib
 colour-science
 colour-science[plotting]
 colour-science[optional]
+git+https://github.com/hbldh/bleak@develop
