@@ -1,5 +1,5 @@
 {
-    "name" : "lissabon",
+    "name" : "libLissabon",
     "version" : "0.1",
     "description" : "Library based on Iotsa to enable low-power remotely controlled lighting.",
     "keywords" : "ble, lighting, low-power, off-grid",
@@ -18,8 +18,5 @@
             "name" : "iotsa",
             "version" : "https://github.com/cwi-dis/iotsa.git#develop"
         }
-    ],
-    "examples" : [
-        "lissabon.ino"
     ]
 }

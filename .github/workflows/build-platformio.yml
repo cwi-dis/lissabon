@@ -26,12 +26,12 @@ jobs:
         - esp32thing
         - esp32dev
         application:
-        - lissabonController
+#        - lissabonController
         - lissabonDimmer
-        - lissabonExample
-        - lissabonLedstrip
-        - lissabonRemote
-        - lissabonSwitch
+#        - lissabonExample
+#        - lissabonLedstrip
+#        - lissabonRemote
+#        - lissabonSwitch
         build_flags: [""]
 #        Extra options/settings.
 #        include:
@@ -93,6 +93,7 @@ jobs:
     - name: Install library dependencies
       run: |
         pio lib -g install "https://github.com/cwi-dis/iotsa.git#${{ env.iotsa_ref }}"
+        pio lib -g install libLissabon
 
     - name: Run PlatformIO
       run: |
@@ -101,6 +102,11 @@ jobs:
         PLATFORMIO_CI_SRC: ${{ matrix.application }}
         PLATFORMIO_BUILD_FLAGS: ${{ matrix.build_flags }}
         
+    - name: Uninstall library dependencies
+      run: |
+        pio lib -g uninstall iotsa
+        pio lib -g uninstall libLissabon
+
     - name: Upload artifact
       uses: actions/upload-artifact@v2
       with:
