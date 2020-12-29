@@ -20,18 +20,15 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        board:
-        - lolin32
- #       - pico32
- #       - esp32thing
- #       - esp32dev
-        application:
-#        - lissabonController
-        - lissabonDimmer
-#        - lissabonExample
-#        - lissabonLedstrip
-#        - lissabonRemote
-#        - lissabonSwitch
+        include:
+          - application: lissabonDimmer
+            variant: lissabon-touchpad-dimmer
+          - application: lissabonDimmer
+            variant: lissabon-hidden-dimmer
+          - application: lissabonDimmer
+            variant: lissabon-plugin-dimmer
+          - application: lissabonDimmer
+            variant: lissabon-buttons-dimmer
     steps:
     - name: Checkout code
       uses: actions/checkout@v2
@@ -67,7 +64,7 @@ jobs:
 
     - name: Run PlatformIO
       run: |
-        (cd ${{ matrix.application }} && pio run --environment ${{ matrix.board }} )
+        (cd ${{ matrix.application }} && pio run --environment ${{ matrix.variant }} )
         
     - name: Uninstall library dependencies
       run: |
@@ -77,6 +74,6 @@ jobs:
     - name: Upload artifact
       uses: actions/upload-artifact@v2
       with:
-        name: ${{ matrix.application }}-${{ matrix.board }}.bin
-        path: ${{ matrix.application }}/.pio/build/${{ matrix.board }}/firmware.bin        
+        name: ${{ matrix.application }}-${{ matrix.variant }}.bin
+        path: ${{ matrix.application }}/.pio/build/${{ matrix.variant }}/firmware.bin        
  
