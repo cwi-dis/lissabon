@@ -29,6 +29,17 @@ jobs:
             variant: lissabon-plugin-dimmer
           - application: lissabonDimmer
             variant: lissabon-buttons-dimmer
+            
+          - application: lissabonRemote
+            variant: lissabon-kitchen-remote
+            
+          - application: lissabonLedstrip
+            variant: lissabon-5v-ledstrip
+          - application: lissabonLedstrip
+            variant: lissabon-12v-ledstrip
+
+          - application: lissabonController
+            variant: lissabon-controller
     steps:
     - name: Checkout code
       uses: actions/checkout@v2
