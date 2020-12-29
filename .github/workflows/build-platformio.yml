@@ -5,25 +5,63 @@ name: build-platformio
 on: 
   push:
     paths-ignore:
-    - '.github/workflows/build-arduino.yml'
     - 'docs/**'
   repository_dispatch:
     types: [rebuild]
   
 env:
   iotsa_ref: develop
-  this_product: iotsaNeoClock
-  
+
 jobs:
+  #
+  # Job#1 - Build all applications for all supported platforms, upload binaries as artifacts
+  #
   build:
     runs-on: ubuntu-latest
     strategy:
       matrix:
         board:
-        - nodemcuv2
-#        - esp32thing
+        - lolin32
+        - pico32
+        - esp32thing
+        - esp32dev
+        application:
+        - lissabonController
+        - lissabonDimmer
+        - lissabonExample
+        - lissabonLedstrip
+        - lissabonRemote
+        - lissabonSwitch
         build_flags: [""]
-
+#        Extra options/settings.
+#        include:
+#        For esp8266 we need to manually exclude esp32_https_server and esp32_https_server_compat. Probably bug in libdeps of platformio
+#        - board: nodemcuv2
+#          pio_extra_args: --project-option="lib_ignore=esp32_https_server_compat"
+#        Extra build: Led with HTTPS
+#        - application: Led
+#          build_flags: -DIOTSA_WITH_HTTPS
+#          board: nodemcuv2
+#          pio_extra_args: --project-option="lib_ignore=esp32_https_server_compat"
+#        - application: Led
+#          build_flags: -DIOTSA_WITH_HTTPS
+#          board: esp32thing
+#        Extra build: Led with COAP
+#        - application: Led
+#          build_flags: -DIOTSA_WITH_COAP
+#          board: nodemcuv2
+#          pio_extra_args: --project-option="lib_ignore=esp32_https_server_compat"
+#        - application: Led
+#          build_flags: -DIOTSA_WITH_COAP
+#          board: esp32thing
+#        Extra build: Led with only COAP support (no web, no rest, no http/s)
+#        - application: Led
+#          build_flags: -DIOTSA_WITH_COAP -DIOTSA_WITHOUT_WEB -DIOTSA_WITHOUT_REST -DIOTSA_WITHOUT_HTTP -DIOTSA_WITHOUT_HTTPS -DIOTSA_WITH_PLACEHOLDERS
+#          board: nodemcuv2
+#          pio_extra_args: --project-option="lib_ignore=esp32_https_server_compat"
+#        - application: Led
+#          build_flags: -DIOTSA_WITH_COAP -DIOTSA_WITHOUT_WEB -DIOTSA_WITHOUT_REST -DIOTSA_WITHOUT_HTTP -DIOTSA_WITHOUT_HTTPS -DIOTSA_WITH_PLACEHOLDERS
+#          board: esp32thing
     steps:
     - name: Checkout code
       uses: actions/checkout@v2
@@ -54,22 +92,18 @@ jobs:
 
     - name: Install library dependencies
       run: |
-        pio lib -g install "Adafruit NeoPixel@~1.3.5"
-        pio lib -g install "Time@>=1.6"
-        pio lib -g install "Timezone@~1.2.4"
-        pio lib -g install "ArduinoJson@~6.14.1"
-        pio lib -g install "ArduinoJWT@~1.0.1"
-        pio lib -g install "CoAP simple library@1.3.19"
-        pio lib -g install "esp32_https_server_compat@~1.0.0"
-        pio lib -g install "DHT sensor library@~1.4.1"
         pio lib -g install "https://github.com/cwi-dis/iotsa.git#${{ env.iotsa_ref }}"
 
     - name: Run PlatformIO
       run: |
-        pio run --environment ${{ matrix.board }}
-
+        pio ci --lib="." --project-option="lib_ldf_mode=deep+" ${{ matrix.pio_extra_args }} --board=${{ matrix.board }} --keep-build-dir
+      env:
+        PLATFORMIO_CI_SRC: ${{ matrix.application }}
+        PLATFORMIO_BUILD_FLAGS: ${{ matrix.build_flags }}
+        
     - name: Upload artifact
       uses: actions/upload-artifact@v2
       with:
-        name: ${{ env.this_product }}-${{ matrix.board }}-${{ env.iotsa_ref }}.bin
-        path: .pio/build/${{ matrix.board }}/firmware.bin
+        name: ${{ matrix.application }}-${{ matrix.board }}.bin
+        path: .pio/build/${{ matrix.board }}/firmware.bin        
+ 
