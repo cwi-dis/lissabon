@@ -22,9 +22,9 @@ jobs:
       matrix:
         board:
         - lolin32
-        - pico32
-        - esp32thing
-        - esp32dev
+ #       - pico32
+ #       - esp32thing
+ #       - esp32dev
         application:
 #        - lissabonController
         - lissabonDimmer
@@ -93,7 +93,7 @@ jobs:
     - name: Install library dependencies
       run: |
         pio lib -g install "https://github.com/cwi-dis/iotsa.git#${{ env.iotsa_ref }}"
-        pio lib -g install libLissabon
+        pio lib -g install file:///$PWD/libLissabon
 
     - name: Run PlatformIO
       run: |
