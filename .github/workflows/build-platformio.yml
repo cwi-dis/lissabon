@@ -79,8 +79,8 @@ jobs:
         
     - name: Uninstall library dependencies
       run: |
-        pio lib -g uninstall iotsa
-        pio lib -g uninstall libLissabon
+        rm -rf ~/.platformio/lib/iotsa
+        rm -rf ~/.platformio/lib/libLissabon
 
     - name: Upload artifact
       uses: actions/upload-artifact@v2
