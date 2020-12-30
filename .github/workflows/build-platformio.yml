@@ -8,6 +8,11 @@ on:
     - 'docs/**'
   repository_dispatch:
     types: [rebuild]
+  workflow_dispatch:
+    iotsa_ref:
+      description: 'iotsa branch, ref or sha'
+      required: true
+      detault: develop
   
 env:
   iotsa_ref: develop
