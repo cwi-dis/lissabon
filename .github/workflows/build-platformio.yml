@@ -9,10 +9,11 @@ on:
   repository_dispatch:
     types: [rebuild]
   workflow_dispatch:
-    iotsa_ref:
-      description: 'iotsa branch, ref or sha'
-      required: true
-      detault: develop
+    inputs:
+      iotsa_ref:
+        description: 'iotsa branch, ref or sha'
+        required: true
+        detault: develop
   
 env:
   iotsa_ref: develop
@@ -46,6 +47,20 @@ jobs:
           - application: lissabonController
             variant: lissabon-controller
     steps:
+    - name: Set env
+      run: |
+        if [ "${{ github.event.name }}" == "repository_dispatch" ]; then 
+            echo "iotsa_ref=${{ github.event.client_payload.iotsa_ref }}" >> $GITHUB_ENV
+            echo "xxxjack repository_dispatch caused iotsa_ref=${{ github.event.client_payload.iotsa_ref }}"
+        fi
+        if [ "${{ github.event.name }}" == "workflow_dispatch" ]; then 
+            echo "iotsa_ref=${{ github.event.inputs.iotsa_ref }}" >> $GITHUB_ENV
+            echo "xxxjack workflow_dispatch caused iotsa_ref=${{ github.event.inputs.iotsa_ref }}"
+        fi
+        echo xxxjack $GITHUB_ENV
+        cat $GITHUB_ENV
+        echo xxxjack end of $GITHUB_ENV
+        
     - name: Checkout code
       uses: actions/checkout@v2
 
