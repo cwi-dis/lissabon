@@ -49,11 +49,11 @@ jobs:
     steps:
     - name: Set env
       run: |
-        if [ "${{ github.event.name }}" == "repository_dispatch" ]; then 
+        if [ "${{ github.event_name }}" == "repository_dispatch" ]; then 
             echo "iotsa_ref=${{ github.event.client_payload.iotsa_ref }}" >> $GITHUB_ENV
             echo "xxxjack repository_dispatch caused iotsa_ref=${{ github.event.client_payload.iotsa_ref }}"
         fi
-        if [ "${{ github.event.name }}" == "workflow_dispatch" ]; then 
+        if [ "${{ github.event_name }}" == "workflow_dispatch" ]; then 
             echo "iotsa_ref=${{ github.event.inputs.iotsa_ref }}" >> $GITHUB_ENV
             echo "xxxjack workflow_dispatch caused iotsa_ref=${{ github.event.inputs.iotsa_ref }}"
         fi
