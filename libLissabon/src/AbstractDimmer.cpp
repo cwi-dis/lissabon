@@ -190,9 +190,9 @@ bool AbstractDimmer::handlerConfigArgs(IotsaWebServer *server){
 #endif // DIMMER_WITH_PWMFREQUENCY
   return anyChanged;
 }
-void AbstractDimmer::configLoad(IotsaConfigFileLoad& cf) {
+bool AbstractDimmer::configLoad(IotsaConfigFileLoad& cf, String& n_name) {
   int value;
-  String n_name = "dimmer" + String(num);
+//xxxjack  String n_name = "dimmer" + String(num);
   String strval;
   cf.get(n_name + ".name", strval, "");
   setName(strval);
@@ -214,10 +214,11 @@ void AbstractDimmer::configLoad(IotsaConfigFileLoad& cf) {
 #ifdef DIMMER_WITH_PWMFREQUENCY
   cf.get(n_name + ".pwmFrequency", pwmFrequency, 5000.0);
 #endif // DIMMER_WITH_PWMFREQUENCY
+  return name != "";
 }
 
-void AbstractDimmer::configSave(IotsaConfigFileSave& cf) {
-  String n_name = "dimmer" + String(num);
+void AbstractDimmer::configSave(IotsaConfigFileSave& cf, String& n_name) {
+//xxxjack  String n_name = "dimmer" + String(num);
   cf.put(n_name + ".name", name);
   cf.put(n_name + ".isOn", isOn);
 #ifdef DIMMER_WITH_LEVEL
@@ -238,30 +239,29 @@ void AbstractDimmer::configSave(IotsaConfigFileSave& cf) {
 #endif // DIMMER_WITH_PWMFREQUENCY
 }
 
-String AbstractDimmer::handlerForm() {
+void AbstractDimmer::formHandler(String& message, String& text, String& f_name) {
   String s_num = String(num);
   String s_name = "dimmer" + s_num;
 
-  String message = "<h2>Dimmer " + s_num + " (" + name + ") operation</h2><form method='get'>";
+  message += "<h2>Dimmer " + s_num + " (" + name + ") operation</h2><form method='get'>";
   if (!available()) message += "<em>(dimmer may be unavailable)</em><br>";
   String checkedOn = isOn ? "checked" : "";
   String checkedOff = !isOn ? "checked " : "";
-  message += "<input type='radio' name='" + s_name +".isOn'" + checkedOff + " value='0'>Off <input type='radio' " + checkedOn + " name='" + s_name + ".isOn' value='1'>On</br>";
+  message += "<input type='radio' name='" + f_name +".isOn'" + checkedOff + " value='0'>Off <input type='radio' " + checkedOn + " name='" + f_name + ".isOn' value='1'>On</br>";
 #ifdef DIMMER_WITH_LEVEL
-  message += "Level (0.0..1.0): <input name='" + s_name +".level' value='" + String(level) + "'></br>";
+  message += "Level (0.0..1.0): <input name='" + f_name +".level' value='" + String(level) + "'></br>";
 #endif
 #ifdef DIMMER_WITH_GAMMA
 #endif // DIMMER_WITH_GAMMA
 #ifdef DIMMER_WITH_ANIMATION
 #endif // DIMMER_WITH_ANIMATION
 #ifdef DIMMER_WITH_TEMPERATURE
-  message += "Color Temperature: <input name='" + s_name +".temperature' value='" + String(temperature) + "'>";
+  message += "Color Temperature: <input name='" + f_name +".temperature' value='" + String(temperature) + "'>";
   message += "(3000.0 is warm, 4000.0 is neutral, 6000.0 is cool)<br>";
 #endif // DIMMER_WITH_TEMPERATURE
 #ifdef DIMMER_WITH_PWMFREQUENCY
 #endif // DIMMER_WITH_PWMFREQUENCY
   message += "<input type='submit'></form>";
-  return message;
 }
 
 void AbstractDimmer::extendHandlerConfigForm(String& message) {}
@@ -291,7 +291,7 @@ String AbstractDimmer::handlerConfigForm() {
   return message;
 }
 
-bool AbstractDimmer::getHandler(JsonObject& reply) {
+void AbstractDimmer::getHandler(JsonObject& reply) {
   reply["name"] = name;
   reply["available"] = available();
   reply["isOn"] = isOn;
@@ -311,7 +311,6 @@ bool AbstractDimmer::getHandler(JsonObject& reply) {
 #ifdef DIMMER_WITH_PWMFREQUENCY
   reply["pwmFrequency"] = pwmFrequency;
 #endif // DIMMER_WITH_PWMFREQUENCY
-  return true;
 }
 
 bool AbstractDimmer::putHandler(const JsonVariant& request) {

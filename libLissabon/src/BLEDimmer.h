@@ -22,9 +22,9 @@ public:
   bool setName(String value);
   void setup();
   void loop();
-  virtual void configLoad(IotsaConfigFileLoad& cf) override;
-  virtual void configSave(IotsaConfigFileSave& cf) override;
-  virtual bool getHandler(JsonObject& reply) override;
+  virtual bool configLoad(IotsaConfigFileLoad& cf, String& name) override;
+  virtual void configSave(IotsaConfigFileSave& cf, String& name) override;
+  virtual void getHandler(JsonObject& reply) override;
 protected:
   virtual void extendHandlerConfigForm(String& message) override;
 

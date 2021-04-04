@@ -2,6 +2,7 @@
 #define _ABSTRACTDIMMER_H_
 
 #include "iotsa.h"
+#include "iotsaApi.h"
 #include "iotsaConfigFile.h"
 #include <ArduinoJson.h>
 using namespace ArduinoJson;
@@ -19,7 +20,7 @@ public:
   virtual void dimmerValueChanged() = 0;
 };
 
-class AbstractDimmer {
+class AbstractDimmer : IotsaApiModObject {
 public:
   AbstractDimmer(int _num, DimmerCallbacks* _callbacks)
   : num(_num),
@@ -30,14 +31,14 @@ public:
   void calcCurLevel();
   virtual bool available() = 0;
   String info();
-  virtual bool getHandler(JsonObject& reply);
-  virtual bool putHandler(const JsonVariant& request);
+  virtual void getHandler(JsonObject& reply) override;
+  virtual bool putHandler(const JsonVariant& request) override;
   virtual bool putConfigHandler(const JsonVariant& request);
   virtual bool handlerArgs(IotsaWebServer *server);
   virtual bool handlerConfigArgs(IotsaWebServer *server);
-  virtual void configLoad(IotsaConfigFileLoad& cf);
-  virtual void configSave(IotsaConfigFileSave& cf);
-  virtual String handlerForm();
+  virtual bool configLoad(IotsaConfigFileLoad& cf, String& name) override;
+  virtual void configSave(IotsaConfigFileSave& cf, String& name) override;
+  virtual void formHandler(String& message, String& text, String& f_name) override;
   virtual String handlerConfigForm();
   virtual bool setName(String value);
   String getUserVisibleName();

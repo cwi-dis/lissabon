@@ -8,6 +8,7 @@ on:
     - 'docs/**'
   repository_dispatch:
     types: [rebuild]
+  pull_request:
   workflow_dispatch:
     inputs:
       iotsa_ref:
@@ -51,15 +52,12 @@ jobs:
       run: |
         if [ "${{ github.event_name }}" == "repository_dispatch" ]; then 
             echo "iotsa_ref=${{ github.event.client_payload.iotsa_ref }}" >> $GITHUB_ENV
-            echo "xxxjack repository_dispatch caused iotsa_ref=${{ github.event.client_payload.iotsa_ref }}"
+            echo "repository_dispatch: iotsa_ref=${{ github.event.client_payload.iotsa_ref }}"
         fi
         if [ "${{ github.event_name }}" == "workflow_dispatch" ]; then 
             echo "iotsa_ref=${{ github.event.inputs.iotsa_ref }}" >> $GITHUB_ENV
-            echo "xxxjack workflow_dispatch caused iotsa_ref=${{ github.event.inputs.iotsa_ref }}"
+            echo "workflow_dispatch: iotsa_ref=${{ github.event.inputs.iotsa_ref }}"
         fi
-        echo xxxjack $GITHUB_ENV
-        cat $GITHUB_ENV
-        echo xxxjack end of $GITHUB_ENV
         
     - name: Checkout code
       uses: actions/checkout@v2
@@ -105,6 +103,6 @@ jobs:
     - name: Upload artifact
       uses: actions/upload-artifact@v2
       with:
-        name: ${{ matrix.application }}-${{ matrix.variant }}.bin
+        name: ${{ matrix.application }}-iotsa${{ env.iotsa_ref }}-${{ matrix.variant }}.bin
         path: ${{ matrix.application }}/.pio/build/${{ matrix.variant }}/firmware.bin        
  
