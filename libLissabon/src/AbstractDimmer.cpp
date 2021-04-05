@@ -90,11 +90,10 @@ String AbstractDimmer::info() {
   return message;
 }
 
-bool AbstractDimmer::handlerArgs(IotsaWebServer *server) {
+bool AbstractDimmer::formHandler_args(IotsaWebServer *server, const String& f_name, bool includeConfig) {
   bool anyChanged = false;
-  String n_dimmer = "dimmer" + String(num);
-  String n_isOn = n_dimmer + ".isOn";
-  String n_level = n_dimmer + ".level";
+  String n_isOn = f_name + ".isOn";
+  String n_level = f_name + ".level";
   if (server->hasArg(n_isOn)) {
     int val = server->arg(n_isOn).toInt();
     if (val != isOn) {
@@ -118,7 +117,7 @@ bool AbstractDimmer::handlerArgs(IotsaWebServer *server) {
 #ifdef DIMMER_WITH_ANIMATION
 #endif // DIMMER_WITH_ANIMATION
 #ifdef DIMMER_WITH_TEMPERATURE
-  String n_temperature = n_dimmer + ".temperature";
+  String n_temperature = f_name + ".temperature";
   if (server->hasArg(n_temperature)) {
     float val = server->arg(n_temperature).toFloat();
     if (val != temperature) {
@@ -130,20 +129,18 @@ bool AbstractDimmer::handlerArgs(IotsaWebServer *server) {
 #endif // DIMMER_WITH_TEMPERATURE
 #ifdef DIMMER_WITH_PWMFREQUENCY
 #endif // DIMMER_WITH_PWMFREQUENCY
-  return anyChanged;
-}
-
-bool AbstractDimmer::handlerConfigArgs(IotsaWebServer *server){
-  bool anyChanged = false;
-  String n_dimmer = "dimmer" + String(num);
-  String n_name = n_dimmer + ".name";
-  String n_minLevel = n_dimmer + ".minLevel";
+  if (!includeConfig) return anyChanged;
+  //
+  // Examine configuration parameters
+  //
+  String n_name = f_name + ".name";
   if (server->hasArg(n_name)) {
     // xxxjack check permission
     String value = server->arg(n_name);
-    anyChanged = setName(value);
+    anyChanged |= setName(value);
   }
 #ifdef DIMMER_WITH_LEVEL
+  String n_minLevel = f_name + ".minLevel";
   if (server->hasArg(n_minLevel)) {
     // xxxjack check permission
     float val = server->arg(n_minLevel).toFloat();
@@ -154,7 +151,7 @@ bool AbstractDimmer::handlerConfigArgs(IotsaWebServer *server){
   }
 #endif
 #ifdef DIMMER_WITH_GAMMA
-  String n_gamma = n_dimmer + ".gamma";
+  String n_gamma = f_name + ".gamma";
   if (server->hasArg(n_gamma)) {
     // xxxjack check permission
     float val = server->arg(n_gamma).toFloat();
@@ -165,7 +162,7 @@ bool AbstractDimmer::handlerConfigArgs(IotsaWebServer *server){
   }
 #endif // DIMMER_WITH_GAMMA
 #ifdef DIMMER_WITH_ANIMATION
-  String n_animation = n_dimmer + ".animation";
+  String n_animation = f_name + ".animation";
   if (server->hasArg(n_animation)) {
     // xxxjack check permission
     int val = server->arg(n_animation).toInt();
@@ -178,7 +175,7 @@ bool AbstractDimmer::handlerConfigArgs(IotsaWebServer *server){
 #ifdef DIMMER_WITH_TEMPERATURE
 #endif // DIMMER_WITH_TEMPERATURE
 #ifdef DIMMER_WITH_PWMFREQUENCY
-  String n_pwmfrequency = n_dimmer + ".pwmFrequency";
+  String n_pwmfrequency = f_name + ".pwmFrequency";
   if (server->hasArg(n_pwmfrequency)) {
     // xxxjack check permission
     float val = server->arg(n_pwmfrequency).toFloat();
@@ -190,7 +187,8 @@ bool AbstractDimmer::handlerConfigArgs(IotsaWebServer *server){
 #endif // DIMMER_WITH_PWMFREQUENCY
   return anyChanged;
 }
-bool AbstractDimmer::configLoad(IotsaConfigFileLoad& cf, String& n_name) {
+
+bool AbstractDimmer::configLoad(IotsaConfigFileLoad& cf, const String& n_name) {
   int value;
 //xxxjack  String n_name = "dimmer" + String(num);
   String strval;
@@ -217,7 +215,7 @@ bool AbstractDimmer::configLoad(IotsaConfigFileLoad& cf, String& n_name) {
   return name != "";
 }
 
-void AbstractDimmer::configSave(IotsaConfigFileSave& cf, String& n_name) {
+void AbstractDimmer::configSave(IotsaConfigFileSave& cf, const String& n_name) {
 //xxxjack  String n_name = "dimmer" + String(num);
   cf.put(n_name + ".name", name);
   cf.put(n_name + ".isOn", isOn);
@@ -239,11 +237,10 @@ void AbstractDimmer::configSave(IotsaConfigFileSave& cf, String& n_name) {
 #endif // DIMMER_WITH_PWMFREQUENCY
 }
 
-void AbstractDimmer::formHandler(String& message, String& text, String& f_name) {
-  String s_num = String(num);
-  String s_name = "dimmer" + s_num;
-
-  message += "<h2>Dimmer " + s_num + " (" + name + ") operation</h2><form method='get'>";
+void AbstractDimmer::formHandler_fields(String& message, const String& text, const String& f_name, bool includeConfig) {
+#if xxxjack_move
+  message += "<h2>Dimmer " + f_name + " (" + name + ") operation</h2><form method='get'>";
+#endif
   if (!available()) message += "<em>(dimmer may be unavailable)</em><br>";
   String checkedOn = isOn ? "checked" : "";
   String checkedOff = !isOn ? "checked " : "";
@@ -261,34 +258,34 @@ void AbstractDimmer::formHandler(String& message, String& text, String& f_name) 
 #endif // DIMMER_WITH_TEMPERATURE
 #ifdef DIMMER_WITH_PWMFREQUENCY
 #endif // DIMMER_WITH_PWMFREQUENCY
+#if xxxjack_move
   message += "<input type='submit'></form>";
-}
+#endif
 
-void AbstractDimmer::extendHandlerConfigForm(String& message) {}
-void AbstractDimmer::extendHandlerConfigArgs(IotsaWebServer *server) {}
-String AbstractDimmer::handlerConfigForm() {
-  String s_num = String(num);
-  String s_name = "dimmer" + s_num;
-  String message = "<h2>Dimmer " + s_num + " configuration</h2><form method='get'>";
-  extendHandlerConfigForm(message);
+  if(!includeConfig) return;
+  //
+  // Configuration form fields
+  //
 #ifdef DIMMER_WITH_LEVEL
-  message += "Min Level (0.0..1.0): <input name='" + s_name +".minLevel' value='" + String(minLevel) + "'></br>";
+  message += "Min Level (0.0..1.0): <input name='" + f_name +".minLevel' value='" + String(minLevel) + "'></br>";
 #endif
 #ifdef DIMMER_WITH_GAMMA
-  message += "Gamma: <input name='" + s_name +".gamma' value='" + String(gamma) + "'>";
+  message += "Gamma: <input name='" + f_name +".gamma' value='" + String(gamma) + "'>";
   message += "(1.0 is linear, 2.2 is common for direct PWM LEDs)<br>";
 #endif // DIMMER_WITH_GAMMA
 #ifdef DIMMER_WITH_ANIMATION
-  message += "Animation duration (milliseconds): <input name='" + s_name +".animation' value='" + String(animationDurationMillis) + "'></br>";
+  message += "Animation duration (milliseconds): <input name='" + f_name +".animation' value='" + String(animationDurationMillis) + "'></br>";
 #endif // DIMMER_WITH_ANIMATION
 #ifdef DIMMER_WITH_TEMPERATURE
 #endif // DIMMER_WITH_TEMPERATURE
 #ifdef DIMMER_WITH_PWMFREQUENCY
-  message += "PWM Frequency: <input name='" + s_name +".pwmFrequency' value='" + String(pwmFrequency) + "'>";
+  message += "PWM Frequency: <input name='" + f_name +".pwmFrequency' value='" + String(pwmFrequency) + "'>";
   message += "(Adapt when dimmed device flashes. 100 may be fine for dimmable LED lamps, 5000 for incandescent)<br>";
 #endif // DIMMER_WITH_PWMFREQUENCY
-  message += "<input type='submit'></form>";
-  return message;
+}
+
+void AbstractDimmer::formHandler_TD(String& message, bool includeConfig) {
+  IotsaSerial.println("AbstractDimmer: formHandler_TD not implemented");
 }
 
 void AbstractDimmer::getHandler(JsonObject& reply) {
@@ -348,44 +345,46 @@ bool AbstractDimmer::putHandler(const JsonVariant& request) {
     updateDimmer();
     anyChanged = true;
   }
-  return anyChanged;
-}
-bool AbstractDimmer::putConfigHandler(const JsonVariant& request) {
-  bool configChanged = false;
-  JsonObject reqObj = request.as<JsonObject>();
-  if (!reqObj) return false;
-  // xxxjack check permission
-  if (reqObj.containsKey("name")) {
-    String value = reqObj["name"].as<String>();
-    if (setName(name)) configChanged = true;
-  }
+  if (true) {
+    // xxxjack the following should only be changed when in configuration mode
+    bool configChanged = false;
+    // xxxjack check permission
+    if (reqObj.containsKey("name")) {
+      String value = reqObj["name"].as<String>();
+      if (setName(name)) configChanged = true;
+    }
 #ifdef DIMMER_WITH_LEVEL
-  if (reqObj.containsKey("minLevel")) {
-    minLevel = reqObj["minLevel"];
-    configChanged = true;
-  }
+    if (reqObj.containsKey("minLevel")) {
+      minLevel = reqObj["minLevel"];
+      configChanged = true;
+    }
 #endif // DIMMER_WITH_LEVEL
 #ifdef DIMMER_WITH_GAMMA
-  if (reqObj.containsKey("gamma")) {
-    gamma = reqObj["gamma"];
-    configChanged = true;
-  }
+    if (reqObj.containsKey("gamma")) {
+      gamma = reqObj["gamma"];
+      configChanged = true;
+    }
 #endif // DIMMER_WITH_GAMMA
 #ifdef DIMMER_WITH_ANIMATION
-  if (reqObj.containsKey("animation")) {
-    animationDurationMillis = reqObj["animation"];
-    configChanged = true;
-  }
+    if (reqObj.containsKey("animation")) {
+      animationDurationMillis = reqObj["animation"];
+      configChanged = true;
+    }
 #endif // DIMMER_WITH_GAMMA
 #ifdef DIMMER_WITH_TEMPERATURE
 #endif // DIMMER_WITH_TEMPERATURE
 #ifdef DIMMER_WITH_PWMFREQUENCY
-  if (reqObj.containsKey("pwmFrequency")) {
-    pwmFrequency = reqObj["pwmFrequency"];
-    configChanged = true;
-  }
+    if (reqObj.containsKey("pwmFrequency")) {
+      pwmFrequency = reqObj["pwmFrequency"];
+      configChanged = true;
+    }
 #endif // DIMMER_WITH_PWMFREQUENCY
-  return configChanged;
+    // xxxjack if configChanged we should save
+    anyChanged |= configChanged;
+
+  }
+  return anyChanged;
 }
+
 
 }

@@ -160,11 +160,12 @@ void LissabonRemoteMod::uiButtonChanged() {
 void
 LissabonRemoteMod::handler() {
   bool anyChanged = false;
-  anyChanged |= dimmer1.handlerConfigArgs(server);
-  dimmer1.handlerArgs(server);
+  // xxxjack this also saves the config file if a non-config setting has been changed. Oh well...
+  String dimmer1name = String(dimmer1.num);
+  anyChanged |= dimmer1.formHandler_args(server, dimmer1name, true);
 #ifdef WITH_SECOND_DIMMER
-  anyChanged |= dimmer2.handlerConfigArgs(server);
-  dimmer2.handlerArgs(server);
+  String dimmer2name = String(dimmer2.num);
+  anyChanged |= dimmer2.formHandler_args(server, dimmer2name, true);
 #endif // WITH_SECOND_DIMMER
   if (anyChanged) {
     configSave();
@@ -172,15 +173,24 @@ LissabonRemoteMod::handler() {
   if (server->hasArg("scanUnknown")) startScanUnknown();
 
   String message = "<html><head><title>BLE Dimmers</title></head><body><h1>BLE Dimmers</h1>";
-  message += dimmer1.handlerForm();
+  message += "<h2>Dimmer Settings</h2><form>";
+  dimmer1.formHandler_fields(message, "Dimmer 1", dimmer1name, false);
 
 #ifdef WITH_SECOND_DIMMER
-  message += dimmer2.handlerForm();
-#endif // WITH_SECOND_DIMMER
-  message += dimmer1.handlerConfigForm();
+  dimmer2.formHandler_fields(message, "Dimmer 2", dimmer2name, false);
+#endif
+  message += "<input type='submit' name='set' value='Set Dimmers'></form><br>";
+
+  message += "<h2>Dimmer Configuration</h2><form>";
+  dimmer1.formHandler_fields(message, "Dimmer 1", dimmer1name, false);
+
 #ifdef WITH_SECOND_DIMMER
-  message += dimmer2.handlerConfigForm();
-#endif // WITH_SECOND_DIMMER
+  dimmer2.formHandler_fields(message, "Dimmer 2", dimmer2name, false);
+#endif
+  message += "<input type='submit' name='config' value='Configure Dimmers'></form><br>";
+
+  // xxxjack fixed number of dimmers, so no need for "new" form.
+
   message += "<h2>Available Unknown/new BLE dimmer devices</h2>";
   message += "<form><input type='submit' name='scanUnknown' value='Scan for 20 seconds'></form>";
   if (unknownDimmers.size() == 0) {
@@ -192,6 +202,8 @@ LissabonRemoteMod::handler() {
     }
     message += "</ul>";
   }
+
+  message += "<form><input type='submit' name='refresh' value='Refresh'></form>";
   message += "</body></html>";
   server->send(200, "text/html", message);
 }
@@ -234,13 +246,11 @@ bool LissabonRemoteMod::putHandler(const char *path, const JsonVariant& request,
   JsonVariant dimmer1Request = reqObj["dimmer1"];
   if (dimmer1Request) {
     if (dimmer1.putHandler(dimmer1Request)) anyChanged = true;
-    if (dimmer1.putConfigHandler(dimmer1Request)) anyChanged = true;
   }
 #ifdef WITH_SECOND_DIMMER
   JsonVariant dimmer2Request = reqObj["dimmer2"];
   if (dimmer2Request) {
     if (dimmer2.putHandler(dimmer2Request)) anyChanged = true;
-    if (dimmer2.putConfigHandler(dimmer2Request)) anyChanged = true;
   }
 #endif
   if (anyChanged) {
@@ -260,17 +270,17 @@ void LissabonRemoteMod::serverSetup() {
 
 void LissabonRemoteMod::configLoad() {
   IotsaConfigFileLoad cf("/config/bledimmer.cfg");
-  dimmer1.configLoad(cf);
+  dimmer1.configLoad(cf, "dimmer1'");
 #ifdef WITH_SECOND_DIMMER
-  dimmer2.configLoad(cf);
+  dimmer2.configLoad(cf, "dimmer2");
 #endif // WITH_SECOND_DIMMER
 }
 
 void LissabonRemoteMod::configSave() {
   IotsaConfigFileSave cf("/config/bledimmer.cfg");
-  dimmer1.configSave(cf);
+  dimmer1.configSave(cf, String(dimmer1.num));
 #ifdef WITH_SECOND_DIMMER
-  dimmer2.configSave(cf);
+  dimmer2.configSave(cf, String(dimmer2.num));
 #endif // WITH_SECOND_DIMMER
 }
 

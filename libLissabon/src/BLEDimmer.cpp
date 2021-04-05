@@ -28,20 +28,19 @@ bool BLEDimmer::setName(String value) {
   if (value) bleClientMod.addDevice(name);
   return true;
 }
-void BLEDimmer::extendHandlerConfigForm(String& message) {
-  String s_num = String(num);
-  String s_name = "dimmer" + s_num;
-  message += "BLE name: <input name='" + s_name +".name' value='" + name + "'><br>";
+void BLEDimmer::formHandler_fields(String& message, const String& text, const String& f_name, bool includeConfig) {
+  AbstractDimmer::formHandler_fields(message, text, f_name, includeConfig);
+  message += "BLE name: <input name='" + f_name +".name' value='" + name + "'><br>";
   IotsaBLEClientConnection *dimmer = bleClientMod.getDevice(name);
   if (dimmer) message += "BLE public address: " + String(dimmer->getAddress().c_str()) + "<br>";
 }
 
-bool BLEDimmer::BLEDimmer::configLoad(IotsaConfigFileLoad& cf, String& name) {
+bool BLEDimmer::BLEDimmer::configLoad(IotsaConfigFileLoad& cf, const String& name) {
   // xxxjack to be done...
   return AbstractDimmer::configLoad(cf, name);
 }
 
-void BLEDimmer::configSave(IotsaConfigFileSave& cf, String& n_name) {
+void BLEDimmer::configSave(IotsaConfigFileSave& cf, const String& n_name) {
 //xxxjack  String s_num = String(num);
 //xxxjack  String s_name = "dimmer" + s_num;
   IotsaBLEClientConnection *dimmer = bleClientMod.getDevice(name);

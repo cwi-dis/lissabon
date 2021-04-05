@@ -33,20 +33,16 @@ public:
   String info();
   virtual void getHandler(JsonObject& reply) override;
   virtual bool putHandler(const JsonVariant& request) override;
-  virtual bool putConfigHandler(const JsonVariant& request);
-  virtual bool handlerArgs(IotsaWebServer *server);
-  virtual bool handlerConfigArgs(IotsaWebServer *server);
-  virtual bool configLoad(IotsaConfigFileLoad& cf, String& name) override;
-  virtual void configSave(IotsaConfigFileSave& cf, String& name) override;
-  virtual void formHandler(String& message, String& text, String& f_name) override;
-  virtual String handlerConfigForm();
+  virtual bool configLoad(IotsaConfigFileLoad& cf, const String& name) override;
+  virtual void configSave(IotsaConfigFileSave& cf, const String& name) override;
+  virtual bool formHandler_args(IotsaWebServer *server, const String& f_name, bool includeConfig) override;
+//  virtual bool formArgHandler_config(IotsaWebServer *server, const String& f_name);
+  virtual void formHandler_fields(String& message, const String& text, const String& f_name, bool includeConfig) override;
+  virtual void formHandler_TD(String& message, bool includeConfig) override /* unimplemented */;
   virtual bool setName(String value);
   String getUserVisibleName();
   bool hasName();
   virtual void identify();
-protected:
-  virtual void extendHandlerConfigForm(String& message);
-  virtual void extendHandlerConfigArgs(IotsaWebServer *server);
 public:
   int num;
   DimmerCallbacks *callbacks;

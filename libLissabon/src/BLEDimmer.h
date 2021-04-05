@@ -22,11 +22,11 @@ public:
   bool setName(String value);
   void setup();
   void loop();
-  virtual bool configLoad(IotsaConfigFileLoad& cf, String& name) override;
-  virtual void configSave(IotsaConfigFileSave& cf, String& name) override;
+  virtual bool configLoad(IotsaConfigFileLoad& cf, const String& name) override;
+  virtual void configSave(IotsaConfigFileSave& cf, const String& name) override;
   virtual void getHandler(JsonObject& reply) override;
+  virtual void formHandler_fields(String& message, const String& text, const String& f_name, bool includeConfig) override;
 protected:
-  virtual void extendHandlerConfigForm(String& message) override;
 
   IotsaBLEClientMod& bleClientMod;
   bool needTransmit;
