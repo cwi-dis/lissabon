@@ -160,8 +160,7 @@ void LissabonDimmerMod::uiButtonChanged() {
 void
 LissabonDimmerMod::handler() {
   bool anyChanged = false;
-  anyChanged |= dimmer.handlerConfigArgs(server);
-  dimmer.handlerArgs(server);
+  anyChanged |= dimmer.formHandler_args(server, "dimmer", true);
 
   if (anyChanged) {
     configSave();
@@ -169,8 +168,9 @@ LissabonDimmerMod::handler() {
   }
   
   String message = "<html><head><title>Dimmer</title></head><body><h1>Dimmer</h1>";
-  message += dimmer.handlerForm();
-  message += dimmer.handlerConfigForm();
+  message += "<h2>Settings</h2><form>";
+  dimmer.formHandler_fields(message, "dimmer", "dimmer", true);
+  message += "<input type='submit' name='set' value='Submit'></form>";
   message += "</body></html>";
   server->send(200, "text/html", message);
 }
@@ -192,21 +192,21 @@ String LissabonDimmerMod::info() {
 #endif // IOTSA_WITH_WEB
 
 bool LissabonDimmerMod::getHandler(const char *path, JsonObject& reply) {
-  return dimmer.getHandler(reply);
+  dimmer.getHandler(reply);
+  return true;
 }
 
 bool LissabonDimmerMod::putHandler(const char *path, const JsonVariant& request, JsonObject& reply) {
   bool anyChanged = false;
-  bool configChanged = false;
   JsonObject reqObj = request.as<JsonObject>();
   if (!reqObj) return false;
   if (dimmer.putHandler(reqObj)) anyChanged = true;
-  if (dimmer.putConfigHandler(reqObj)) configChanged = true;
-  if (configChanged) {
+  if (anyChanged) {
+    // Should do this only for config changes
     configSave();
   }
   if (anyChanged) dimmer.updateDimmer(); // xxxjack or is this called already?
-  return anyChanged|configChanged;
+  return anyChanged;
 
 }
 
@@ -222,12 +222,12 @@ void LissabonDimmerMod::serverSetup() {
 
 void LissabonDimmerMod::configLoad() {
   IotsaConfigFileLoad cf("/config/pwmdimmer.cfg");
-  dimmer.configLoad(cf);
+  dimmer.configLoad(cf, "dimmer");
 }
 
 void LissabonDimmerMod::configSave() {
   IotsaConfigFileSave cf("/config/pwmdimmer.cfg");
-  dimmer.configSave(cf);
+  dimmer.configSave(cf, "dimmer");
 
 }
 

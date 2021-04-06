@@ -168,24 +168,34 @@ bool LedstripDimmer::formHandler_args(IotsaWebServer *server, const String& f_na
   // Configuration settings
   float whiteTemperature = rgbwSpace.WTemperature;
   float whiteBrightness = rgbwSpace.WBrightness;
-  if( server->hasArg("whiteTemperature")) {
-    whiteTemperature = server->arg("whiteTemperature").toFloat();
+
+  String argName = f_name + ".whiteTemperature";
+  if( server->hasArg(argName)) {
+    whiteTemperature = server->arg(argName).toFloat();
     anyChanged = true;
   }
-  if( server->hasArg("whiteBrightness")) {
-    whiteBrightness = server->arg("whiteBrightness").toFloat();
+
+  argName = f_name + ".whiteBrightness";
+  if( server->hasArg(argName)) {
+    whiteBrightness = server->arg(argName).toFloat();
     anyChanged = true;
   }
-  if( server->hasArg("focalPoint")) {
-    focalPoint = server->arg("focalPoint").toFloat();
+
+  argName = f_name + ".focalPoint";
+  if( server->hasArg(argName)) {
+    focalPoint = server->arg(argName).toFloat();
     anyChanged = true;
   }
-  if( server->hasArg("focalSpread")) {
-    focalSpread = server->arg("focalSpread").toFloat();
+
+  argName = f_name + ".focalSpread";
+  if( server->hasArg(argName)) {
+    focalSpread = server->arg(argName).toFloat();
     anyChanged = true;
   }
-  if( server->hasArg("calibrationMode")) {
-    calibrationMode = (CalibrationMode)server->arg("calibrationMode").toInt();
+
+  argName = f_name + ".calibrationMode";
+  if( server->hasArg(argName)) {
+    calibrationMode = (CalibrationMode)server->arg(argName).toInt();
     anyChanged = true;
   }
   if (anyChanged) {
@@ -197,15 +207,15 @@ bool LedstripDimmer::formHandler_args(IotsaWebServer *server, const String& f_na
 
 bool LedstripDimmer::configLoad(IotsaConfigFileLoad& cf, const String& f_name) {
   float whiteTemperature, whiteBrightness;
-  cf.get("whiteTemperature", whiteTemperature, 4000);
-  cf.get("whiteBrightness", whiteBrightness, 1.0);
-  cf.get("focalPoint", focalPoint, 0.5);
-  cf.get("focalSpread", focalSpread, 1.0);
+  cf.get(f_name + ".whiteTemperature", whiteTemperature, 4000);
+  cf.get(f_name + ".whiteBrightness", whiteBrightness, 1.0);
+  cf.get(f_name + ".focalPoint", focalPoint, 0.5);
+  cf.get(f_name + ".focalSpread", focalSpread, 1.0);
 #if 1
   calibrationMode = calibration_normal;
 #else
   int value;
-  cf.get("calibrationMode", value, 0);
+  cf.get(f_name + ".calibrationMode", value, 0);
   calibrationMode = (CalibrationMode)value;
 #endif
   updateColorspace(whiteTemperature, whiteBrightness);
@@ -214,12 +224,12 @@ bool LedstripDimmer::configLoad(IotsaConfigFileLoad& cf, const String& f_name) {
 }
 
 void LedstripDimmer::configSave(IotsaConfigFileSave& cf, const String& f_name) {
-  cf.put("whiteTemperature", rgbwSpace.WTemperature);
-  cf.put("whiteBrightness", rgbwSpace.WBrightness);
-  cf.put("focalPoint", focalPoint);
-  cf.put("focalSpread", focalSpread);
+  cf.put(f_name + ".whiteTemperature", rgbwSpace.WTemperature);
+  cf.put(f_name + ".whiteBrightness", rgbwSpace.WBrightness);
+  cf.put(f_name + ".focalPoint", focalPoint);
+  cf.put(f_name + ".focalSpread", focalSpread);
 #if 0
-  cf.put("calibrationMode", (int)calibrationMode);
+  cf.put(f_name + ".calibrationMode", (int)calibrationMode);
 #endif
   AbstractDimmer::configSave(cf, f_name);
 }
@@ -227,14 +237,14 @@ void LedstripDimmer::configSave(IotsaConfigFileSave& cf, const String& f_name) {
 void LedstripDimmer::formHandler_fields(String& message, const String& text, const String& f_name, bool includeConfig) {
   AbstractDimmer::formHandler_fields(message, text, f_name, includeConfig);
   // Configuration parameters
-  message += "White LED temperature: <input type='text' name='whiteTemperature' value='" + String(rgbwSpace.WTemperature) +"' ><br>";
-  message += "White LED brightness: <input type='text' name='whiteBrightness' value='" + String(rgbwSpace.WBrightness) +"' ><br>";
-  message += "Focal point: <input type='text' name='focalPoint' value='" + String(focalPoint) +"' > (0.0 is first LED, 1.0 is last LED)<br>";
-  message += "Focal spread: <input type='text' name='focalSpread' value='" + String(focalSpread) +"' > (0.0 is narrow, 1.0 is as full width)<br>";
+  message += "White LED temperature: <input type='text' name='" + f_name + ".whiteTemperature' value='" + String(rgbwSpace.WTemperature) +"' ><br>";
+  message += "White LED brightness: <input type='text' name='" + f_name + ".whiteBrightness' value='" + String(rgbwSpace.WBrightness) +"' ><br>";
+  message += "Focal point: <input type='text' name='" + f_name + ".focalPoint' value='" + String(focalPoint) +"' > (0.0 is first LED, 1.0 is last LED)<br>";
+  message += "Focal spread: <input type='text' name='" + f_name +" .focalSpread' value='" + String(focalSpread) +"' > (0.0 is narrow, 1.0 is as full width)<br>";
   String checkedNormal = calibrationMode == calibration_normal ? "checked" : "";
   String checkedRGB = calibrationMode == calibration_rgb ? "checked" : "";
   String checkedAlternate = calibrationMode ==calibration_alternating ? "checked" : "";
-  message += "RGBW calibration mode: <input type='radio' name='calibrationMode' value='0' " + checkedNormal + "> Normal mode <input type='radio' name='calibrationMode' value='1' " + checkedRGB + "> RGB only <input type='radio' name='calibrationMode' value='2' " + checkedAlternate + "> Alternate RGB and RGBW LEDs<br>";
+  message += "RGBW calibration mode: <input type='radio' name='" + f_name + ".calibrationMode' value='0' " + checkedNormal + "> Normal mode <input type='radio' name='calibrationMode' value='1' " + checkedRGB + "> RGB only <input type='radio' name='calibrationMode' value='2' " + checkedAlternate + "> Alternate RGB and RGBW LEDs<br>";
   message += "(hard color calibration can only be set through REST interface calibrationData)<br>";
   message += colorDump();
 }

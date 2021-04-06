@@ -190,7 +190,6 @@ bool AbstractDimmer::formHandler_args(IotsaWebServer *server, const String& f_na
 
 bool AbstractDimmer::configLoad(IotsaConfigFileLoad& cf, const String& n_name) {
   int value;
-//xxxjack  String n_name = "dimmer" + String(num);
   String strval;
   cf.get(n_name + ".name", strval, "");
   setName(strval);
@@ -216,7 +215,6 @@ bool AbstractDimmer::configLoad(IotsaConfigFileLoad& cf, const String& n_name) {
 }
 
 void AbstractDimmer::configSave(IotsaConfigFileSave& cf, const String& n_name) {
-//xxxjack  String n_name = "dimmer" + String(num);
   cf.put(n_name + ".name", name);
   cf.put(n_name + ".isOn", isOn);
 #ifdef DIMMER_WITH_LEVEL
@@ -238,9 +236,6 @@ void AbstractDimmer::configSave(IotsaConfigFileSave& cf, const String& n_name) {
 }
 
 void AbstractDimmer::formHandler_fields(String& message, const String& text, const String& f_name, bool includeConfig) {
-#if xxxjack_move
-  message += "<h2>Dimmer " + f_name + " (" + name + ") operation</h2><form method='get'>";
-#endif
   if (!available()) message += "<em>(dimmer may be unavailable)</em><br>";
   String checkedOn = isOn ? "checked" : "";
   String checkedOff = !isOn ? "checked " : "";
@@ -258,9 +253,6 @@ void AbstractDimmer::formHandler_fields(String& message, const String& text, con
 #endif // DIMMER_WITH_TEMPERATURE
 #ifdef DIMMER_WITH_PWMFREQUENCY
 #endif // DIMMER_WITH_PWMFREQUENCY
-#if xxxjack_move
-  message += "<input type='submit'></form>";
-#endif
 
   if(!includeConfig) return;
   //

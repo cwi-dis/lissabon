@@ -72,15 +72,15 @@ void IotsaBLEDimmerMod::uiButtonChanged() {
 void
 IotsaBLEDimmerMod::handler() {
   bool anyChanged = false;
-  anyChanged |= dimmer.handlerConfigArgs(server);
-  dimmer.handlerArgs(server);
+  anyChanged |= dimmer.formHandler_args(server, "dimmer", true);
   if (anyChanged) {
     configSave();
   }
 
   String message = "<html><head><title>BLE Dimmers</title></head><body><h1>BLE Dimmers</h1>";
-  message += dimmer.handlerForm();
-  message += dimmer.handlerConfigForm();
+  message += "<h2>Settings</h2><form>";
+  dimmer.formHandler_fields(message, "dimmer", "dimmer", true);
+  message += "<input type='submit' name='set' value='Submit'></form>";
 
   message += "</body></html>";
   server->send(200, "text/html", message);
@@ -107,11 +107,11 @@ bool IotsaBLEDimmerMod::putHandler(const char *path, const JsonVariant& request,
   JsonVariant dimmerRequest = reqObj["dimmer"];
   if (dimmerRequest) {
     if (dimmer.putHandler(dimmerRequest)) anyChanged = true;
-    if (dimmer.putConfigHandler(dimmerRequest)) anyChanged = true;
   }
   if (anyChanged) {
     configSave();
   }
+  if (anyChanged) dimmer.updateDimmer();
   return anyChanged;
 }
 
@@ -124,12 +124,12 @@ void IotsaBLEDimmerMod::serverSetup() {
 
 void IotsaBLEDimmerMod::configLoad() {
   IotsaConfigFileLoad cf("/config/bledimmer.cfg");
-  dimmer.configLoad(cf);
+  dimmer.configLoad(cf, "dimmer");
 }
 
 void IotsaBLEDimmerMod::configSave() {
   IotsaConfigFileSave cf("/config/bledimmer.cfg");
-  dimmer.configSave(cf);
+  dimmer.configSave(cf, "dimmer");
 }
 
 void IotsaBLEDimmerMod::setup() {

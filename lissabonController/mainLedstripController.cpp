@@ -165,29 +165,34 @@ IotsaLedstripControllerMod::handler() {
       knownDimmers[newDimmerName] = newDimmer;
       changed = true;
     }
+  }
+  if (server->hasArg("set")) {
     for (auto it: knownDimmers) {
+      String dimmerName(it.first.c_str());
       BLEDimmer *dimmer = it.second;
       if (dimmer) {
-        dimmer->handlerArgs(server);
-        if (dimmer->handlerConfigArgs(server)) changed = true;
+        changed |= dimmer->formHandler_args(server, dimmerName, true);
       }
     }
-    if (changed) configSave();
   }
-
-  String message = "<html><head><title>BLE Dimmers</title></head><body><h1>BLE Dimmers</h1>";
+  if (changed) configSave();
+  
+  String message = "<html><head><title>Lissabon Controller</title></head><body><h1>Lissabon Controller</h1>";
   for(auto it: knownDimmers) {
-    std::string name = it.first;
+    String name(it.first.c_str());
     BLEDimmer *dimmer = it.second;
+    message += "<h2>BLE dimmer " + name + "</h2>";
     if (dimmer) {
-      message += dimmer->handlerForm();
-      message += dimmer->handlerConfigForm();
+      message += "<form>";
+      dimmer->formHandler_fields(message, name, name, true);
+      message += "<input type='submit' name='set' value='Submit'></form>";
     } else {
-      message += "<h2>" + String(name.c_str()) + "</h2><p>No info</p>";
+      message += "<h2>" + name + "</h2><p>No info</p>";
     }
   }
   message += "<h2>Available Unknown/new BLE dimmer devices</h2>";
   message += "<form><input type='submit' name='scanUnknown' value='Scan for 20 seconds'></form>";
+  message += "<form><input type='submit' name='refresh' value='Refresh'></form>";
   if (unknownDimmers.size() == 0) {
     message += "<p>No unassigned BLE dimmer devices seen recently.</p>";
   } else {
@@ -195,12 +200,16 @@ IotsaLedstripControllerMod::handler() {
     for (auto it: unknownDimmers) {
       message += "<li>" + String(it.c_str());
       if (it != "") {
-        message += "<form><input type='hidden' name='add' value='" + String(it.c_str()) + "><input type='submit' value='Add'>";
+        message += "<form><input type='hidden' name='add' value='" + String(it.c_str()) + "><input type='submit' value='Add'></form>";
+      } else {
+        message += "<em>nameless dimmer (cannot be added)</em>";
       }
       message += "</li>";
     }
     message += "</ul>";
   }
+  message += "<h2>Add BLE dimmer manually</h2>";
+  message += "<form>BLE name: <input name='add'><input type='submit' value='Add'></form>";
   message += "</body></html>";
   server->send(200, "text/html", message);
 }

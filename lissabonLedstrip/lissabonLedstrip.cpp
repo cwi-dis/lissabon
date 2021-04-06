@@ -142,7 +142,7 @@ void LissabonLedstripMod::uiButtonChanged() {
 void
 LissabonLedstripMod::handler() {
   bool anyChanged = false;
-  anyChanged |= dimmer.formHandler_args(server, "", true);
+  anyChanged |= dimmer.formHandler_args(server, "ledstrip", true);
 
   if (anyChanged) {
     configSave();
@@ -152,7 +152,7 @@ LissabonLedstripMod::handler() {
   
   String message = "<html><head><title>Lissabon Ledstrip</title></head><body><h1>Lissabon Ledstrip</h1>";
   message += "<h2>Settings</h2><form>";
-  dimmer.formHandler_fields(message, "ledstrip", "", true);
+  dimmer.formHandler_fields(message, "ledstrip", "ledstrip", true);
   message += "<input type='submit' name='set' value='Submit'></form>";
   message += "</body></html>";
   server->send(200, "text/html", message);
@@ -204,12 +204,12 @@ void LissabonLedstripMod::serverSetup() {
 
 void LissabonLedstripMod::configLoad() {
   IotsaConfigFileLoad cf("/config/ledstrip.cfg");
-  dimmer.configLoad(cf, "");
+  dimmer.configLoad(cf, "ledstrip");
 }
 
 void LissabonLedstripMod::configSave() {
   IotsaConfigFileSave cf("/config/ledstrip.cfg");
-  dimmer.configSave(cf, "");
+  dimmer.configSave(cf, "ledstrip");
 }
 
 void LissabonLedstripMod::setup() {
