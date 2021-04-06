@@ -100,8 +100,8 @@ public:
 protected:
   void uiButtonChanged();
   void dimmerValueChanged();
-  bool getHandler(const char *path, JsonObject& reply);
-  bool putHandler(const char *path, const JsonVariant& request, JsonObject& reply);
+  bool getHandler(const char *path, JsonObject& reply) override;
+  bool putHandler(const char *path, const JsonVariant& request, JsonObject& reply) override;
 private:
   LedstripDimmer dimmer;
 #ifdef WITH_TOUCHPADS
@@ -142,8 +142,7 @@ void LissabonLedstripMod::uiButtonChanged() {
 void
 LissabonLedstripMod::handler() {
   bool anyChanged = false;
-  anyChanged |= dimmer.handlerConfigArgs(server);
-  dimmer.handlerArgs(server);
+  anyChanged |= dimmer.formHandler_args(server, "", true);
 
   if (anyChanged) {
     configSave();
@@ -152,8 +151,9 @@ LissabonLedstripMod::handler() {
   
   
   String message = "<html><head><title>Lissabon Ledstrip</title></head><body><h1>Lissabon Ledstrip</h1>";
-  message += dimmer.handlerForm();
-  message += dimmer.handlerConfigForm();
+  message += "<h2>Settings</h2><form>";
+  dimmer.formHandler_fields(message, "ledstrip", "", true);
+  message += "<input type='submit' name='set' value='Submit'></form>";
   message += "</body></html>";
   server->send(200, "text/html", message);
 }
@@ -175,22 +175,21 @@ String LissabonLedstripMod::info() {
 #endif // IOTSA_WITH_WEB
 
 bool LissabonLedstripMod::getHandler(const char *path, JsonObject& reply) {
-  bool ok = dimmer.getHandler(reply);
-  return ok;
+  dimmer.getHandler(reply);
+  return true;
 }
 
 bool LissabonLedstripMod::putHandler(const char *path, const JsonVariant& request, JsonObject& reply) {
   bool anyChanged = false;
-  bool configChanged = false;
   JsonObject reqObj = request.as<JsonObject>();
   if (!reqObj) return false;
   if (dimmer.putHandler(reqObj)) anyChanged = true;
-  if (dimmer.putConfigHandler(reqObj)) configChanged = true;
-  if (configChanged) {
+  if (anyChanged) {
+    // Should do this only for configuration changes
     configSave();
   }
   if (anyChanged) dimmer.updateDimmer(); // xxxjack or is this called already?
-  return anyChanged|configChanged;
+  return anyChanged;
 
 }
 void LissabonLedstripMod::serverSetup() {
@@ -205,12 +204,12 @@ void LissabonLedstripMod::serverSetup() {
 
 void LissabonLedstripMod::configLoad() {
   IotsaConfigFileLoad cf("/config/ledstrip.cfg");
-  dimmer.configLoad(cf);
+  dimmer.configLoad(cf, "");
 }
 
 void LissabonLedstripMod::configSave() {
   IotsaConfigFileSave cf("/config/ledstrip.cfg");
-  dimmer.configSave(cf);
+  dimmer.configSave(cf, "");
 }
 
 void LissabonLedstripMod::setup() {

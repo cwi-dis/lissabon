@@ -17,15 +17,13 @@ public:
   void identify();
   void loop();
   // Overrides
-  virtual bool getHandler(JsonObject& reply) override;
+  virtual void getHandler(JsonObject& reply) override;
   virtual bool putHandler(const JsonVariant& request) override;
-  virtual bool putConfigHandler(const JsonVariant& request) override;
-  virtual bool handlerArgs(IotsaWebServer *server) override;
-  virtual bool handlerConfigArgs(IotsaWebServer *server) override;
-  virtual void configLoad(IotsaConfigFileLoad& cf) override;
-  virtual void configSave(IotsaConfigFileSave& cf) override;
-  virtual String handlerForm() override;
-  virtual String handlerConfigForm() override;
+  virtual bool formHandler_args(IotsaWebServer *server, const String& f_name, bool includeConfig) override;
+  virtual bool configLoad(IotsaConfigFileLoad& cf, const String& name) override;
+  virtual void configSave(IotsaConfigFileSave& cf, const String& name) override;
+  virtual void formHandler_fields(String& message, const String& text, const String& f_name, bool includeConfig) override;
+  virtual void formHandler_TD(String& message, bool includeConfig);
 
   void setHandler(uint8_t *_buffer, size_t _count, int bpp, IotsaPixelsourceHandler *handler);
 protected:

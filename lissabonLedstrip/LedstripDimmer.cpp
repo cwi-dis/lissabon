@@ -83,7 +83,6 @@ float LedstripDimmer::maxLevelCorrectColor() {
 
 String LedstripDimmer::colorDump() {
   String rv;
-  rv += "<h2>Calibration information</h2>";
   float maxLevel = maxLevelCorrectColor();
   rv += "<p>Maximum level with correct color: " + String(maxLevel) + " (at temperature " + String(temperature) + ")<br>";
   TempFColor maxColor(temperature, maxLevel);
@@ -129,45 +128,44 @@ bool LedstripDimmer::available() {
   return true;
 }
 
-bool LedstripDimmer::getHandler(JsonObject& reply) {
+void LedstripDimmer::getHandler(JsonObject& reply) {
   reply["whiteTemperature"] = rgbwSpace.WTemperature;
   reply["whiteBrightness"] = rgbwSpace.WBrightness;
   reply["focalPoint"] = focalPoint;
   reply["focalSpread"] = focalSpread;
   reply["maxLevelCorrectColor"] = maxLevelCorrectColor();
-  return AbstractDimmer::getHandler(reply);
+  AbstractDimmer::getHandler(reply);
 }
+
 bool LedstripDimmer::putHandler(const JsonVariant& request) {
-  return AbstractDimmer::putHandler(request);
-}
-bool LedstripDimmer::putConfigHandler(const JsonVariant& request) {
-  float whiteTemperature = request["whiteTemperature"]|rgbwSpace.WTemperature;
-  float whiteBrightness = request["whiteBrightness"]|rgbwSpace.WBrightness;
-  focalPoint = request["focalPoint"] | focalPoint;
-  focalSpread = request["focalSpread"] | focalSpread;
-  if (request.containsKey("calibrationData")) {
-    JsonArray _calibrationData = request["calibrationData"];
-    int size = _calibrationData.size();
-    if (_calibrationData && (size == 4 || size == 8)) {
-      for (int i =0; i<8; i++) {
-        calibrationData[i] = _calibrationData[i % size];
+  AbstractDimmer::putHandler(request);
+  // Handle configuration settings
+  if (true) {
+    float whiteTemperature = request["whiteTemperature"]|rgbwSpace.WTemperature;
+    float whiteBrightness = request["whiteBrightness"]|rgbwSpace.WBrightness;
+    focalPoint = request["focalPoint"] | focalPoint;
+    focalSpread = request["focalSpread"] | focalSpread;
+    if (request.containsKey("calibrationData")) {
+      JsonArray _calibrationData = request["calibrationData"];
+      int size = _calibrationData.size();
+      if (_calibrationData && (size == 4 || size == 8)) {
+        for (int i =0; i<8; i++) {
+          calibrationData[i] = _calibrationData[i % size];
+        }
+        calibrationMode = calibration_hard;
+        millisAnimationStart = millisAnimationEnd = millis();
+        IFDEBUG IotsaSerial.println("Got calibrationData");
+      } else {
+        IFDEBUG IotsaSerial.println("Bad calibrationData");
       }
-      calibrationMode = calibration_hard;
-      millisAnimationStart = millisAnimationEnd = millis();
-      IFDEBUG IotsaSerial.println("Got calibrationData");
-    } else {
-      IFDEBUG IotsaSerial.println("Bad calibrationData");
     }
+    updateColorspace(whiteTemperature, whiteBrightness);
   }
-  updateColorspace(whiteTemperature, whiteBrightness);
-  (void)AbstractDimmer::putConfigHandler(request);
   return true;
 }
-bool LedstripDimmer::handlerArgs(IotsaWebServer *server) {
-  return AbstractDimmer::handlerArgs(server);
-}
-bool LedstripDimmer::handlerConfigArgs(IotsaWebServer *server) {
-  bool anyChanged;
+bool LedstripDimmer::formHandler_args(IotsaWebServer *server, const String& f_name, bool includeConfig) {
+  bool anyChanged = AbstractDimmer::formHandler_args(server, f_name, includeConfig);
+  // Configuration settings
   float whiteTemperature = rgbwSpace.WTemperature;
   float whiteBrightness = rgbwSpace.WBrightness;
   if( server->hasArg("whiteTemperature")) {
@@ -194,9 +192,10 @@ bool LedstripDimmer::handlerConfigArgs(IotsaWebServer *server) {
     updateColorspace(whiteTemperature, whiteBrightness);
     updateDimmer();
   }
-  return AbstractDimmer::handlerConfigArgs(server);
+  return anyChanged;
 }
-void LedstripDimmer::configLoad(IotsaConfigFileLoad& cf) {
+
+bool LedstripDimmer::configLoad(IotsaConfigFileLoad& cf, const String& f_name) {
   float whiteTemperature, whiteBrightness;
   cf.get("whiteTemperature", whiteTemperature, 4000);
   cf.get("whiteBrightness", whiteBrightness, 1.0);
@@ -210,9 +209,11 @@ void LedstripDimmer::configLoad(IotsaConfigFileLoad& cf) {
   calibrationMode = (CalibrationMode)value;
 #endif
   updateColorspace(whiteTemperature, whiteBrightness);
-  AbstractDimmer::configLoad(cf);
+  AbstractDimmer::configLoad(cf, f_name);
+  return true;
 }
-void LedstripDimmer::configSave(IotsaConfigFileSave& cf) {
+
+void LedstripDimmer::configSave(IotsaConfigFileSave& cf, const String& f_name) {
   cf.put("whiteTemperature", rgbwSpace.WTemperature);
   cf.put("whiteBrightness", rgbwSpace.WBrightness);
   cf.put("focalPoint", focalPoint);
@@ -220,16 +221,12 @@ void LedstripDimmer::configSave(IotsaConfigFileSave& cf) {
 #if 0
   cf.put("calibrationMode", (int)calibrationMode);
 #endif
-  AbstractDimmer::configSave(cf);
+  AbstractDimmer::configSave(cf, f_name);
 }
-String LedstripDimmer::handlerForm() {
-  return AbstractDimmer::handlerForm();
-}
-String LedstripDimmer::handlerConfigForm() {
-  String message = AbstractDimmer::handlerConfigForm();
-  String s_num = String(num);
-  String s_name = "dimmer" + s_num;
-  message += "<h2>Dimmer " + s_num + " extended configuration</h2><form method='get'>";
+
+void LedstripDimmer::formHandler_fields(String& message, const String& text, const String& f_name, bool includeConfig) {
+  AbstractDimmer::formHandler_fields(message, text, f_name, includeConfig);
+  // Configuration parameters
   message += "White LED temperature: <input type='text' name='whiteTemperature' value='" + String(rgbwSpace.WTemperature) +"' ><br>";
   message += "White LED brightness: <input type='text' name='whiteBrightness' value='" + String(rgbwSpace.WBrightness) +"' ><br>";
   message += "Focal point: <input type='text' name='focalPoint' value='" + String(focalPoint) +"' > (0.0 is first LED, 1.0 is last LED)<br>";
@@ -239,9 +236,11 @@ String LedstripDimmer::handlerConfigForm() {
   String checkedAlternate = calibrationMode ==calibration_alternating ? "checked" : "";
   message += "RGBW calibration mode: <input type='radio' name='calibrationMode' value='0' " + checkedNormal + "> Normal mode <input type='radio' name='calibrationMode' value='1' " + checkedRGB + "> RGB only <input type='radio' name='calibrationMode' value='2' " + checkedAlternate + "> Alternate RGB and RGBW LEDs<br>";
   message += "(hard color calibration can only be set through REST interface calibrationData)<br>";
-  message += "<input type='submit'></form>";
   message += colorDump();
-  return message;
+}
+
+void LedstripDimmer::formHandler_TD(String& message, bool includeConfig) {
+
 }
 
 void LedstripDimmer::identify() {
