@@ -39,7 +39,7 @@ IotsaOtaMod otaMod(application);
 IotsaBatteryMod batteryMod(application);
 
 #include "iotsaInput.h"
-Touchpad touch1down(12, true, true, true);
+Touchpad touch1down(26, true, true, true);
 Touchpad touch1up(13, true, true, true);
 UpDownButtons encoder1(touch1down, touch1up, true);
 #ifdef WITH_SECOND_DIMMER
