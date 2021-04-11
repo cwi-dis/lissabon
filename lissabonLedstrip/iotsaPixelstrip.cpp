@@ -206,6 +206,10 @@ bool IotsaPixelstripMod::putHandler(const char *path, const JsonVariant& request
     }
     if (reqObj.containsKey("count")) {
       count = reqObj["count"];
+      if (count < 2) {
+        IotsaSerial.println("count set to 2 to workaround bug");
+        count = 2;
+      }
       anyChanged = true;
     }
     if (reqObj.containsKey("gamma")) {

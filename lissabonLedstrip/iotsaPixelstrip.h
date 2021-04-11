@@ -37,7 +37,7 @@ const int IOTSA_NPB_BPP = (IOTSA_NPB_FEATURE::PixelSize);
 #endif
 
 #ifndef IOTSA_NPB_DEFAULT_COUNT
-#define IOTSA_NPB_DEFAULT_COUNT 1 // Default number of pixels
+#define IOTSA_NPB_DEFAULT_COUNT 2 // Default number of pixels, Note: count=1 will trigger bug in NPB.
 #endif
 
 typedef NeoPixelBus<IOTSA_NPB_FEATURE,IOTSA_NPB_METHOD> IotsaNeoPixelBus;
