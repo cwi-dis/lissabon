@@ -52,7 +52,7 @@ IotsaBatteryMod batteryMod(application);
 #ifdef WITH_TOUCHPADS
 #define WITH_UI
 // Two touchpad pins: off/decrement (long press), on/increment (long press)
-Touchpad touchdown(26, true, true, true);
+Touchpad touchdown(2, true, true, true);
 Touchpad touchup(13, true, true, true);
 UpDownButtons encoder(touchdown, touchup, true);
 
