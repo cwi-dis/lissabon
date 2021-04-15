@@ -34,7 +34,7 @@ IotsaOtaMod otaMod(application);
 IotsaBatteryMod batteryMod(application);
 
 #include "iotsaInput.h"
-Touchpad touchpad12(2, true, false, true);
+Touchpad touchpad12(32, true, false, true);
 Touchpad touchpad13(13, true, false, true);
 Touchpad touchpad14(14, true, false, true);
 Touchpad touchpad15(15, true, false, true);

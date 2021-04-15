@@ -54,7 +54,7 @@ IotsaPixelstripMod pixelstripMod(application);
 
 #ifdef WITH_TOUCHPADS
 #include "iotsaInput.h"
-Touchpad upTouch(2, true, true, true);
+Touchpad upTouch(32, true, true, true);
 Touchpad downTouch(13, true, true, true);
 UpDownButtons levelEncoder(upTouch, downTouch, true);
 Touchpad upTempTouch(14, true, true, true);

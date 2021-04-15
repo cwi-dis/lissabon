@@ -16,8 +16,8 @@ IotsaApplication application("Lissabon Sample");
 IotsaWifiMod wifiMod(application);
 
 #include "iotsaInput.h"
-Touchpad touch1down(12, true, true, true);
-Touchpad touch1up(13, true, true, true);
+Touchpad touch1down(13, true, true, true);
+Touchpad touch1up(14, true, true, true);
 UpDownButtons encoder1(touch1down, touch1up, true);
 
 Input* inputs[] = {
