@@ -30,9 +30,15 @@ bool BLEDimmer::setName(String value) {
 }
 void BLEDimmer::formHandler_fields(String& message, const String& text, const String& f_name, bool includeConfig) {
   AbstractDimmer::formHandler_fields(message, text, f_name, includeConfig);
-  message += "BLE name: <input name='" + f_name +".name' value='" + name + "'><br>";
-  IotsaBLEClientConnection *dimmer = bleClientMod.getDevice(name);
-  if (dimmer) message += "BLE public address: " + String(dimmer->getAddress().c_str()) + "<br>";
+  if (includeConfig) {
+    message += "BLE device name: <input name='" + f_name +".name' value='" + name + "'><br>";
+    IotsaBLEClientConnection *dimmer = bleClientMod.getDevice(name);
+    if (dimmer) {
+      message += "BLE device address: " + String(dimmer->getAddress().c_str()) + "<br>";
+    } else {
+      message += "<em>BLE device not available</em><br>";
+    }
+  }
 }
 
 bool BLEDimmer::BLEDimmer::configLoad(IotsaConfigFileLoad& cf, const String& name) {

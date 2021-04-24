@@ -108,7 +108,7 @@ public:
   bool configLoad(IotsaConfigFileLoad& cf, const String& f_name) {
     for (auto d : dimmers) {
       String ident = "dimmer" + String(d->num);
-      if (f_name) ident = f_name + "." + ident;
+      if (f_name != "") ident = f_name + "." + ident;
       d->configLoad(cf, ident);
     }
   }
@@ -116,7 +116,7 @@ public:
   void configSave(IotsaConfigFileSave& cf, const String& f_name) {
     for (auto d : dimmers) {
       String ident = "dimmer" + String(d->num);
-      if (f_name) ident = f_name + "." + ident;
+      if (f_name != "") ident = f_name + "." + ident;
       d->configSave(cf, ident);
     }
   }
@@ -260,6 +260,8 @@ LissabonRemoteMod::handler() {
   message += "<h2>Dimmer Settings</h2><form>";
   dimmers.formHandler_fields(message, "", "", false);
   message += "<input type='submit' name='set' value='Set Dimmers'></form><br>";
+
+  message += "<h2>Dimmer Configuration</h2><form>";
   dimmers.formHandler_fields(message, "", "", true);
   message += "<input type='submit' name='config' value='Configure Dimmers'></form><br>";
 
@@ -345,9 +347,9 @@ void LissabonRemoteMod::setup() {
 #ifdef PIN_DISABLESLEEP
   batteryMod.setPinDisableSleep(PIN_DISABLESLEEP);
 #endif
-  dimmers.ui_at(1)->setUpDownButtons(encoder1);
+  dimmers.ui_at(0)->setUpDownButtons(encoder1);
 #ifdef WITH_SECOND_DIMMER
-  dimmers.ui_at(2)->setUpDownButtons(encoder2);
+  dimmers.ui_at(1)->setUpDownButtons(encoder2);
 #endif // WITH_SECOND_DIMMER
 
   auto callback = std::bind(&LissabonRemoteMod::unknownDeviceFound, this, std::placeholders::_1);

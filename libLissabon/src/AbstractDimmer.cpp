@@ -236,7 +236,10 @@ void AbstractDimmer::configSave(IotsaConfigFileSave& cf, const String& n_name) {
 }
 
 void AbstractDimmer::formHandler_fields(String& message, const String& text, const String& f_name, bool includeConfig) {
-  if (!available()) message += "<em>(dimmer may be unavailable)</em><br>";
+  message += "<br>Dimmer: ";
+  message += text;
+  if (!available()) message += " <em>(dimmer may be unavailable)</em>";
+  message += "<br>";
   String checkedOn = isOn ? "checked" : "";
   String checkedOff = !isOn ? "checked " : "";
   message += "<input type='radio' name='" + f_name +".isOn'" + checkedOff + " value='0'>Off <input type='radio' " + checkedOn + " name='" + f_name + ".isOn' value='1'>On</br>";
