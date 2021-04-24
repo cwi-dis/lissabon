@@ -60,97 +60,11 @@ IotsaInputMod touchMod(application, inputs, sizeof(inputs)/sizeof(inputs[0]));
 #include "iotsaBLEClient.h"
 IotsaBLEClientMod bleClientMod(application);
 
+#include "DimmerCollection.h"
 #include "BLEDimmer.h"
 #include "DimmerUI.h"
 
 using namespace Lissabon;
-
-class DimmerCollection {
-public:
-  typedef AbstractDimmer ItemType;
-  typedef std::vector<ItemType*> ItemVectorType;
-  typedef ItemVectorType::iterator iterator;
-
-  int size() { return dimmers.size(); }
-  DimmerUI* push_back(ItemType* dimmer, bool addUI) { 
-    dimmers.push_back(dimmer);
-    DimmerUI *ui = nullptr;
-    if (addUI) ui = new DimmerUI(*dimmer);
-    dimmerUIs.push_back(ui);
-    return ui;
-  }
-  ItemType* at(int i) { return dimmers.at(i); }
-  DimmerUI* ui_at(int i) { return dimmerUIs.at(i); }
-  iterator begin() { return dimmers.begin(); }
-  iterator end() { return dimmers.end(); }
-
-  void getHandler(JsonObject& reply) {
-    for (auto d : dimmers) {
-      String ident = "dimmer" + String(d->num);
-      JsonObject dimmerReply = reply.createNestedObject(ident);
-      d->getHandler(dimmerReply);
-    }
-  }
-
-  bool putHandler(const JsonVariant& request) {
-    bool anyChanged = false;
-    JsonObject reqObj = request.as<JsonObject>();
-    for (auto d : dimmers) {
-      String ident = "dimmer" + String(d->num);
-      JsonVariant dimmerRequest = reqObj[ident];
-      if (dimmerRequest) {
-        if (d->putHandler(dimmerRequest)) anyChanged = true;
-      }
-    }
-    return anyChanged;
-  }
-
-  bool configLoad(IotsaConfigFileLoad& cf, const String& f_name) {
-    for (auto d : dimmers) {
-      String ident = "dimmer" + String(d->num);
-      if (f_name != "") ident = f_name + "." + ident;
-      d->configLoad(cf, ident);
-    }
-  }
-
-  void configSave(IotsaConfigFileSave& cf, const String& f_name) {
-    for (auto d : dimmers) {
-      String ident = "dimmer" + String(d->num);
-      if (f_name != "") ident = f_name + "." + ident;
-      d->configSave(cf, ident);
-    }
-  }
-
-  bool formHandler_args(IotsaWebServer *server, const String& f_name, bool includeConfig) {
-    bool anyChanged = false;
-    for(auto d : dimmers) {
-      String ident(d->num);
-      if (f_name != "") ident = f_name + "." + ident;
-      anyChanged |= d->formHandler_args(server, ident, includeConfig);
-    }
-    return anyChanged;
-  }
-
-  void formHandler_fields(String& message, const String& text, const String& f_name, bool includeConfig) {
-    for (auto d : dimmers) {
-      String ident(d->num);
-      if (f_name != "") ident = f_name + "." + ident;
-      String name = "Dimmer " + ident;
-      d->formHandler_fields(message, name, ident, includeConfig);
-    }
-  }
-
-  String info() {
-    String message;
-    for (auto d : dimmers) {
-      message += d->info();
-    }
-    return message;
-  }
-protected:
-  ItemVectorType dimmers;
-  std::vector<DimmerUI *> dimmerUIs;
-};
 
 class LissabonRemoteMod : public IotsaApiMod, public DimmerCallbacks {
 public:
