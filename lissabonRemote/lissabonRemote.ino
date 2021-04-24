@@ -72,10 +72,10 @@ public:
   : IotsaRestApiMod(_app, _auth)
   {
     BLEDimmer *dimmer = new BLEDimmer(1, bleClientMod, this);
-    dimmers.push_back(dimmer, true);
+    dimmers.push_back(dimmer);
   #ifdef WITH_SECOND_DIMMER
     dimmer = new BLEDimmer(2, bleClientMod, this);
-    dimmers.push_back(dimmer, true);
+    dimmers.push_back(dimmer);
   #endif
   }
   void setup();
@@ -97,6 +97,7 @@ private:
   void ledOn();
   void ledOff();
   DimmerCollection dimmers;
+  std::vector<DimmerUI*> dimmerUIs;
   uint32_t scanUnknownUntilMillis = 0;
   std::set<std::string> unknownDimmers;
   uint32_t saveAtMillis = 0;
@@ -261,9 +262,13 @@ void LissabonRemoteMod::setup() {
 #ifdef PIN_DISABLESLEEP
   batteryMod.setPinDisableSleep(PIN_DISABLESLEEP);
 #endif
-  dimmers.ui_at(0)->setUpDownButtons(encoder1);
+  DimmerUI *ui = new DimmerUI(*dimmers.at(0));
+  ui->setUpDownButtons(encoder1);
+  dimmerUIs.push_back(ui);
 #ifdef WITH_SECOND_DIMMER
-  dimmers.ui_at(1)->setUpDownButtons(encoder2);
+  ui = new DimmerUI(*dimmers.at(1));
+  ui->setUpDownButtons(encoder2);
+  dimmerUIs.push_back(ui);
 #endif // WITH_SECOND_DIMMER
 
   auto callback = std::bind(&LissabonRemoteMod::unknownDeviceFound, this, std::placeholders::_1);

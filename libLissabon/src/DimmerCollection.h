@@ -19,9 +19,8 @@ public:
   typedef ItemVectorType::iterator iterator;
 
   int size();
-  DimmerUI* push_back(ItemType* dimmer, bool addUI);
+  void push_back(ItemType* dimmer);
   ItemType* at(int i);
-  DimmerUI* ui_at(int i);
   iterator begin();
   iterator end();
 
@@ -34,7 +33,6 @@ public:
   String info();
 protected:
   ItemVectorType dimmers;
-  std::vector<DimmerUI *> dimmerUIs;
 };
 }
 #endif // _DIMMERCOLLECTION_H_

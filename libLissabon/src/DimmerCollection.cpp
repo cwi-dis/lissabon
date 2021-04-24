@@ -14,17 +14,11 @@ int DimmerCollection::size() {
   return dimmers.size(); 
 }
 
-DimmerUI* DimmerCollection::push_back(DimmerCollection::ItemType* dimmer, bool addUI) { 
+void DimmerCollection::push_back(DimmerCollection::ItemType* dimmer) { 
   dimmers.push_back(dimmer);
-  DimmerUI *ui = nullptr;
-  if (addUI) ui = new DimmerUI(*dimmer);
-  dimmerUIs.push_back(ui);
-  return ui;
 }
 
 DimmerCollection::ItemType* DimmerCollection::at(int i) { return dimmers.at(i); }
-
-DimmerUI* DimmerCollection::ui_at(int i) { return dimmerUIs.at(i); }
 
 DimmerCollection::iterator DimmerCollection::begin() { return dimmers.begin(); }
 
