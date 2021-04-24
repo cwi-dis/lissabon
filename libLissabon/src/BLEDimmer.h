@@ -20,8 +20,8 @@ public:
   void updateDimmer();
   bool available();
   bool setName(String value);
-  void setup();
-  void loop();
+  void setup() override;
+  void loop() override;
   virtual bool configLoad(IotsaConfigFileLoad& cf, const String& name) override;
   virtual void configSave(IotsaConfigFileSave& cf, const String& name) override;
   virtual void getHandler(JsonObject& reply) override;

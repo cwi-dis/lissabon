@@ -43,6 +43,8 @@ public:
   String getUserVisibleName();
   bool hasName();
   virtual void identify();
+  virtual void setup() {};
+  virtual void loop() {};
 public:
   int num;
   DimmerCallbacks *callbacks;
