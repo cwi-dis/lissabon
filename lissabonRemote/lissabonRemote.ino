@@ -83,6 +83,70 @@ public:
   DimmerUI* ui_at(int i) { return dimmerUIs.at(i); }
   iterator begin() { return dimmers.begin(); }
   iterator end() { return dimmers.end(); }
+
+  void getHandler(JsonObject& reply) {
+    for (auto d : dimmers) {
+      String ident = "dimmer" + String(d->num);
+      JsonObject dimmerReply = reply.createNestedObject(ident);
+      d->getHandler(dimmerReply);
+    }
+  }
+
+  bool putHandler(const JsonVariant& request) {
+    bool anyChanged = false;
+    JsonObject reqObj = request.as<JsonObject>();
+    for (auto d : dimmers) {
+      String ident = "dimmer" + String(d->num);
+      JsonVariant dimmerRequest = reqObj[ident];
+      if (dimmerRequest) {
+        if (d->putHandler(dimmerRequest)) anyChanged = true;
+      }
+    }
+    return anyChanged;
+  }
+
+  bool configLoad(IotsaConfigFileLoad& cf, const String& f_name) {
+    for (auto d : dimmers) {
+      String ident = "dimmer" + String(d->num);
+      if (f_name) ident = f_name + "." + ident;
+      d->configLoad(cf, ident);
+    }
+  }
+
+  void configSave(IotsaConfigFileSave& cf, const String& f_name) {
+    for (auto d : dimmers) {
+      String ident = "dimmer" + String(d->num);
+      if (f_name) ident = f_name + "." + ident;
+      d->configSave(cf, ident);
+    }
+  }
+
+  bool formHandler_args(IotsaWebServer *server, const String& f_name, bool includeConfig) {
+    bool anyChanged = false;
+    for(auto d : dimmers) {
+      String ident(d->num);
+      if (f_name != "") ident = f_name + "." + ident;
+      anyChanged |= d->formHandler_args(server, ident, includeConfig);
+    }
+    return anyChanged;
+  }
+
+  void formHandler_fields(String& message, const String& text, const String& f_name, bool includeConfig) {
+    for (auto d : dimmers) {
+      String ident(d->num);
+      if (f_name != "") ident = f_name + "." + ident;
+      String name = "Dimmer " + ident;
+      d->formHandler_fields(message, name, ident, includeConfig);
+    }
+  }
+
+  String info() {
+    String message;
+    for (auto d : dimmers) {
+      message += d->info();
+    }
+    return message;
+  }
 protected:
   ItemVectorType dimmers;
   std::vector<DimmerUI *> dimmerUIs;
@@ -178,10 +242,7 @@ void
 LissabonRemoteMod::handler() {
   bool anyChanged = false;
   // xxxjack this also saves the config file if a non-config setting has been changed. Oh well...
-  for(auto d : dimmers) {
-    String ident(d->num);
-    anyChanged |= d->formHandler_args(server, ident, true);
-  }
+  dimmers.formHandler_args(server, "", true);
 #if 0
   String dimmer1name = String(dimmer1.num);
   anyChanged |= dimmer1.formHandler_args(server, dimmer1name, true);
@@ -197,25 +258,9 @@ LissabonRemoteMod::handler() {
 
   String message = "<html><head><title>BLE Dimmers</title></head><body><h1>BLE Dimmers</h1>";
   message += "<h2>Dimmer Settings</h2><form>";
-  for (auto d : dimmers) {
-    String ident(d->num);
-    String name = "Dimmer " + ident;
-    d->formHandler_fields(message, name, ident, false);
-  }
-#if 0
-  dimmer1.formHandler_fields(message, "Dimmer 1", dimmer1name, false);
-
-#ifdef WITH_SECOND_DIMMER
-  dimmer2.formHandler_fields(message, "Dimmer 2", dimmer2name, false);
-#endif
-#endif
+  dimmers.formHandler_fields(message, "", "", false);
   message += "<input type='submit' name='set' value='Set Dimmers'></form><br>";
-
-  for (auto d : dimmers) {
-    String ident(d->num);
-    String name = "Dimmer " + ident;
-    d->formHandler_fields(message, name, ident, true);
-  }
+  dimmers.formHandler_fields(message, "", "", true);
   message += "<input type='submit' name='config' value='Configure Dimmers'></form><br>";
 
   // xxxjack fixed number of dimmers, so no need for "new" form.
@@ -240,9 +285,7 @@ LissabonRemoteMod::handler() {
 String LissabonRemoteMod::info() {
 
   String message = "<p>";
-  for (auto d : dimmers) {
-    message += d->info();
-  }
+  message += dimmers.info();
   message += "See <a href='/bledimmer'>/bledimmer</a> to change settings or <a href='/api/bledimmer'>/api/bledimmer</a> for REST API.<br>";
   message += "</p>";
   return message;
@@ -251,19 +294,7 @@ String LissabonRemoteMod::info() {
 
 bool LissabonRemoteMod::getHandler(const char *path, JsonObject& reply) {
   // xxxjack need to distinguish between config and operational parameters
-  for (auto d : dimmers) {
-    String ident = "dimmer" + String(d->num);
-    JsonObject dimmerReply = reply.createNestedObject(ident);
-    d->getHandler(dimmerReply);
-  }
-#if 0
-  JsonObject dimmer1Reply = reply.createNestedObject("dimmer1");
-  dimmer1.getHandler(dimmer1Reply);
-#ifdef WITH_SECOND_DIMMER
-  JsonObject dimmer2Reply = reply.createNestedObject("dimmer2");
-  dimmer2.getHandler(dimmer2Reply);
-#endif
-#endif
+  dimmers.getHandler(reply);
   if (unknownDimmers.size()) {
     JsonArray unknownReply = reply.createNestedArray("unassigned");
     for (auto it : unknownDimmers) {
@@ -278,25 +309,7 @@ bool LissabonRemoteMod::putHandler(const char *path, const JsonVariant& request,
   bool anyChanged = false;
   JsonObject reqObj = request.as<JsonObject>();
   if (reqObj["scanUnknown"]|0) startScanUnknown();
-  for (auto d : dimmers) {
-    String ident = "dimmer" + String(d->num);
-    JsonVariant dimmerRequest = reqObj[ident];
-    if (dimmerRequest) {
-      if (d->putHandler(dimmerRequest)) anyChanged = true;
-    }
-  }
-#if 0
-  JsonVariant dimmer1Request = reqObj["dimmer1"];
-  if (dimmer1Request) {
-    if (dimmer1.putHandler(dimmer1Request)) anyChanged = true;
-  }
-#ifdef WITH_SECOND_DIMMER
-  JsonVariant dimmer2Request = reqObj["dimmer2"];
-  if (dimmer2Request) {
-    if (dimmer2.putHandler(dimmer2Request)) anyChanged = true;
-  }
-#endif
-#endif
+  dimmers.putHandler(request);
   if (anyChanged) {
     configSave();
   }
@@ -314,30 +327,12 @@ void LissabonRemoteMod::serverSetup() {
 
 void LissabonRemoteMod::configLoad() {
   IotsaConfigFileLoad cf("/config/bledimmer.cfg");
-  for (auto d : dimmers) {
-    String ident = "dimmer" + String(d->num);
-    d->configLoad(cf, ident);
-  }
-#if 0
-  dimmer1.configLoad(cf, "dimmer1'");
-#ifdef WITH_SECOND_DIMMER
-  dimmer2.configLoad(cf, "dimmer2");
-#endif // WITH_SECOND_DIMMER
-#endif
+  dimmers.configLoad(cf, "");
 }
 
 void LissabonRemoteMod::configSave() {
   IotsaConfigFileSave cf("/config/bledimmer.cfg");
-  for (auto d : dimmers) {
-    String ident = "dimmer" + String(d->num);
-    d->configSave(cf, ident);
-  }
-#if 0
-  dimmer1.configSave(cf, String(dimmer1.num));
-#ifdef WITH_SECOND_DIMMER
-  dimmer2.configSave(cf, String(dimmer2.num));
-#endif // WITH_SECOND_DIMMER
-#endif
+  dimmers.configSave(cf, "");
 }
 
 void LissabonRemoteMod::setup() {
@@ -388,12 +383,6 @@ void LissabonRemoteMod::loop() {
   for (auto d : dimmers) {
     d->loop();
   }
-#if 0
-  dimmer1.loop();
-#ifdef WITH_SECOND_DIMMER
-  dimmer2.loop();
-#endif
-#endif
 }
 
 // Instantiate the Led module, and install it in the framework
