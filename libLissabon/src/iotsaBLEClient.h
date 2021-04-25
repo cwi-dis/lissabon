@@ -5,6 +5,8 @@
 #include <BLEDevice.h>
 #include "iotsaBLEClientConnection.h"
 
+#include <set>
+
 typedef std::function<void(BLEAdvertisedDevice&)> BleDeviceFoundCallback;
 typedef const char *UUIDString;
 
@@ -21,6 +23,10 @@ public:
 #endif
   virtual void setup() override;
   virtual void serverSetup() override;
+  virtual void handler();
+  virtual void formHandler_fields(String& message, const String& text, const String& f_name, bool includeConfig);
+  virtual bool formHandler_args(IotsaWebServer *server, const String& f_name, bool includeConfig);
+
   virtual void loop() override;
   virtual String info() override { return ""; }
   void findUnknownDevices(bool on);
@@ -32,15 +38,17 @@ protected:
   std::map<std::string, IotsaBLEClientConnection*> devices;
   // These are all known devices by address
   std::map<std::string, IotsaBLEClientConnection *>devicesByAddress;
+  // These are all names of unknown devices
+  std::set<std::string> unknownDevices;
 public:
   IotsaBLEClientConnection* addDevice(std::string id);
-  IotsaBLEClientConnection* addDevice(String id);
+  IotsaBLEClientConnection* addDevice(String id) { return addDevice(std::string(id.c_str())); }
   IotsaBLEClientConnection* getDevice(std::string id);
-  IotsaBLEClientConnection* getDevice(String id);
+  IotsaBLEClientConnection* getDevice(String id) { return getDevice(std::string(id.c_str())); }
   void delDevice(std::string id);
-  void delDevice(String id);
+  void delDevice(String id) { delDevice(std::string(id.c_str())); }
   void deviceNotSeen(std::string id);
-  void deviceNotSeen(String id);
+  void deviceNotSeen(String id) { deviceNotSeen(std::string(id.c_str())); }
   bool canConnect();
 protected:
   void configLoad();
@@ -49,9 +57,11 @@ protected:
   void updateScanning();
   void startScanning();
   void stopScanning();
+  void startScanUnknown();
   static void scanComplete(BLEScanResults results);
   static IotsaBLEClientMod *scanningMod;
   bool scanForUnknownClients = false;
+  uint32_t scanUnknownUntilMillis = 0;
   bool shouldUpdateScan = false;
   BLEScan *scanner = NULL;
   BleDeviceFoundCallback callback = NULL;

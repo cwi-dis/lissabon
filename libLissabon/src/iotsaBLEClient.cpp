@@ -2,16 +2,27 @@
 #include "iotsaBLEClient.h"
 #include "iotsaConfigFile.h"
 
+//
+// IotsaBLEClientMod is intended to be used as a base class
+// for other modules (which will then save configurations, etc, for the 
+// devices the module is interested in). 
+//
+// But defining the following will allow IotsaBLEClient to be used to connect to generic
+// BLE devices.
+#undef IOTSA_BLE_GENERIC
+
+//
+// For debugging: define this to print all client advertisements received
 #undef DEBUG_PRINT_ALL_CLIENTS
 
 void IotsaBLEClientMod::configLoad() {
-#if 0
+#ifdef IOTSA_BLE_GENERIC
   IotsaConfigFileLoad cf("/config/bleclient.cfg");
   devices.clear();
   int nDevice;
   cf.get("nDevice", nDevice, 0);
   for (int i=0; i < nDevice; i++) {
-    String name = "device" + String(i);
+    String name = "bledevice." + String(i);
     String id;
     cf.get(name, id, "");
     if (id) {
@@ -20,20 +31,20 @@ void IotsaBLEClientMod::configLoad() {
       devices[idd] = conn;
     }
   }
-#endif
+#endif // IOTSA_BLE_GENERIC
 }
 
 void IotsaBLEClientMod::configSave() {
-#if 0
+#ifdef IOTSA_BLE_GENERIC
   IotsaConfigFileSave cf("/config/bleclient.cfg");
   cf.put("nDevice", (int)devices.size());
   int i = 0;
   for (auto it : devices) {
-    String name = "device" + String(i);
+    String name = "bledevice." + String(i);
     String id(it.first.c_str());
     cf.put(name, id);
   }
-#endif
+#endif // IOTSA_BLE_GENERIC
 }
 
 void IotsaBLEClientMod::setup() {
@@ -49,10 +60,50 @@ void IotsaBLEClientMod::setup() {
   scanner = NULL;
 }
 
+#ifdef IOTSA_WITH_WEB
+void
+IotsaBLEClientMod::handler() {
+#ifdef IOTSA_BLE_GENERIC
+  bool anyChanged = false;
+  anyChanged |= formHandler_args(server, "", true);
+  if (anyChanged) saveConfig();
+  String message = "<html><head><title>BLE Devices</title></head><body><h1>BLE Devices</h1>";
+
+  formHandler_fields(message, "BLE devices", "bledevice", true);
+
+  message += "<form><input type='submit' name='refresh' value='Refresh'></form>";
+  message += "</body></html>";
+  server->send(200, "text/html", message);
+#endif
+}
+
+void IotsaBLEClientMod::formHandler_fields(String& message, const String& text, const String& f_name, bool includeConfig) {
+  // xxxjack fixed number of dimmers, so no need for "new" form.
+
+  message += "<h2>Available Unknown/new " + text + " devices</h2>";
+  message += "<form><input type='submit' name='scanUnknown' value='Scan for 20 seconds'></form>";
+  if (unknownDevices.size() == 0) {
+    message += "<p>No unassigned BLE dimmer devices seen recently.</p>";
+  } else {
+    message += "<ul>";
+    for (auto it: unknownDevices) {
+      message += "<li>" + String(it.c_str()) + "</li>";
+    }
+    message += "</ul>";
+  }
+}
+
+bool IotsaBLEClientMod::formHandler_args(IotsaWebServer *server, const String& f_name, bool includeConfig) {
+  if (server->hasArg("scanUnknown")) startScanUnknown();
+  return false;
+}
+
+#endif // IOTSA_WITH_WEB
+
 bool IotsaBLEClientMod::getHandler(const char *path, JsonObject& reply) {
-  if (unknownDimmers.size()) {
+  if (unknownDevices.size()) {
     JsonArray unknownReply = reply.createNestedArray("unassigned");
-    for (auto it : unknownDimmers) {
+    for (auto it : unknownDevices) {
       unknownReply.add((char *)it.c_str());
     }
   }
@@ -73,6 +124,12 @@ bool IotsaBLEClientMod::putHandler(const char *path, const JsonVariant& request,
   return anyChanged;
 }
 
+void IotsaBLEClientMod::startScanUnknown() {
+  findUnknownDevices(true);
+  scanUnknownUntilMillis = millis() + 20000;
+  iotsaConfig.postponeSleep(21000);
+}
+
 void IotsaBLEClientMod::findUnknownDevices(bool on) {
   scanForUnknownClients = on;
   shouldUpdateScan = true;
@@ -81,7 +138,6 @@ void IotsaBLEClientMod::findUnknownDevices(bool on) {
 void IotsaBLEClientMod::updateScanning() {
   // We should be scanning if scanForUnknownClients is true or any of
   // our known devices does not have an address associated with it yet.
-  IotsaSerial.println("xxxjack updateScanning");
   bool shouldScan = scanForUnknownClients;
   if (!shouldScan) {
     for (auto it: devices) {
@@ -160,6 +216,10 @@ void IotsaBLEClientMod::setManufacturerFilter(uint16_t manufacturerID) {
 }
 
 void IotsaBLEClientMod::loop() {
+  if (scanUnknownUntilMillis != 0 && millis() > scanUnknownUntilMillis) {
+    findUnknownDevices(false);
+    scanUnknownUntilMillis = 0;
+  }
   if (shouldUpdateScan) {
     shouldUpdateScan = false;
     updateScanning();
@@ -221,20 +281,12 @@ IotsaBLEClientConnection* IotsaBLEClientMod::addDevice(std::string id) {
   return it->second;
 }
 
-IotsaBLEClientConnection* IotsaBLEClientMod::addDevice(String id) {
-  return addDevice(std::string(id.c_str()));
-}
-
 IotsaBLEClientConnection* IotsaBLEClientMod::getDevice(std::string id) {
   auto it = devices.find(id);
   if (it == devices.end()) {
     return NULL;
   }
   return it->second;
-}
-
-IotsaBLEClientConnection* IotsaBLEClientMod::getDevice(String id) {
-  return getDevice(std::string(id.c_str()));
 }
 
 void IotsaBLEClientMod::deviceNotSeen(std::string id) {
@@ -245,16 +297,8 @@ void IotsaBLEClientMod::deviceNotSeen(std::string id) {
   shouldUpdateScan = true; // We may want to start scanning again
 }
 
-void IotsaBLEClientMod::deviceNotSeen(String id) {
-  deviceNotSeen(std::string(id.c_str()));
-}
-
 void IotsaBLEClientMod::delDevice(std::string id) {
   shouldUpdateScan = true;  // We may be able to stop scanning
   devices.erase(id);
   configSave();
-}
-
-void IotsaBLEClientMod::delDevice(String id) {
-  delDevice(std::string(id.c_str()));
 }
