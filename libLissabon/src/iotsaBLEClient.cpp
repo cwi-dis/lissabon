@@ -58,7 +58,21 @@ void IotsaBLEClientMod::setup() {
   scanner->setInterval(155);
   scanner->setWindow(151);
   scanner = NULL;
+#ifdef IOTSA_BLE_GENERIC
+  //
+  // Setup callback so we are informaed of unknown dimmers.
+  //
+  auto callback = std::bind(&IotsaBLEClientMod::unknownBLEDeviceFound, this, std::placeholders::_1);
+  setUnknownDeviceFoundCallback(callback);
+#endif // IOTSA_BLE_GENERIC
 }
+
+#ifdef IOTSA_BLE_GENERIC
+void IotsaBLEClientMod::unknownBLEDeviceFound(BLEAdvertisedDevice& deviceAdvertisement) {
+  IFDEBUG IotsaSerial.printf("unknownBLEDeviceFound:  \"%s\"\n", deviceAdvertisement.getName().c_str());
+  unknownDevices.insert(deviceAdvertisement.getName());
+}
+#endif // IOTSA_BLE_GENERIC
 
 #ifdef IOTSA_WITH_WEB
 void
@@ -289,7 +303,7 @@ IotsaBLEClientConnection* IotsaBLEClientMod::getDevice(std::string id) {
   return it->second;
 }
 
-void IotsaBLEClientMod::deviceNotSeen(std::string id) {
+void IotsaBLEClientMod::deviceNotConnectable(std::string id) {
   IotsaBLEClientConnection *dev;
   dev = addDevice(id);
   if (dev == NULL) return;

@@ -109,7 +109,7 @@ void BLEDimmer::loop() {
   // If all that is correct, try to connect.
   if (!dimmer->connect()) {
     IotsaSerial.println("connect to dimmer failed");
-    bleClientMod.deviceNotSeen(name);
+    bleClientMod.deviceNotConnectable(name);
     return;
   }
   bool ok;

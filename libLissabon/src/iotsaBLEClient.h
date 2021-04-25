@@ -29,6 +29,23 @@ public:
 
   virtual void loop() override;
   virtual String info() override { return ""; }
+  //
+  // Interfaces for use by subclasses (or other classes with a reference)
+  // to control which BLE devices are known by this class
+  //
+  IotsaBLEClientConnection* addDevice(std::string id);
+  IotsaBLEClientConnection* addDevice(String id) { return addDevice(std::string(id.c_str())); }
+  IotsaBLEClientConnection* getDevice(std::string id);
+  IotsaBLEClientConnection* getDevice(String id) { return getDevice(std::string(id.c_str())); }
+  void delDevice(std::string id);
+  void delDevice(String id) { delDevice(std::string(id.c_str())); }
+  void deviceNotConnectable(std::string id);
+  void deviceNotConnectable(String id) { deviceNotConnectable(std::string(id.c_str())); }
+  bool canConnect();
+  //
+  // Interfaces to control which BLE devices are visible to this
+  // class (and any subclass)
+  //
   void findUnknownDevices(bool on);
   void setUnknownDeviceFoundCallback(BleDeviceFoundCallback _callback);
   void setServiceFilter(const BLEUUID& serviceUUID);
@@ -40,16 +57,6 @@ protected:
   std::map<std::string, IotsaBLEClientConnection *>devicesByAddress;
   // These are all names of unknown devices
   std::set<std::string> unknownDevices;
-public:
-  IotsaBLEClientConnection* addDevice(std::string id);
-  IotsaBLEClientConnection* addDevice(String id) { return addDevice(std::string(id.c_str())); }
-  IotsaBLEClientConnection* getDevice(std::string id);
-  IotsaBLEClientConnection* getDevice(String id) { return getDevice(std::string(id.c_str())); }
-  void delDevice(std::string id);
-  void delDevice(String id) { delDevice(std::string(id.c_str())); }
-  void deviceNotSeen(std::string id);
-  void deviceNotSeen(String id) { deviceNotSeen(std::string(id.c_str())); }
-  bool canConnect();
 protected:
   void configLoad();
   void configSave();
