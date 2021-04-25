@@ -148,9 +148,11 @@ LissabonRemoteMod::handler() {
   bool anyChanged = false;
   // xxxjack this also saves the config file if a non-config setting has been changed. Oh well...
   anyChanged |= dimmers.formHandler_args(server, "", true);
-  IotsaBLEClientMod::formHandler_args(server, "", true);
+  anyChanged |= IotsaBLEClientMod::formHandler_args(server, "", true);
   if (anyChanged) {
+    IotsaSerial.println("xxxjack saving remote config");
     configSave();
+    IotsaSerial.println("xxxjack saving remote config");
   }
   String message = "<html><head><title>BLE Dimmers</title></head><body><h1>BLE Dimmers</h1>";
   message += "<h2>Dimmer Settings</h2><form method='post'>";
@@ -294,6 +296,12 @@ void LissabonRemoteMod::loop() {
 
 // Instantiate our remote control module, and install it in the framework
 LissabonRemoteMod remoteMod(application);
+
+#if 1
+// For debugging configuration: allow backing up of all files
+#include "iotsaFilesBackup.h"
+IotsaFilesBackupMod backupMod(application);
+#endif
 
 // Standard setup() method, hands off most work to the application framework
 void setup(void){

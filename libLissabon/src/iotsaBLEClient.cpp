@@ -289,7 +289,10 @@ IotsaBLEClientConnection* IotsaBLEClientMod::addDevice(std::string id) {
     // Device with this ID doesn't exist yet. Add it.
     IotsaBLEClientConnection* dev = new IotsaBLEClientConnection(id);
     devices[id] = dev;
+#if 0
+    // xxxjack bad idea to save straight away... 
     configSave();
+#endif
     return dev;
   }
   shouldUpdateScan = true; // We probably want to scan for the new device
@@ -314,6 +317,9 @@ void IotsaBLEClientMod::deviceNotConnectable(std::string id) {
 
 void IotsaBLEClientMod::delDevice(std::string id) {
   shouldUpdateScan = true;  // We may be able to stop scanning
-  devices.erase(id);
-  configSave();
+  int nDeleted = devices.erase(id);
+#if 0
+  // xxxjack bad idea to save config stright away
+  if (nDeleted > 0) configSave();
+#endif
 }
