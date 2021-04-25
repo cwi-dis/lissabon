@@ -96,6 +96,7 @@ void IotsaBLEClientMod::formHandler_fields(String& message, const String& text, 
 
   message += "<h2>Available Unknown/new " + text + " devices</h2>";
   message += "<form><input type='submit' name='scanUnknown' value='Scan for 20 seconds'></form>";
+  message += "<form><input type='submit' name='refresh' value='Refresh'></form>";
   if (unknownDevices.size() == 0) {
     message += "<p>No unassigned BLE dimmer devices seen recently.</p>";
   } else {

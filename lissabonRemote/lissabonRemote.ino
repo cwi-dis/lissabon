@@ -153,11 +153,11 @@ LissabonRemoteMod::handler() {
     configSave();
   }
   String message = "<html><head><title>BLE Dimmers</title></head><body><h1>BLE Dimmers</h1>";
-  message += "<h2>Dimmer Settings</h2><form>";
+  message += "<h2>Dimmer Settings</h2><form method='post'>";
   dimmers.formHandler_fields(message, "", "", false);
   message += "<input type='submit' name='set' value='Set Dimmers'></form><br>";
 
-  message += "<h2>Dimmer Configuration</h2><form>";
+  message += "<h2>Dimmer Configuration</h2><form method='post'>";
   dimmers.formHandler_fields(message, "", "", true);
   message += "<input type='submit' name='config' value='Configure Dimmers'></form><br>";
 
@@ -198,6 +198,7 @@ bool LissabonRemoteMod::putHandler(const char *path, const JsonVariant& request,
 void LissabonRemoteMod::serverSetup() {
 #ifdef IOTSA_WITH_WEB
   server->on("/bledimmer", std::bind(&LissabonRemoteMod::handler, this));
+  server->on("/bledimmer", HTTP_POST,std::bind(&LissabonRemoteMod::handler, this));
 #endif
   api.setup("/api/bledimmer", true, true);
   name = "bledimmer";
