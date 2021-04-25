@@ -58,7 +58,6 @@ Input* inputs[] = {
 IotsaInputMod touchMod(application, inputs, sizeof(inputs)/sizeof(inputs[0]));
 
 #include "iotsaBLEClient.h"
-IotsaBLEClientMod bleClientMod(application);
 
 #include "DimmerCollection.h"
 #include "BLEDimmer.h"
@@ -66,28 +65,28 @@ IotsaBLEClientMod bleClientMod(application);
 
 using namespace Lissabon;
 
-class LissabonRemoteMod : public IotsaApiMod, public DimmerCallbacks {
+class LissabonRemoteMod : public IotsaBLEClientMod, public DimmerCallbacks {
 public:
   LissabonRemoteMod(IotsaApplication &_app, IotsaAuthenticationProvider *_auth=NULL)
-  : IotsaRestApiMod(_app, _auth)
+  : IotsaBLEClientMod(_app, _auth)
   {
-    BLEDimmer *dimmer = new BLEDimmer(1, bleClientMod, this);
+    BLEDimmer *dimmer = new BLEDimmer(1, *this, this);
     dimmers.push_back(dimmer);
   #ifdef WITH_SECOND_DIMMER
-    dimmer = new BLEDimmer(2, bleClientMod, this);
+    dimmer = new BLEDimmer(2, *this, this);
     dimmers.push_back(dimmer);
   #endif
   }
-  void setup();
-  void serverSetup();
-  String info();
-  void configLoad();
-  void configSave();
-  void loop();
+  void setup() override;
+  void serverSetup() override;
+  String info() override;
+  void configLoad() override;
+  void configSave() override;
+  void loop() override;
 
 protected:
-  bool getHandler(const char *path, JsonObject& reply);
-  bool putHandler(const char *path, const JsonVariant& request, JsonObject& reply);
+  bool getHandler(const char *path, JsonObject& reply) override;
+  bool putHandler(const char *path, const JsonVariant& request, JsonObject& reply) override;
   void unknownDeviceFound(BLEAdvertisedDevice& deviceAdvertisement);
 private:
   void uiButtonChanged();
@@ -120,7 +119,7 @@ void LissabonRemoteMod::ledOff() {
 }
 
 void LissabonRemoteMod::startScanUnknown() {
-  bleClientMod.findUnknownDevices(true);
+  findUnknownDevices(true);
   scanUnknownUntilMillis = millis() + 20000;
   iotsaConfig.postponeSleep(21000);
 }
@@ -169,8 +168,11 @@ LissabonRemoteMod::handler() {
   if (anyChanged) {
     configSave();
   }
+#if 0
+  bleClientMod.formHandler_args(server, "", true);
+#else
   if (server->hasArg("scanUnknown")) startScanUnknown();
-
+#endif
   String message = "<html><head><title>BLE Dimmers</title></head><body><h1>BLE Dimmers</h1>";
   message += "<h2>Dimmer Settings</h2><form>";
   dimmers.formHandler_fields(message, "", "", false);
@@ -211,22 +213,16 @@ String LissabonRemoteMod::info() {
 
 bool LissabonRemoteMod::getHandler(const char *path, JsonObject& reply) {
   // xxxjack need to distinguish between config and operational parameters
+  IotsaBLEClientMod::getHandler(path, reply);
   dimmers.getHandler(reply);
-  if (unknownDimmers.size()) {
-    JsonArray unknownReply = reply.createNestedArray("unassigned");
-    for (auto it : unknownDimmers) {
-      unknownReply.add((char *)it.c_str());
-    }
-  }
   return true;
 }
 
 bool LissabonRemoteMod::putHandler(const char *path, const JsonVariant& request, JsonObject& reply) {
   // xxxjack need to distinguish between config and operational parameters
   bool anyChanged = false;
-  JsonObject reqObj = request.as<JsonObject>();
-  if (reqObj["scanUnknown"]|0) startScanUnknown();
-  dimmers.putHandler(request);
+  anyChanged = IotsaBLEClientMod::putHandler(path, request, reply);
+  anyChanged |= dimmers.putHandler(request);
   if (anyChanged) {
     configSave();
   }
@@ -243,16 +239,19 @@ void LissabonRemoteMod::serverSetup() {
 
 
 void LissabonRemoteMod::configLoad() {
+  // IotsaBLEClientMod::configLoad();
   IotsaConfigFileLoad cf("/config/bledimmer.cfg");
   dimmers.configLoad(cf, "");
 }
 
 void LissabonRemoteMod::configSave() {
+  // IotsaBLEClientMod::configSave();
   IotsaConfigFileSave cf("/config/bledimmer.cfg");
   dimmers.configSave(cf, "");
 }
 
 void LissabonRemoteMod::setup() {
+  IotsaBLEClientMod::setup();
   configLoad();
   iotsaConfig.allowRCMDescription("tap any touchpad 4 times");
 #ifdef LED_PIN
@@ -272,8 +271,8 @@ void LissabonRemoteMod::setup() {
 #endif // WITH_SECOND_DIMMER
 
   auto callback = std::bind(&LissabonRemoteMod::unknownDeviceFound, this, std::placeholders::_1);
-  bleClientMod.setUnknownDeviceFoundCallback(callback);
-  bleClientMod.setServiceFilter(Lissabon::Dimmer::serviceUUID);
+  setUnknownDeviceFoundCallback(callback);
+  setServiceFilter(Lissabon::Dimmer::serviceUUID);
   ledOff();
 }
 
@@ -292,7 +291,7 @@ void LissabonRemoteMod::loop() {
   { static uint32_t last; if (millis() > last+1000) { iotsaConfig.printHeapSpace(); last = millis(); }}
 #endif
   if (scanUnknownUntilMillis != 0 && millis() > scanUnknownUntilMillis) {
-    bleClientMod.findUnknownDevices(false);
+    findUnknownDevices(false);
     scanUnknownUntilMillis = 0;
   }
   // See whether we have a value to save (because the user has been turning the dimmer)

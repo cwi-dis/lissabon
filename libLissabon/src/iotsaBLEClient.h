@@ -8,14 +8,21 @@
 typedef std::function<void(BLEAdvertisedDevice&)> BleDeviceFoundCallback;
 typedef const char *UUIDString;
 
-class IotsaBLEClientMod : public IotsaMod, public BLEAdvertisedDeviceCallbacks {
+class IotsaBLEClientMod : public IotsaApiMod, public BLEAdvertisedDeviceCallbacks {
 public:
-  IotsaBLEClientMod(IotsaApplication& app) : IotsaMod(app) {}
-  using IotsaMod::IotsaMod;
-  void setup();
-  void serverSetup();
-  void loop();
-  String info() { return ""; }
+  //xxxjack IotsaBLEClientMod(IotsaApplication& app) : IotsaApiMod(app) {}
+  using IotsaApiMod::IotsaApiMod;
+  virtual ~IotsaBLEClientMod() {}
+  virtual bool getHandler(const char *path, JsonObject& reply) override;
+  virtual bool putHandler(const char *path, const JsonVariant& request, JsonObject& reply) override;
+#if 0
+  bool formHandler_args(IotsaWebServer *server, const String& f_name, bool includeConfig) override;
+  void formHandler_fields(String& message, const String& text, const String& f_name, bool includeConfig) override;
+#endif
+  virtual void setup() override;
+  virtual void serverSetup() override;
+  virtual void loop() override;
+  virtual String info() override { return ""; }
   void findUnknownDevices(bool on);
   void setUnknownDeviceFoundCallback(BleDeviceFoundCallback _callback);
   void setServiceFilter(const BLEUUID& serviceUUID);

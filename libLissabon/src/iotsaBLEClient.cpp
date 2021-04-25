@@ -49,6 +49,30 @@ void IotsaBLEClientMod::setup() {
   scanner = NULL;
 }
 
+bool IotsaBLEClientMod::getHandler(const char *path, JsonObject& reply) {
+  if (unknownDimmers.size()) {
+    JsonArray unknownReply = reply.createNestedArray("unassigned");
+    for (auto it : unknownDimmers) {
+      unknownReply.add((char *)it.c_str());
+    }
+  }
+  return true;
+}
+bool IotsaBLEClientMod::putHandler(const char *path, const JsonVariant& request, JsonObject& reply) {
+  bool anyChanged = false;
+  JsonObject reqObj = request.as<JsonObject>();
+  if (reqObj["scanUnknown"]|0) {
+    anyChanged = true;
+    startScanUnknown();
+  }
+#if 0
+  if (anyChanged) {
+    configSave();
+  }
+#endif
+  return anyChanged;
+}
+
 void IotsaBLEClientMod::findUnknownDevices(bool on) {
   scanForUnknownClients = on;
   shouldUpdateScan = true;
