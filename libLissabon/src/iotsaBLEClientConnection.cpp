@@ -95,7 +95,41 @@ bool IotsaBLEClientConnection::getAsBuffer(BLEUUID& serviceUUID, BLEUUID& charUU
   *sizep = value.length();
   return true;
 }
+bool IotsaBLEClientConnection::get(BLEUUID& serviceUUID, BLEUUID& charUUID, uint8_t& value) {
+  size_t size;
+  uint8_t *ptr;
+  if (!getAsBuffer(serviceUUID, charUUID, &ptr, &size)) return false;
+  if (size != sizeof(uint8_t)) return false;
+  value = *(uint8_t *)ptr;
+  return true;
+}
 
+bool IotsaBLEClientConnection::get(BLEUUID& serviceUUID, BLEUUID& charUUID, uint16_t& value) {
+  size_t size;
+  uint8_t *ptr;
+  if (!getAsBuffer(serviceUUID, charUUID, &ptr, &size)) return false;
+  if (size != sizeof(uint16_t)) return false;
+  value = *(uint16_t *)ptr;
+  return true;
+}
+
+bool IotsaBLEClientConnection::get(BLEUUID& serviceUUID, BLEUUID& charUUID, uint32_t& value) {
+  size_t size;
+  uint8_t *ptr;
+  if (!getAsBuffer(serviceUUID, charUUID, &ptr, &size)) return false;
+  if (size != sizeof(uint32_t)) return false;
+  value = *(uint32_t *)ptr;
+  return true;
+}
+
+bool IotsaBLEClientConnection::get(BLEUUID& serviceUUID, BLEUUID& charUUID, std::string& value) {
+  size_t size;
+  uint8_t *ptr;
+  if (!getAsBuffer(serviceUUID, charUUID, &ptr, &size)) return false;
+  value = std::string((const char *)ptr, size);
+  return true;
+}
+#ifdef oldapi
 int IotsaBLEClientConnection::getAsInt(BLEUUID& serviceUUID, BLEUUID& charUUID) {
   size_t size;
   uint8_t *ptr;
@@ -115,6 +149,7 @@ std::string IotsaBLEClientConnection:: getAsString(BLEUUID& serviceUUID, BLEUUID
   if (!getAsBuffer(serviceUUID, charUUID, &ptr, &size)) return "";
   return std::string((const char *)ptr, size);
 }
+#endif // oldapi
 
 static BleNotificationCallback _staticCallback;
 
