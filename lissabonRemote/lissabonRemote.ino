@@ -255,6 +255,7 @@ void LissabonRemoteMod::setup() {
   //
   auto callback = std::bind(&LissabonRemoteMod::unknownBLEDimmerFound, this, std::placeholders::_1);
   setUnknownDeviceFoundCallback(callback);
+  setDuplicateNameFilter(true);
   setServiceFilter(Lissabon::Dimmer::serviceUUID);
   ledOff();
 }

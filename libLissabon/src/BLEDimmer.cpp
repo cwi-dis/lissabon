@@ -79,7 +79,7 @@ void BLEDimmer::loop() {
       disconnectAtMillis = 0;
       IotsaBLEClientConnection *dimmer = bleClientMod.getDevice(name);
       if (dimmer) {
-        IFDEBUG IotsaSerial.println("xxxjack disconnecting");
+        IFDEBUG IotsaSerial.printf("BLEDimmer: delayed disconnect %s\n", dimmer->getName().c_str());
         dimmer->disconnect();
       }
     }
@@ -105,32 +105,36 @@ void BLEDimmer::loop() {
     return;
   }
   // If we are scanning we don't try to connect
-  if (!bleClientMod.canConnect()) return;
+  if (!bleClientMod.canConnect()) {
+    IotsaSerial.println("BLEDimmer: BLE busy, cannot connect");
+    return;
+  }
   // If all that is correct, try to connect.
   if (!dimmer->connect()) {
-    IotsaSerial.println("connect to dimmer failed");
+    IotsaSerial.printf("BLEDimmer: connect to %s failed\n", dimmer->getName().c_str());
     bleClientMod.deviceNotConnectable(name);
     return;
   }
+  IFDEBUG IotsaSerial.printf("BLEDimmer: connected to %s\n", dimmer->getName().c_str());
   bool ok;
 #ifdef DIMMER_WITH_LEVEL
   // Connected to dimmer.
   int levelValue = level * ((1<<sizeof(Lissabon::Dimmer::Type_brightness)*8)-1);
-  IFDEBUG IotsaSerial.printf("xxxjack Transmit brightness %d\n", levelValue);
+  IFDEBUG IotsaSerial.printf("BLEDimmer: Transmit brightness %d\n", levelValue);
   ok = dimmer->set(Lissabon::Dimmer::serviceUUID, Lissabon::Dimmer::brightnessUUID, (Lissabon::Dimmer::Type_brightness)levelValue);
   if (!ok) {
-    IFDEBUG IotsaSerial.println("BLE: set(brightness) failed");
+    IFDEBUG IotsaSerial.println("BLEDimmer: set(brightness) failed");
   }
 #endif
 #ifdef DIMMER_WITH_TEMPERATURE
   int temperatureValue = temperature;
-  IFDEBUG IotsaSerial.printf("xxxjack Transmit temperature %d\n", temperatureValue);
+  IFDEBUG IotsaSerial.printf("BLEDimmer: Transmit temperature %d\n", temperatureValue);
   ok = dimmer->set(Lissabon::Dimmer::serviceUUID, Lissabon::Dimmer::temperatureUUID, (Lissabon::Dimmer::Type_temperature)temperatureValue);
   if (!ok) {
     IFDEBUG IotsaSerial.println("BLE: set(brightness) failed");
   }
 #endif // DIMMER_WITH_TEMPERATURE
-  IFDEBUG IotsaSerial.printf("xxxjack Transmit ison %d\n", (int)isOn);
+  IFDEBUG IotsaSerial.printf("BLEDimmer: Transmit ison %d\n", (int)isOn);
   ok = dimmer->set(Lissabon::Dimmer::serviceUUID, Lissabon::Dimmer::isOnUUID, (Lissabon::Dimmer::Type_isOn)isOn);
   if (!ok) {
     IFDEBUG IotsaSerial.println("BLE: set(isOn) failed");
@@ -138,8 +142,9 @@ void BLEDimmer::loop() {
 #ifdef IOTSA_BLEDIMMER_KEEPOPEN_MILLIS
   disconnectAtMillis = millis() + IOTSA_BLEDIMMER_KEEPOPEN_MILLIS;
   iotsaConfig.postponeSleep(IOTSA_BLEDIMMER_KEEPOPEN_MILLIS+100);
+  IFDEBUG IotsaSerial.println("BLEDimmer: keepopen");
 #else
-  IFDEBUG IotsaSerial.println("xxxjack disconnecting");
+  IFDEBUG IotsaSerial.printf("BLEDimmer: disconnecting %s", dimmer->getName().c_str());
   dimmer->disconnect();
 #endif
   needTransmit = false;

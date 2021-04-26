@@ -221,6 +221,10 @@ void IotsaBLEClientMod::setUnknownDeviceFoundCallback(BleDeviceFoundCallback _ca
   callback = _callback;
 }
 
+void IotsaBLEClientMod::setDuplicateNameFilter(bool noDuplicateNames) {
+  duplicateNameFilter = noDuplicateNames;
+}
+
 void IotsaBLEClientMod::setServiceFilter(const BLEUUID& serviceUUID) {
   if (serviceFilter) delete serviceFilter;
   serviceFilter = new BLEUUID(serviceUUID);
@@ -270,6 +274,8 @@ void IotsaBLEClientMod::onResult(BLEAdvertisedDevice advertisedDevice) {
   }
   // Do we want callbacks for unknown devices?
   if (callback == NULL) return;
+  // Have we seen this unknown device before?
+  if ( duplicateNameFilter && unknownDevices.find(advertisedDevice.getName()) != unknownDevices.end()) return;
   // Do we filter on services?
   if (serviceFilter != NULL) {
     if (!advertisedDevice.isAdvertisingService(*serviceFilter)) return;
