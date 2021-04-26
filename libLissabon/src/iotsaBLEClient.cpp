@@ -255,9 +255,10 @@ void IotsaBLEClientMod::onResult(BLEAdvertisedDevice advertisedDevice) {
   auto it = devices.find(deviceName);
   if (it != devices.end()) {
     auto dev = it->second;
-    bool changed = dev->setDevice(advertisedDevice);
+    bool changed = dev->receivedAdvertisement(advertisedDevice);
     if (changed) {
       devicesByAddress[advertisedDevice.getAddress().toString()] = dev;
+      IFDEBUG IotsaSerial.printf("BLEClientMod: advertisement update byname for %s\n", deviceName.c_str());
     }
     shouldUpdateScan = true; // We may have found what we were looking for
     return;
@@ -265,9 +266,10 @@ void IotsaBLEClientMod::onResult(BLEAdvertisedDevice advertisedDevice) {
   auto it2 = devicesByAddress.find(advertisedDevice.getAddress().toString());
   if (it2 != devicesByAddress.end()) {
     auto dev = it->second;
-    bool changed = dev->setDevice(advertisedDevice);
+    bool changed = dev->receivedAdvertisement(advertisedDevice);
     if (changed) {
       devicesByAddress[advertisedDevice.getAddress().toString()] = dev;
+      IFDEBUG IotsaSerial.printf("BLEClientMod: advertisement update byaddress for %s\n", deviceName.c_str());
     }
     shouldUpdateScan = true; // We may have found what we were looking for
     return;

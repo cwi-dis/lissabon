@@ -16,7 +16,7 @@ bool BLEDimmer::available() {
 }
 
 void BLEDimmer::updateDimmer() {
-  needTransmit = true;
+  needSyncToDevice = true;
   needTransmitTimeoutAtMillis = millis() + IOTSA_BLEDIMMER_CONNECT_TIMEOUT;
   callbacks->dimmerValueChanged();
 }
@@ -71,7 +71,7 @@ void BLEDimmer::setup() {
 
 void BLEDimmer::loop() {
   // If we don't have anything to transmit we bail out quickly...
-  if (!needTransmit) {
+  if (!needSyncToDevice && !needSyncFromDevice) {
 #ifdef IOTSA_BLEDIMMER_KEEPOPEN_MILLIS
 
     // But we first disconnect if we are connected-idle for long enough.
@@ -86,19 +86,21 @@ void BLEDimmer::loop() {
   #endif
     return;
   }
-  // We have something to transmit. Check whether our dimmer actually exists.
+  // We have something to transmit/receive. Check whether our dimmer actually exists.
   IotsaBLEClientConnection *dimmer = bleClientMod.getDevice(name);
   if (dimmer == NULL) {
-    IFDEBUG IotsaSerial.printf("Skip xmit to nonexistent dimmer %d %s\n", num, name.c_str());
-    needTransmit = false;
+    IFDEBUG IotsaSerial.printf("BLEDimmer: Skip connection to nonexistent dimmer %d %s\n", num, name.c_str());
+    needSyncToDevice = false;
+    needSyncFromDevice = false;
     return;
   }
   // If it exists, check that we have enough information to connect.
   if (!dimmer->available()) {
     //IotsaSerial.println("xxxjack dimmer not available");
     if (millis() > needTransmitTimeoutAtMillis) {
-      IotsaSerial.println("Giving up on connecting to dimmer");
-      needTransmit = false;
+      IotsaSerial.println("BLEDimmer: Giving up on connecting to dimmer");
+      needSyncToDevice = false;
+      needSyncFromDevice = false;
       return;
     }
     // iotsaBLEClient should be listening for advertisements
@@ -116,6 +118,25 @@ void BLEDimmer::loop() {
     return;
   }
   IFDEBUG IotsaSerial.printf("BLEDimmer: connected to %s\n", dimmer->getName().c_str());
+  
+  if (needSyncToDevice) {
+    syncToDevice(dimmer);
+  }
+  if (needSyncFromDevice) {
+    syncFromDevice(dimmer);
+  }
+
+#ifdef IOTSA_BLEDIMMER_KEEPOPEN_MILLIS
+  disconnectAtMillis = millis() + IOTSA_BLEDIMMER_KEEPOPEN_MILLIS;
+  iotsaConfig.postponeSleep(IOTSA_BLEDIMMER_KEEPOPEN_MILLIS+100);
+  IFDEBUG IotsaSerial.println("BLEDimmer: keepopen");
+#else
+  IFDEBUG IotsaSerial.printf("BLEDimmer: disconnecting %s", dimmer->getName().c_str());
+  dimmer->disconnect();
+#endif
+}
+
+void BLEDimmer::syncToDevice(IotsaBLEClientConnection *dimmer) {
   bool ok;
 #ifdef DIMMER_WITH_LEVEL
   // Connected to dimmer.
@@ -139,14 +160,11 @@ void BLEDimmer::loop() {
   if (!ok) {
     IFDEBUG IotsaSerial.println("BLE: set(isOn) failed");
   }
-#ifdef IOTSA_BLEDIMMER_KEEPOPEN_MILLIS
-  disconnectAtMillis = millis() + IOTSA_BLEDIMMER_KEEPOPEN_MILLIS;
-  iotsaConfig.postponeSleep(IOTSA_BLEDIMMER_KEEPOPEN_MILLIS+100);
-  IFDEBUG IotsaSerial.println("BLEDimmer: keepopen");
-#else
-  IFDEBUG IotsaSerial.printf("BLEDimmer: disconnecting %s", dimmer->getName().c_str());
-  dimmer->disconnect();
-#endif
-  needTransmit = false;
+  needSyncToDevice = false;
 }
+
+void BLEDimmer::syncFromDevice(IotsaBLEClientConnection *dimmer) {
+
+}
+
 }

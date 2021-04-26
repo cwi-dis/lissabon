@@ -9,7 +9,7 @@ class IotsaBLEClientConnection {
   friend class IotsaBLEClientMod;
 public:
   IotsaBLEClientConnection(std::string& _name, std::string _address="");
-  bool setDevice(BLEAdvertisedDevice& _device);
+  bool receivedAdvertisement(BLEAdvertisedDevice& _device);
   void clearDevice();
   bool available();
   bool connect();

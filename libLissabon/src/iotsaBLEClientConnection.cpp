@@ -18,7 +18,7 @@ std::string IotsaBLEClientConnection::getAddress() {
   return address.toString();
 }
 
-bool IotsaBLEClientConnection::setDevice(BLEAdvertisedDevice& _device) {
+bool IotsaBLEClientConnection::receivedAdvertisement(BLEAdvertisedDevice& _device) {
   // Check whether the address is the same, then we don't have to add anything.
   if (addressValid && _device.getAddressType() == addressType && _device.getAddress().equals(address)) {
     return false;

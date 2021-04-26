@@ -17,6 +17,7 @@ public:
   : AbstractDimmer(_num, _callbacks), 
     bleClientMod(_bleClientMod)
   {}
+  void followDimmerChanges(bool follow) { listenForDeviceChanges = true; }
   void updateDimmer();
   bool available();
   bool setName(String value);
@@ -27,11 +28,14 @@ public:
   virtual void getHandler(JsonObject& reply) override;
   virtual void formHandler_fields(String& message, const String& text, const String& f_name, bool includeConfig) override;
 protected:
-
+  void syncToDevice(IotsaBLEClientConnection *dimmer);
+  void syncFromDevice(IotsaBLEClientConnection *dimmer);
   IotsaBLEClientMod& bleClientMod;
-  bool needTransmit;
-  uint32_t needTransmitTimeoutAtMillis;
-  uint32_t disconnectAtMillis;
+  bool listenForDeviceChanges = false;
+  bool needSyncToDevice = false;
+  bool needSyncFromDevice = false;
+  uint32_t needTransmitTimeoutAtMillis = 0;
+  uint32_t disconnectAtMillis = 0;
 };
 };
 #endif // _BLEDIMMER_H_
