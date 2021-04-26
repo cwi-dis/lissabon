@@ -157,6 +157,7 @@ void IotsaBLEClientMod::updateScanning() {
   if (!shouldScan) {
     for (auto it: devices) {
       if (!it.second->available()) {
+        IotsaSerial.printf("BLE scan required for %s\n", it.second->getName().c_str());
         shouldScan = true;
         break;
       }
