@@ -71,9 +71,11 @@ public:
   : IotsaBLEClientMod(_app, _auth)
   {
     BLEDimmer *dimmer = new BLEDimmer(1, *this, this);
+    dimmer->followDimmerChanges(true);
     dimmers.push_back(dimmer);
   #ifdef WITH_SECOND_DIMMER
     dimmer = new BLEDimmer(2, *this, this);
+    dimmer->followDimmerChanges(true);
     dimmers.push_back(dimmer);
   #endif
   }
@@ -257,6 +259,12 @@ void LissabonRemoteMod::setup() {
   setUnknownDeviceFoundCallback(callback);
   setDuplicateNameFilter(true);
   setServiceFilter(Lissabon::Dimmer::serviceUUID);
+  //
+  // Setup dimmers by getting current settings from BLE devices
+  //
+  for (auto d : dimmers) {
+    d->setup();
+  }
   ledOff();
 }
 

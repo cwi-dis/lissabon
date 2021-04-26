@@ -17,7 +17,7 @@ public:
   : AbstractDimmer(_num, _callbacks), 
     bleClientMod(_bleClientMod)
   {}
-  void followDimmerChanges(bool follow) { listenForDeviceChanges = true; }
+  void followDimmerChanges(bool follow);
   void updateDimmer();
   bool available();
   bool setName(String value);

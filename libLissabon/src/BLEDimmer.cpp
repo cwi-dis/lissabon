@@ -67,8 +67,20 @@ void BLEDimmer::getHandler(JsonObject& reply) {
 }
 
 void BLEDimmer::setup() {
+  if (listenForDeviceChanges) {
+    needSyncFromDevice = listenForDeviceChanges;
+    needTransmitTimeoutAtMillis = millis() + IOTSA_BLEDIMMER_CONNECT_TIMEOUT;
+  }
 }
 
+void BLEDimmer::followDimmerChanges(bool follow) { 
+  listenForDeviceChanges = follow; 
+  if (listenForDeviceChanges) {
+    needSyncFromDevice = listenForDeviceChanges;
+    needTransmitTimeoutAtMillis = millis() + IOTSA_BLEDIMMER_CONNECT_TIMEOUT;
+  }
+}
+ 
 void BLEDimmer::loop() {
   // If we don't have anything to transmit we bail out quickly...
   if (!needSyncToDevice && !needSyncFromDevice) {
@@ -98,7 +110,7 @@ void BLEDimmer::loop() {
   if (!dimmer->available()) {
     //IotsaSerial.println("xxxjack dimmer not available");
     if (millis() > needTransmitTimeoutAtMillis) {
-      IotsaSerial.println("BLEDimmer: Giving up on connecting to dimmer");
+      IotsaSerial.printf("BLEDimmer: Giving up on connecting to %s\n", name.c_str());
       needSyncToDevice = false;
       needSyncFromDevice = false;
       return;
@@ -152,19 +164,20 @@ void BLEDimmer::syncToDevice(IotsaBLEClientConnection *dimmer) {
   IFDEBUG IotsaSerial.printf("BLEDimmer: Transmit temperature %d\n", temperatureValue);
   ok = dimmer->set(Lissabon::Dimmer::serviceUUID, Lissabon::Dimmer::temperatureUUID, (Lissabon::Dimmer::Type_temperature)temperatureValue);
   if (!ok) {
-    IFDEBUG IotsaSerial.println("BLE: set(brightness) failed");
+    IFDEBUG IotsaSerial.println("BLEDimmer: set(temperature) failed");
   }
 #endif // DIMMER_WITH_TEMPERATURE
   IFDEBUG IotsaSerial.printf("BLEDimmer: Transmit ison %d\n", (int)isOn);
   ok = dimmer->set(Lissabon::Dimmer::serviceUUID, Lissabon::Dimmer::isOnUUID, (Lissabon::Dimmer::Type_isOn)isOn);
   if (!ok) {
-    IFDEBUG IotsaSerial.println("BLE: set(isOn) failed");
+    IFDEBUG IotsaSerial.println("BLEDimmer: set(isOn) failed");
   }
   needSyncToDevice = false;
 }
 
 void BLEDimmer::syncFromDevice(IotsaBLEClientConnection *dimmer) {
-
+  IotsaSerial.printf("xxxjack syncFromDevice not yet implemented\n");
+  needSyncFromDevice = false;
 }
 
 }
