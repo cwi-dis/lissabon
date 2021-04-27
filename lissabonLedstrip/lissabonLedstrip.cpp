@@ -44,8 +44,9 @@ IotsaBLEServerMod bleserverMod(application);
 
 #include "iotsaBattery.h"
 #define PIN_DISABLESLEEP 0
-//#define PIN_VBAT 37
-//#define VBAT_100_PERCENT (12.0/11.0) // 100K and 1M resistors divide by 11, not 10...
+#define PIN_VBAT 35
+#define VBAT_100_PERCENT (12.7/10.0) // 100K and 1M resistors divide by 11, not 10...
+#define VBAT_0_PERCENT (10.5/10.0) // 100K and 1M resistors divide by 11, not 10...
 IotsaBatteryMod batteryMod(application);
 
 #include "iotsaPixelstrip.h"
@@ -216,7 +217,7 @@ void LissabonLedstripMod::setup() {
   // Allow switching the dimmer to iotsa config mode over BLE or with taps
   batteryMod.allowBLEConfigModeSwitch();
 #ifdef PIN_VBAT
-  batteryMod.setPinVBat(PIN_VBAT, VBAT_100_PERCENT);
+  batteryMod.setPinVBat(PIN_VBAT, VBAT_100_PERCENT, VBAT_0_PERCENT);
 #endif
 #ifdef PIN_DISABLESLEEP
   batteryMod.setPinDisableSleep(PIN_DISABLESLEEP);
