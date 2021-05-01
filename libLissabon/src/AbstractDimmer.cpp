@@ -94,6 +94,10 @@ bool AbstractDimmer::formHandler_args(IotsaWebServer *server, const String& f_na
   bool anyChanged = false;
   String n_isOn = f_name + ".isOn";
   String n_level = f_name + ".level";
+  String n_identify = f_name + ".identify";
+  if (server->hasArg(n_identify) && server->arg(n_identify).toInt()) {
+    identify();
+  }
   if (server->hasArg(n_isOn)) {
     int val = server->arg(n_isOn).toInt();
     if (val != isOn) {
@@ -240,6 +244,7 @@ void AbstractDimmer::formHandler_fields(String& message, const String& text, con
   message += text;
   if (!available()) message += " <em>(dimmer may be unavailable)</em>";
   message += "<br>";
+  message += "<input type='checkbox' name='" + f_name + ".identify' value='1'>Identify (two rapid flashes)<br>";
   String checkedOn = isOn ? "checked" : "";
   String checkedOff = !isOn ? "checked " : "";
   message += "<input type='radio' name='" + f_name +".isOn'" + checkedOff + " value='0'>Off <input type='radio' " + checkedOn + " name='" + f_name + ".isOn' value='1'>On</br>";
