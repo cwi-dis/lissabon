@@ -78,7 +78,7 @@ IotsaBLEDimmerMod::handler() {
   }
 
   String message = "<html><head><title>BLE Dimmers</title></head><body><h1>BLE Dimmers</h1>";
-  message += "<h2>Settings</h2><form>";
+  message += "<h2>Settings</h2><form method='post'>";
   dimmer.formHandler_fields(message, "dimmer", "dimmer", true);
   message += "<input type='submit' name='set' value='Submit'></form>";
 
@@ -117,6 +117,7 @@ bool IotsaBLEDimmerMod::putHandler(const char *path, const JsonVariant& request,
 
 void IotsaBLEDimmerMod::serverSetup() {
   server->on("/bledimmer", std::bind(&IotsaBLEDimmerMod::handler, this));
+  server->on("/bledimmer", HTTP_POST, std::bind(&IotsaBLEDimmerMod::handler, this));
   api.setup("/api/bledimmer", true, true);
   name = "bledimmer";
 }

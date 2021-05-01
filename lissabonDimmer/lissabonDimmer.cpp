@@ -168,7 +168,7 @@ LissabonDimmerMod::handler() {
   }
   
   String message = "<html><head><title>Dimmer</title></head><body><h1>Dimmer</h1>";
-  message += "<h2>Settings</h2><form>";
+  message += "<h2>Settings</h2><form method='post'>";
   dimmer.formHandler_fields(message, "dimmer", "dimmer", true);
   message += "<input type='submit' name='set' value='Submit'></form>";
   message += "</body></html>";
@@ -214,6 +214,7 @@ void LissabonDimmerMod::serverSetup() {
   // Setup the web server hooks for this module.
 #ifdef IOTSA_WITH_WEB
   server->on("/dimmer", std::bind(&LissabonDimmerMod::handler, this));
+  server->on("/dimmer", HTTP_POST, std::bind(&LissabonDimmerMod::handler, this));
 #endif // IOTSA_WITH_WEB
   api.setup("/api/dimmer", true, true);
   name = "dimmer";
