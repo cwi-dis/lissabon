@@ -139,6 +139,8 @@ void IotsaPixelstripMod::powerOn(bool force) {
   //
   // We also ensure the ledstrip DATA output pin will carry the data signal.
   //
+  gpio_hold_dis((gpio_num_t)pin);
+  pinMode(pin, OUTPUT);
   IOTSA_NPB_ENABLE_OUTPUT_PIN();
   delay(1);
   //
@@ -169,9 +171,11 @@ void IotsaPixelstripMod::powerOff(bool force) {
   gpio_hold_en((gpio_num_t)IOTSA_NPB_POWER_PIN);
   //
   // We also try to float the ledstrip DATA output pin (to forestall leaking
-  // current from data to very dimply power the leds)
+  // current from data to very dimly power the leds)
   //
-  IOTSA_NPB_FLOAT_OUTPUT_PIN();
+  //IOTSA_NPB_FLOAT_OUTPUT_PIN();
+  pinMode(pin, INPUT);
+  //gpio_hold_en((gpio_num_t)pin);
 #endif // IOTSA_NPB_POWER_PIN
 }
 
