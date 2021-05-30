@@ -15,88 +15,123 @@ VERBOSE=True
 FILTER=True
 
 async def discover_devices_simple(duration=5):
-    devices = await bleak.discover(duration)
+    task =  bleak.discover(duration)
+    devices = await task
     return devices
-    
-def discovery_callback(device, advertisement_data):
-    print(f'discovery_callback({device.name}, {device.address}, {advertisement_data.service_uuids})')
-    
-async def discover_devices(duration=5):
-    scanner = bleak.BleakScanner()
-    scanner.register_detection_callback(discovery_callback)
-    await scanner.start()
-    await asyncio.sleep(duration)
-    await scanner.stop()
-    devices = await scanner.get_discovered_devices()
-    return devices
-    
-async def filter_devices(devices):
-    print(f'{len(devices)} devices:')
-    def has_name(d): return d.name and d.name != 'Unknown'
-    def has_battery(d): return 'battery' in d.metadata.get('uuids', [])
-    #devices = filter(lambda d:has_name(d) and has_battery(d), devices)
-    devices = filter(lambda d: has_name(d), devices)
-    devices = list(devices)
-    return devices
-    
-async def get_device_services(device):
-    error = None
-    services = None
-    if VERBOSE: print(f'+ get services: start {device.name} {device.address}')
-    try:
-        async with bleak.BleakClient(device.address) as server:
-            services = await server.get_services()
-    except bleak.exc.BleakError as e:
-        error = str(e)
-    except asyncio.exceptions.TimeoutError:
-        error = 'Timeout'
-    if VERBOSE: print(f'+ get services: done {device.name} {device.address}')
-    return device, services, error
 
-def _unused():
-    print(f'\t{len(services)} services:')
-    for service in services:
-        print(f'\t\t{service.uuid()} ({service.description()}):')
-        for characteristic in service.characteristics:
-            print(f'\t\t\t{characteristic}')
+class BTError(RuntimeError):
+    pass
+   
+class BTCharacteristic:
+    def __init__(self, characteristic, server):
+        self.characteristic = characteristic
+        self.server = server
+         
+class BTService:
+    def __init__(self, service, device):
+        self.service = service
+        self.device = device
+        self.characteristics = {}
+        
+        
+    def dump(self):
+        print(f'\t\tService {self.service.uuid} {self.service.description}:')
+        for c in self.service.characteristics:
+            print(f'\t\t\tCharacteristic {c}')
+
+class BTServer:
+    def __init__(self, device):
+        self.device = device
+        self.services = {}
+        self.error = ''
+
+    async def get_device_services(self):
+        error = None
+        services = None
+        if VERBOSE: print(f'+ get services: start {self.device.name} {self.device.address}')
+        try:
+            async with bleak.BleakClient(self.device.address) as server:
+                _services = await server.get_services()
+        except bleak.exc.BleakError as e:
+            error = str(e)
+        except asyncio.exceptions.TimeoutError:
+            error = 'Timeout'
+        if VERBOSE: print(f'+ get services: done {self.device.name} {self.device.address}')
+        if error:
+            self.error = error
+        else:
+            for s in _services:
+                self.services[s.uuid] = BTService(s, self)
+        
+    def dump(self):
+        print(f'\tDevice {self.device.name} {self.device.address} {self.error}:')
+        for s in self.services.values():
+            s.dump()
+
+
+class BT:
+    def __init__(self):
+        self.raw_devices = []
+        self.devices = {}
+        
+    def discovery_callback(self, device, advertisement_data):
+        print(f'discovery_callback({device.name}, {device.address}, {advertisement_data.service_uuids})')
+    
+    async def discover_devices(self, duration=5, filter=True):
+        scanner = bleak.BleakScanner()
+        scanner.register_detection_callback(self.discovery_callback)
+        await scanner.start()
+        await asyncio.sleep(duration)
+        await scanner.stop()
+        self.raw_devices = await scanner.get_discovered_devices()
+        if filter:
+            await self._filter_devices()
+        else:
+            for d in self.raw_devices:
+                k = d.name if d.has_name() else d.address
+                self.devices[k] = BTSserver(d)
+        if VERBOSE: print(f'+ discovery: {len(self.raw_devices)} devices, {len(self.devices)} filtered devices')
+    
+    async def _filter_devices(self):
+        if VERBOSE: print(f'filter_devices: {len(self.raw_devices)} devices:')
+        def has_name(d): return d.name and d.name != 'Unknown'
+        def has_battery(d): return 'battery' in d.metadata.get('uuids', [])
+        #devices = filter(lambda d:has_name(d) and has_battery(d), devices)
+        filtered = filter(lambda d: has_name(d), self.raw_devices)
+        for d in filtered:
+            k = d.name or d.address
+            self.devices[k] = BTServer(d)
+    
+    def dump(self):
+        print(f'{len(self.devices)} devices:')
+        for d in self.devices.values():
+            d.dump()
+
+    def _unused():
+        print(f'\t{len(services)} services:')
+        for service in services:
+            print(f'\t\t{service.uuid()} ({service.description()}):')
+            for characteristic in service.characteristics:
+                print(f'\t\t\t{characteristic}')
 
 async def main():
     if VERBOSE: print('+ step 1: discovery: start')
-    devices = await discover_devices(10)
+    bt = BT()
+    await bt.discover_devices(10, filter=FILTER)
     if VERBOSE: print('+ step 1: discovery: done')
     if VERBOSE:
-        print(f'{len(devices)} devices:')
-        for d in devices:
-            print(f'\tname={d.name}, address={d.address}')
-
-    if FILTER:
-        if VERBOSE: print('+ step 2: filter: start')
-        devices = await filter_devices(devices)
-        if VERBOSE: print('+ step 2: filter: done')
-        if VERBOSE:
-            print(f'{len(devices)} filtered devices:')
-            for d in devices:
-                print(f'\tname={d.name}, address={d.address}')
+        bt.dump()
 
     tasks = []
     if VERBOSE: print('+ step 3: get services: start')
-    for device in devices:
-        tasks.append(asyncio.create_task(get_device_services(device)))
+    for device in bt.devices.values():
+        tasks.append(asyncio.create_task(device.get_device_services()))
     if tasks:
         results = await asyncio.gather(*tasks)
     else:
         results = []
     
     if VERBOSE: print('+ step 3: get services: done')
-    for device, services, error in results:
-        print(f'Device {device}')
-        if services:
-            for service in services:
-                print(f'\tService {service}')
-        elif error:
-            print(f'\t{error}')
-        else:
-            print(f'\tunknown')
-    print('all done')
+    bt.dump()
     
 asyncio.run(main())
