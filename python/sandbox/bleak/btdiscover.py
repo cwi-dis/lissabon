@@ -27,6 +27,21 @@ class BTCharacteristic:
         self.characteristic = characteristic
         self.server = server
         
+    def __repr__(self):
+        return str(self.characteristic)
+        
+    def can_read(self):
+        return 'read' in self.characteristic.properties
+        
+    def can_write(self):
+        return 'write' in self.characteristic.properties
+        
+    def can_notify(self):
+        return 'notify' in self.characteristic.properties
+        
+    def can_indicate(self):
+        return 'indicate' in self.characteristic.properties
+        
     def dump(self):
         print(f'\t\t\t{self.characteristic}')
          
@@ -37,11 +52,22 @@ class BTService:
         self.characteristics = {}
         self._init_characteristics()
         
+    def __getitem__(self, key):
+        return self.characteristics[key]
+        
+    def __in__(self, key):
+        return key in self.characteristics
+        
+    def __iter__(self):
+        return self.characteristics
+        
+    def items(self):
+        return self.characteristics.items()
+        
     def _init_characteristics(self):
         for c in self.service.characteristics:
             id = c.description or c.uuid
-            self.characteristics[id] = BTCharacteristic(c, self)
-        
+            self.characteristics[id] = BTCharacteristic(c, self)    
         
     def dump(self):
         print(f'\t\tService {self.service.uuid} {self.service.description}:')
@@ -55,6 +81,18 @@ class BTServer:
         self.services = {}
         self.error = ''
 
+    def __getitem__(self, key):
+        return self.services[key]
+        
+    def __in__(self, key):
+        return key in self.services
+        
+    def __iter__(self):
+        return self.services
+        
+    def items(self):
+        return self.services.items()
+        
     async def get_device_services(self):
         error = None
         services = None
@@ -85,6 +123,18 @@ class BT:
     def __init__(self):
         self.raw_devices = []
         self.devices = {}
+        
+    def __getitem__(self, key):
+        return self.devices[key]
+        
+    def __in__(self, key):
+        return key in self.devices
+        
+    def __iter__(self):
+        return self.devices
+    
+    def items(self):
+        return self.devices.items()
         
     def discovery_callback(self, device, advertisement_data):
         print(f'discovery_callback({device.name}, {device.address}, {advertisement_data.service_uuids})')
@@ -146,5 +196,15 @@ async def main():
     
     if VERBOSE: print('+ step 3: get services: done')
     bt.dump()
+    
+    for d_id, d in bt.items():
+        print(f'{d_id}:')
+        for s_id, s in d.items():
+            print(f'\t{s_id}:')
+            for c_id, c in s.items():
+                print(f'\t\t{c_id}: {"read" if c.can_read() else ""} {"write" if c.can_write() else ""}  {"notify" if c.can_notify() else ""} {"indicate" if c.can_indicate() else ""}')
+                
+                
+        
     
 asyncio.run(main())
