@@ -26,18 +26,28 @@ class BTCharacteristic:
     def __init__(self, characteristic, server):
         self.characteristic = characteristic
         self.server = server
+        
+    def dump(self):
+        print(f'\t\t\t{self.characteristic}')
          
 class BTService:
     def __init__(self, service, device):
         self.service = service
         self.device = device
         self.characteristics = {}
+        self._init_characteristics()
+        
+    def _init_characteristics(self):
+        for c in self.service.characteristics:
+            id = c.description or c.uuid
+            self.characteristics[id] = BTCharacteristic(c, self)
         
         
     def dump(self):
         print(f'\t\tService {self.service.uuid} {self.service.description}:')
-        for c in self.service.characteristics:
-            print(f'\t\t\tCharacteristic {c}')
+        for i, c in self.characteristics.items():
+            print(f'\t\t- Item {i}:')
+            c.dump()
 
 class BTServer:
     def __init__(self, device):
@@ -61,11 +71,13 @@ class BTServer:
             self.error = error
         else:
             for s in _services:
-                self.services[s.uuid] = BTService(s, self)
+                id = s.description or s.uuid
+                self.services[id] = BTService(s, self)
         
     def dump(self):
         print(f'\tDevice {self.device.name} {self.device.address} {self.error}:')
-        for s in self.services.values():
+        for i, s in self.services.items():
+            print(f'\t- Item {i}:')
             s.dump()
 
 
@@ -99,12 +111,13 @@ class BT:
         #devices = filter(lambda d:has_name(d) and has_battery(d), devices)
         filtered = filter(lambda d: has_name(d), self.raw_devices)
         for d in filtered:
-            k = d.name or d.address
-            self.devices[k] = BTServer(d)
+            id = d.name or d.address
+            self.devices[id] = BTServer(d)
     
     def dump(self):
         print(f'{len(self.devices)} devices:')
-        for d in self.devices.values():
+        for i, d in self.devices.items():
+            print(f'- Entry {i}:')
             d.dump()
 
     def _unused():
