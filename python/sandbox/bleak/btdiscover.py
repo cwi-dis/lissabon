@@ -23,9 +23,9 @@ class BTError(RuntimeError):
     pass
    
 class BTCharacteristic:
-    def __init__(self, characteristic, server):
+    def __init__(self, characteristic, service):
         self.characteristic = characteristic
-        self.server = server
+        self.service = service
         
     def __repr__(self):
         return str(self.characteristic)
@@ -41,6 +41,14 @@ class BTCharacteristic:
         
     def can_indicate(self):
         return 'indicate' in self.characteristic.properties
+        
+    async def read(self):
+        await self.service.device.connect()
+        try:
+            rv = await self.service.device.client.read_gatt_char(self)
+        except bleak.BleakError as e:
+            rv = f'Error: {e}'
+        return rv
         
     def dump(self):
         print(f'\t\t\t{self.characteristic}')
@@ -78,6 +86,7 @@ class BTService:
 class BTServer:
     def __init__(self, device):
         self.device = device
+        self.client = None
         self.services = {}
         self.error = ''
 
@@ -92,6 +101,13 @@ class BTServer:
         
     def items(self):
         return self.services.items()
+        
+    async def connect(self):
+        if self.client == None:
+            self.client = bleak.BleakClient(self.device.address)
+        
+    async def disconnect(self):
+        self.client = None
         
     async def get_device_services(self):
         error = None
@@ -202,7 +218,9 @@ async def main():
         for s_id, s in d.items():
             print(f'\t{s_id}:')
             for c_id, c in s.items():
-                print(f'\t\t{c_id}: {"read" if c.can_read() else ""} {"write" if c.can_write() else ""}  {"notify" if c.can_notify() else ""} {"indicate" if c.can_indicate() else ""}')
+                print(f'\t\t{c_id}: can {"read" if c.can_read() else ""} {"write" if c.can_write() else ""}  {"notify" if c.can_notify() else ""} {"indicate" if c.can_indicate() else ""}')
+                if c.can_read():
+                    print(f'\t\t\t {await c.read()}')
                 
                 
         
