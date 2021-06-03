@@ -87,7 +87,7 @@ class BTService:
 class BTServer:
     def __init__(self, device):
         self.device = device
-#        self.client = None
+        self.client = None
         self.services = {}
         self.error = ''
 
@@ -103,15 +103,14 @@ class BTServer:
     def items(self):
         return self.services.items()
 
-#     async def connect(self):
-#         if self.client == None:
-#             self.client = bleak.BleakClient(self.device.address)
-#         
+    def connect(self):
+        return bleak.BleakClient(self.device.address)
+        
 #     async def disconnect(self):
 #         self.client = None
 
     async def read(self, attr):
-        async with bleak.BleakClient(self.device.address) as client:
+        async with self.connect() as client:
             #await client.get_services()
             #paired = await client.pair()
             rv = await client.read_gatt_char(attr)
@@ -123,7 +122,7 @@ class BTServer:
         services = None
         if VERBOSE: print(f'+ get services: start {self.device.name} {self.device.address}')
         try:
-            async with bleak.BleakClient(self.device.address) as server:
+            async with self.connect() as server:
                 _services = await server.get_services()
         except bleak.exc.BleakError as e:
             error = str(e)
