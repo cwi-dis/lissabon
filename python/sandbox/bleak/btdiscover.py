@@ -44,7 +44,7 @@ class BTCharacteristic:
         
     async def read(self):
         try:
-            rv = await self.service.device.read(self.characteristic)
+            rv = await self.service.device.read(self.characteristic.uuid)
         except asyncio.exceptions.TimeoutError as e:
             return f'Error: Timeout'
         except bleak.exc.BleakError as e:
@@ -113,6 +113,7 @@ class BTServer:
     async def read(self, attr):
         async with bleak.BleakClient(self.device.address) as client:
             #await client.get_services()
+            #paired = await client.pair()
             rv = await client.read_gatt_char(attr)
         return rv
         
