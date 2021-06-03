@@ -43,11 +43,12 @@ class BTCharacteristic:
         return 'indicate' in self.characteristic.properties
         
     async def read(self):
-        await self.service.device.connect()
         try:
-            rv = await self.service.device.client.read_gatt_char(self)
-        except bleak.BleakError as e:
-            rv = f'Error: {e}'
+            rv = await self.service.device.read(self.characteristic)
+        except asyncio.exceptions.TimeoutError as e:
+            return f'Error: Timeout'
+        except bleak.exc.BleakError as e:
+            return f'Error: {e}'
         return rv
         
     def dump(self):
@@ -86,7 +87,7 @@ class BTService:
 class BTServer:
     def __init__(self, device):
         self.device = device
-        self.client = None
+#        self.client = None
         self.services = {}
         self.error = ''
 
@@ -101,13 +102,20 @@ class BTServer:
         
     def items(self):
         return self.services.items()
+
+#     async def connect(self):
+#         if self.client == None:
+#             self.client = bleak.BleakClient(self.device.address)
+#         
+#     async def disconnect(self):
+#         self.client = None
+
+    async def read(self, attr):
+        async with bleak.BleakClient(self.device.address) as client:
+            #await client.get_services()
+            rv = await client.read_gatt_char(attr)
+        return rv
         
-    async def connect(self):
-        if self.client == None:
-            self.client = bleak.BleakClient(self.device.address)
-        
-    async def disconnect(self):
-        self.client = None
         
     async def get_device_services(self):
         error = None
