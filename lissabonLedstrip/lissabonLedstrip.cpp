@@ -152,7 +152,7 @@ LissabonLedstripMod::handler() {
   
   
   String message = "<html><head><title>Lissabon Ledstrip</title></head><body><h1>Lissabon Ledstrip</h1>";
-  message += "<h2>Settings</h2><form>";
+  message += "<h2>Settings</h2><form method='post'>";
   dimmer.formHandler_fields(message, "ledstrip", "ledstrip", true);
   message += "<input type='submit' name='set' value='Submit'></form>";
   message += "</body></html>";
@@ -197,6 +197,7 @@ void LissabonLedstripMod::serverSetup() {
   // Setup the web server hooks for this module.
 #ifdef IOTSA_WITH_WEB
   server->on("/ledstrip", std::bind(&LissabonLedstripMod::handler, this));
+  server->on("/ledstrip", HTTP_POST, std::bind(&LissabonLedstripMod::handler, this));
 #endif // IOTSA_WITH_WEB
   api.setup("/api/ledstrip", true, true);
   name = "ledstrip";
