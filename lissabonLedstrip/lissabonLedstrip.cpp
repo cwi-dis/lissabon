@@ -157,6 +157,7 @@ LissabonLedstripMod::handler() {
   message += "<input type='submit' name='set' value='Submit'></form>";
   message += "</body></html>";
   server->send(200, "text/html", message);
+  iotsaConfig.extendCurrentMode();
 }
 
 String LissabonLedstripMod::info() {
@@ -177,6 +178,7 @@ String LissabonLedstripMod::info() {
 
 bool LissabonLedstripMod::getHandler(const char *path, JsonObject& reply) {
   dimmer.getHandler(reply);
+  iotsaConfig.extendCurrentMode();
   return true;
 }
 
@@ -190,6 +192,7 @@ bool LissabonLedstripMod::putHandler(const char *path, const JsonVariant& reques
     configSave();
   }
   if (anyChanged) dimmer.updateDimmer(); // xxxjack or is this called already?
+  iotsaConfig.extendCurrentMode();
   return anyChanged;
 
 }
