@@ -1,15 +1,16 @@
 import asyncio
 import bleak
-bleak.uuids.uuid128_dict["3b000001-1226-4a53-9d24-afa50c0163a3"] = "iotsa RGB LED service"
-bleak.uuids.uuid128_dict["3b000002-1226-4a53-9d24-afa50c0163a3"] = "iotsa RGB LED value"
-bleak.uuids.uuid16_dict[0x2A19] = "Battery Level"
-bleak.uuids.uuid128_dict["e4d90002-250f-46e6-90a4-ab98f01a0587"] = "iotsa USB voltage level"
-bleak.uuids.uuid128_dict["e4d90003-250f-46e6-90a4-ab98f01a0587"] = "iotsa soft reboot"
-bleak.uuids.uuid128_dict["6b2f0001-38bc-4204-a506-1d3546ad3688"] = "iotsa/lissabon lighting service"
-bleak.uuids.uuid128_dict["6b2f0002-38bc-4204-a506-1d3546ad3688"] = "iotsa/lissabon light on"
-bleak.uuids.uuid128_dict["6b2f0003-38bc-4204-a506-1d3546ad3688"] = "iotsa/lissabon identify fixture"
-bleak.uuids.uuid128_dict["6b2f0004-38bc-4204-a506-1d3546ad3688"] = "iotsa/lissabon brightness"
-bleak.uuids.uuid128_dict["6b2f0005-38bc-4204-a506-1d3546ad3688"] = "iotsa/lissabon temperature"
+bleak.register_uuids({
+    "3b000001-1226-4a53-9d24-afa50c0163a3": "iotsa RGB LED service",
+    "3b000002-1226-4a53-9d24-afa50c0163a3": "iotsa RGB LED value",
+    "e4d90002-250f-46e6-90a4-ab98f01a0587": "iotsa USB voltage level",
+    "e4d90003-250f-46e6-90a4-ab98f01a0587": "iotsa soft reboot",
+    "6b2f0001-38bc-4204-a506-1d3546ad3688": "iotsa/lissabon lighting service",
+    "6b2f0002-38bc-4204-a506-1d3546ad3688": "iotsa/lissabon light on",
+    "6b2f0003-38bc-4204-a506-1d3546ad3688": "iotsa/lissabon identify fixture",
+    "6b2f0004-38bc-4204-a506-1d3546ad3688": "iotsa/lissabon brightness",
+    "6b2f0005-38bc-4204-a506-1d3546ad3688": "iotsa/lissabon temperature",
+})
 
 VERBOSE=True
 FILTER=True
