@@ -38,6 +38,13 @@ Touchpad touchpad12(12, true, false, true);
 Touchpad touchpad13(13, true, false, true);
 Touchpad touchpad14(14, true, false, true);
 Touchpad touchpad15(15, true, false, true);
+// When using an Alps EC12D rotary encoder with pushbutton here is the pinout:
+// When viewed from the top there are pins at northwest, north, northeast, southwest, southeast.
+// These pins are named (in Alps terminology) A, E, B, C, D.
+// A and B (northwest, northeast) are the rotary encoder pins,
+// C is the corresponding ground,
+// D and E are the pushbutton pins.
+// So, connect E and C to GND, D to GPIO0, A to GPIO4, B to GPIO2
 Button button(0, true, false, true);
 RotaryEncoder encoder(4, 2);
 
