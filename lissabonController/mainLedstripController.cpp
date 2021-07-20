@@ -156,6 +156,7 @@ void
 IotsaLedstripControllerMod::handler() {
   // xxxjack update settings for remotes?
   bool changed = false;
+  String error;
   if (server->hasArg("scanUnknown")) startScanUnknown();
   if (server->hasArg("add")) {
     String newDimmerName_ = server->arg("add");
@@ -164,6 +165,8 @@ IotsaLedstripControllerMod::handler() {
       BLEDimmer *newDimmer = NULL;
       knownDimmers[newDimmerName] = newDimmer;
       changed = true;
+    } else {
+      error = "Bad dimmer name";
     }
   }
   if (server->hasArg("set")) {
@@ -178,6 +181,9 @@ IotsaLedstripControllerMod::handler() {
   if (changed) configSave();
   
   String message = "<html><head><title>Lissabon Controller</title></head><body><h1>Lissabon Controller</h1>";
+  if (error != "") {
+    message += "<p><em>Error: " + error + "</em></p>";
+  }
   for(auto it: knownDimmers) {
     String name(it.first.c_str());
     BLEDimmer *dimmer = it.second;
@@ -200,7 +206,7 @@ IotsaLedstripControllerMod::handler() {
     for (auto it: unknownDimmers) {
       message += "<li>" + String(it.c_str());
       if (it != "") {
-        message += "<form><input type='hidden' name='add' value='" + String(it.c_str()) + "><input type='submit' value='Add'></form>";
+        message += "<form><input type='hidden' name='add' value='" + String(it.c_str()) + "'><input type='submit' value='Add'></form>";
       } else {
         message += "<em>nameless dimmer (cannot be added)</em>";
       }
