@@ -12,6 +12,9 @@
 #include "iotsaConfigFile.h"
 #include <set>
 
+#include "DimmerCollection.h"
+using namespace Lissabon;
+
 #include "display.h"
 Display *display;
 
@@ -84,7 +87,7 @@ private:
   void startScanUnknown();
   uint32_t scanUnknownUntilMillis = 0;
   std::set<std::string> unknownDimmers;
-  std::map<std::string, BLEDimmer *> knownDimmers;
+  DimmerCollection knownDimmers;
 };
 
 void 
@@ -96,10 +99,9 @@ IotsaLedstripControllerMod::updateDisplay() {
   int index = 0;
   for (auto& elem : knownDimmers) {
     index++;
-    std::string name = elem.first;
-    BLEDimmer* conn = elem.second;
-    IotsaSerial.printf("device %s, available=%d\n", name.c_str(), conn->available());
-    display->addStrip(index, name, conn->available());
+    String name = elem->getUserVisibleName();
+    IotsaSerial.printf("device %s, available=%d\n", name.c_str(), elem->available());
+    display->addStrip(index, name, elem->available());
   }
   display->show();
 }
@@ -126,11 +128,12 @@ IotsaLedstripControllerMod::handler() {
   String error;
   if (server->hasArg("scanUnknown")) startScanUnknown();
   if (server->hasArg("add")) {
-    String newDimmerName_ = server->arg("add");
-    std::string newDimmerName(newDimmerName_.c_str());
-    if (newDimmerName != "" && knownDimmers.find(newDimmerName) == knownDimmers.end()) {
-      BLEDimmer *newDimmer = NULL;
-      knownDimmers[newDimmerName] = newDimmer;
+    String newDimmerName = server->arg("add");
+    if (newDimmerName != "" && knownDimmers.find(newDimmerName) == nullptr) {
+      int num = knownDimmers.size();
+      BLEDimmer *newDimmer = new BLEDimmer(num, bleClientMod, nullptr);
+      newDimmer->setName(newDimmerName);
+      knownDimmers.push_back(newDimmer);
       changed = true;
     } else {
       error = "Bad dimmer name";
@@ -138,11 +141,8 @@ IotsaLedstripControllerMod::handler() {
   }
   if (server->hasArg("set")) {
     for (auto it: knownDimmers) {
-      String dimmerName(it.first.c_str());
-      BLEDimmer *dimmer = it.second;
-      if (dimmer) {
-        changed |= dimmer->formHandler_args(server, dimmerName, true);
-      }
+      String dimmerName(it->getUserVisibleName());
+      changed |= it->formHandler_args(server, dimmerName, true);
     }
   }
   if (changed) configSave();
@@ -152,16 +152,11 @@ IotsaLedstripControllerMod::handler() {
     message += "<p><em>Error: " + error + "</em></p>";
   }
   for(auto it: knownDimmers) {
-    String name(it.first.c_str());
-    BLEDimmer *dimmer = it.second;
+    String name(it->getUserVisibleName());
     message += "<h2>BLE dimmer " + name + "</h2>";
-    if (dimmer) {
-      message += "<form>";
-      dimmer->formHandler_fields(message, name, name, true);
-      message += "<input type='submit' name='set' value='Submit'></form>";
-    } else {
-      message += "<h2>" + name + "</h2><p>No info</p>";
-    }
+    message += "<form>";
+    it->formHandler_fields(message, name, name, true);
+    message += "<input type='submit' name='set' value='Submit'></form>";
   }
   message += "<h2>Available Unknown/new BLE dimmer devices</h2>";
   message += "<form><input type='submit' name='scanUnknown' value='Scan for 20 seconds'></form>";

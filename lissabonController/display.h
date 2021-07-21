@@ -6,7 +6,7 @@ public:
   Display();
   void show();
   void clearStrips();
-  void addStrip(int index, std::string name, bool available);
+  void addStrip(int index, String name, bool available);
   void selectStrip(int index);
 
   void setIntensity(float intensity);

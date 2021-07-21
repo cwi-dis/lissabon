@@ -69,7 +69,7 @@ void Display::clearStrips() {
   selectStrip(0);
 }
 
-void Display::addStrip(int index, std::string name, bool available) {
+void Display::addStrip(int index, String name, bool available) {
   // xxxjack show name in index
   int x = STRIPS_X;
   int y = STRIPS_Y + index*STRIPS_HEIGHT;

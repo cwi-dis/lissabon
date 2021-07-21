@@ -20,6 +20,13 @@ void DimmerCollection::push_back(DimmerCollection::ItemType* dimmer) {
 
 DimmerCollection::ItemType* DimmerCollection::at(int i) { return dimmers.at(i); }
 
+DimmerCollection::ItemType* DimmerCollection::find(const String& name) { 
+  for(auto d : dimmers) {
+    if (d->getUserVisibleName() == name) return d;
+  }
+  return nullptr;
+}
+
 DimmerCollection::iterator DimmerCollection::begin() { return dimmers.begin(); }
 
 DimmerCollection::iterator DimmerCollection::end() { return dimmers.end(); }

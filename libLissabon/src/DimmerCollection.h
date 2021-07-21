@@ -21,6 +21,7 @@ public:
   int size();
   void push_back(ItemType* dimmer);
   ItemType* at(int i);
+  ItemType* find(const String& name);
   iterator begin();
   iterator end();
 
