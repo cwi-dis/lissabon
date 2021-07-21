@@ -34,10 +34,6 @@ IotsaOtaMod otaMod(application);
 IotsaBatteryMod batteryMod(application);
 
 #include "iotsaInput.h"
-Touchpad touchpad12(12, true, false, true);
-Touchpad touchpad13(13, true, false, true);
-Touchpad touchpad14(14, true, false, true);
-Touchpad touchpad15(15, true, false, true);
 // When using an Alps EC12D rotary encoder with pushbutton here is the pinout:
 // When viewed from the top there are pins at northwest, north, northeast, southwest, southeast.
 // These pins are named (in Alps terminology) A, E, B, C, D.
@@ -49,10 +45,6 @@ Button button(0, true, false, true);
 RotaryEncoder encoder(4, 2);
 
 Input* inputs[] = {
-  &touchpad12,
-  &touchpad13,
-  &touchpad14,
-  &touchpad15,
   &button,
   &encoder
 };
@@ -86,10 +78,6 @@ protected:
   void unknownDeviceFound(BLEAdvertisedDevice& device);
 private:
   void handler();
-  bool touch12();
-  bool touch13();
-  bool touch14();
-  bool touch15();
   bool buttonPress();
   bool encoderChanged();
   void updateDisplay();
@@ -114,34 +102,6 @@ IotsaLedstripControllerMod::updateDisplay() {
     display->addStrip(index, name, conn->available());
   }
   display->show();
-}
-
-bool
-IotsaLedstripControllerMod::touch12() {
-  IFDEBUG IotsaSerial.println("touch12()");
-  updateDisplay();
-  return true;
-}
-
-bool
-IotsaLedstripControllerMod::touch13() {
-  IFDEBUG IotsaSerial.println("touch13()");
-  updateDisplay();
-  return true;
-}
-
-bool
-IotsaLedstripControllerMod::touch14() {
-  IFDEBUG IotsaSerial.println("touch14()");
-  updateDisplay();
-  return true;
-}
-
-bool
-IotsaLedstripControllerMod::touch15() {
-  IFDEBUG IotsaSerial.println("touch15()");
-  updateDisplay();
-  return true;
 }
 
 bool
@@ -265,10 +225,6 @@ void IotsaLedstripControllerMod::setup() {
   batteryMod.setPinDisableSleep(PIN_DISABLESLEEP);
 #endif
   _setupDisplay();
-  touchpad12.setCallback(std::bind(&IotsaLedstripControllerMod::touch12, this));
-  touchpad13.setCallback(std::bind(&IotsaLedstripControllerMod::touch13, this));
-  touchpad14.setCallback(std::bind(&IotsaLedstripControllerMod::touch14, this));
-  touchpad15.setCallback(std::bind(&IotsaLedstripControllerMod::touch15, this));
   button.setCallback(std::bind(&IotsaLedstripControllerMod::buttonPress, this));
   encoder.setCallback(std::bind(&IotsaLedstripControllerMod::encoderChanged, this));
   auto callback = std::bind(&IotsaLedstripControllerMod::unknownDeviceFound, this, std::placeholders::_1);
