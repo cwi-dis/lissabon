@@ -27,8 +27,8 @@ public:
 
   void getHandler(JsonObject& reply);
   bool putHandler(const JsonVariant& request);
-  bool configLoad(IotsaConfigFileLoad& cf, const String& f_name);
-  void configSave(IotsaConfigFileSave& cf, const String& f_name);
+  virtual bool configLoad(IotsaConfigFileLoad& cf, const String& f_name);
+  virtual void configSave(IotsaConfigFileSave& cf, const String& f_name);
   bool formHandler_args(IotsaWebServer *server, const String& f_name, bool includeConfig);
   void formHandler_fields(String& message, const String& text, const String& f_name, bool includeConfig);
   String info();

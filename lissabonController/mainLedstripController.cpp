@@ -12,7 +12,7 @@
 #include "iotsaConfigFile.h"
 #include <set>
 
-#include "DimmerCollection.h"
+#include "DimmerDynamicCollection.h"
 using namespace Lissabon;
 
 #include "display.h"
@@ -88,7 +88,8 @@ private:
   uint32_t scanUnknownUntilMillis = 0;
   typedef std::pair<std::string, BLEAddress> unknownDimmerInfo;
   std::set<unknownDimmerInfo> unknownDimmers;
-  DimmerCollection knownDimmers;
+  DimmerDynamicCollection knownDimmers;
+  DimmerDynamicCollection::ItemType* dimmerFactory(int num);
 };
 
 void 
@@ -121,6 +122,13 @@ IotsaLedstripControllerMod::encoderChanged() {
   return true;
 }
 
+DimmerDynamicCollection::ItemType *
+IotsaLedstripControllerMod::dimmerFactory(int num) {
+  BLEDimmer *newDimmer = new BLEDimmer(num, bleClientMod, nullptr);
+  newDimmer->followDimmerChanges(true);
+  return newDimmer;
+}
+
 #ifdef IOTSA_WITH_WEB
 void
 IotsaLedstripControllerMod::handler() {
@@ -131,10 +139,7 @@ IotsaLedstripControllerMod::handler() {
   if (server->hasArg("add")) {
     String newDimmerName = server->arg("add");
     if (newDimmerName != "" && knownDimmers.find(newDimmerName) == nullptr) {
-      int num = knownDimmers.size();
-      BLEDimmer *newDimmer = new BLEDimmer(num, bleClientMod, nullptr);
-      newDimmer->setName(newDimmerName);
-      knownDimmers.push_back(newDimmer);
+      knownDimmers.push_back_new(newDimmerName);
       changed = true;
     } else {
       error = "Bad dimmer name";
@@ -191,10 +196,18 @@ String IotsaLedstripControllerMod::info() {
 #endif // IOTSA_WITH_WEB
 
 bool IotsaLedstripControllerMod::getHandler(const char *path, JsonObject& reply) {
+  bleClientMod.getHandler(path, reply);
+  knownDimmers.getHandler(reply);
   return true;
 }
 
 bool IotsaLedstripControllerMod::putHandler(const char *path, const JsonVariant& request, JsonObject& reply) {
+  bool anyChanged = false;
+  anyChanged = bleClientMod.putHandler(path, request, reply);
+  anyChanged |= knownDimmers.putHandler(request);
+  if (anyChanged) {
+    configSave();
+  }
   return true;
 }
 
@@ -209,18 +222,20 @@ void IotsaLedstripControllerMod::serverSetup() {
 
 void IotsaLedstripControllerMod::configLoad() {
   IotsaConfigFileLoad cf("/config/blecontroller.cfg");
-  // xxxjack load known dimmers
+  knownDimmers.configLoad(cf, "");
 }
 
 void IotsaLedstripControllerMod::configSave() {
   IotsaConfigFileSave cf("/config/bledimmer.cfg");
-  // xxxjack save known dimmers
+  IotsaSerial.println("xxxjack save blecontroller config");
+  knownDimmers.configSave(cf, "");
 }
 
 void IotsaLedstripControllerMod::setup() {
 #ifdef PIN_DISABLESLEEP
   batteryMod.setPinDisableSleep(PIN_DISABLESLEEP);
 #endif
+  knownDimmers.setFactory(std::bind(&IotsaLedstripControllerMod::dimmerFactory, this, std::placeholders::_1));
   _setupDisplay();
   button.setCallback(std::bind(&IotsaLedstripControllerMod::buttonPress, this));
   encoder.setCallback(std::bind(&IotsaLedstripControllerMod::encoderChanged, this));
