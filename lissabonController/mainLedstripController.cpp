@@ -155,7 +155,7 @@ IotsaLedstripControllerMod::handler() {
   for(auto it: knownDimmers) {
     String name(it->getUserVisibleName());
     message += "<h2>BLE dimmer " + name + "</h2>";
-    message += "<form>";
+    message += "<form method='POST'>";
     it->formHandler_fields(message, name, name, true);
     message += "<input type='submit' name='set' value='Submit'></form>";
   }
@@ -201,6 +201,7 @@ bool IotsaLedstripControllerMod::putHandler(const char *path, const JsonVariant&
 void IotsaLedstripControllerMod::serverSetup() {
 #ifdef IOTSA_WITH_WEB
   server->on("/blecontroller", std::bind(&IotsaLedstripControllerMod::handler, this));
+  server->on("/blecontroller", HTTP_POST, std::bind(&IotsaLedstripControllerMod::handler, this));
 #endif
   api.setup("/api/blecontroller", true, true);
   name = "blecontroller";
