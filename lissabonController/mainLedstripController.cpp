@@ -86,7 +86,8 @@ private:
   void updateDisplay();
   void startScanUnknown();
   uint32_t scanUnknownUntilMillis = 0;
-  std::set<std::string> unknownDimmers;
+  typedef std::pair<std::string, BLEAddress> unknownDimmerInfo;
+  std::set<unknownDimmerInfo> unknownDimmers;
   DimmerCollection knownDimmers;
 };
 
@@ -166,9 +167,9 @@ IotsaLedstripControllerMod::handler() {
   } else {
     message += "<ul>";
     for (auto it: unknownDimmers) {
-      message += "<li>" + String(it.c_str());
-      if (it != "") {
-        message += "<form><input type='hidden' name='add' value='" + String(it.c_str()) + "'><input type='submit' value='Add'></form>";
+      message += "<li>" + String(it.first.c_str()) + " " + it.second.toString().c_str();
+      if (it.first != "") {
+        message += "<form><input type='hidden' name='add' value='" + String(it.first.c_str()) + "'><input type='submit' value='Add'></form>";
       } else {
         message += "<em>nameless dimmer (cannot be added)</em>";
       }
@@ -241,7 +242,9 @@ void IotsaLedstripControllerMod::startScanUnknown() {
 
 void IotsaLedstripControllerMod::unknownDeviceFound(BLEAdvertisedDevice& deviceAdvertisement) {
   IFDEBUG IotsaSerial.printf("unknownDeviceFound: iotsaLedstrip/iotsaDimmer \"%s\"\n", deviceAdvertisement.getName().c_str());
-  unknownDimmers.insert(deviceAdvertisement.getName());
+  deviceAdvertisement.getAddress();
+  unknownDimmerInfo info(deviceAdvertisement.getName(), deviceAdvertisement.getAddress());
+  unknownDimmers.insert(info);
 }
 
 void IotsaLedstripControllerMod::loop() {
