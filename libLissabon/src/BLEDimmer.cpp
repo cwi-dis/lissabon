@@ -18,7 +18,7 @@ bool BLEDimmer::available() {
 void BLEDimmer::updateDimmer() {
   needSyncToDevice = true;
   needTransmitTimeoutAtMillis = millis() + IOTSA_BLEDIMMER_CONNECT_TIMEOUT;
-  callbacks->dimmerValueChanged();
+  if (callbacks) callbacks->dimmerValueChanged();
 }
 
 bool BLEDimmer::setName(String value) {
