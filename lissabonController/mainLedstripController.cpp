@@ -55,8 +55,6 @@ Input* inputs[] = {
 IotsaInputMod touchMod(application, inputs, sizeof(inputs)/sizeof(inputs[0]));
 
 #include "iotsaBLEClient.h"
-IotsaBLEClientMod bleClientMod(application);
-
 #include "BLEDimmer.h"
 
 //
@@ -64,9 +62,9 @@ IotsaBLEClientMod bleClientMod(application);
 //
 using namespace Lissabon;
 
-class IotsaLedstripControllerMod : public IotsaApiMod {
+class IotsaLedstripControllerMod : public IotsaBLEClientMod, public DimmerCallbacks {
 public:
-  using IotsaApiMod::IotsaApiMod;
+  using IotsaBLEClientMod::IotsaBLEClientMod;
   void setup();
   void serverSetup();
   String info();
@@ -80,6 +78,8 @@ protected:
   bool putHandler(const char *path, const JsonVariant& request, JsonObject& reply);
   void unknownDeviceFound(BLEAdvertisedDevice& device);
 private:
+  void uiButtonChanged();
+  void dimmerValueChanged();
   void handler();
   bool buttonPress();
   bool encoderChanged();
@@ -122,9 +122,52 @@ IotsaLedstripControllerMod::encoderChanged() {
   return true;
 }
 
+
+void IotsaLedstripControllerMod::uiButtonChanged() {
+#if 1
+  IotsaSerial.println("xxxjack IOButtonChanged()");
+#else
+  // Called whenever any button changed state.
+  // Used to give visual feedback (led turning off) on presses and releases,
+  // and to enable config mod after 4 taps and reboot after 8 taps
+  uint32_t now = millis();
+  ledOn();
+  if (lastButtonChangeMillis > 0 && now < lastButtonChangeMillis + TAP_DURATION) {
+    // A button change that was quick enough for a tap
+    lastButtonChangeMillis = now;
+    buttonChangeCount++;
+    IFDEBUG IotsaSerial.printf("tap mode count=%d\n", buttonChangeCount);
+    if (buttonChangeCount == TAP_COUNT_MODE_CHANGE) {
+      IFDEBUG IotsaSerial.println("tap mode change");
+      iotsaConfig.allowRequestedConfigurationMode();
+    }
+    if (buttonChangeCount == TAP_COUNT_REBOOT) {
+      IFDEBUG IotsaSerial.println("tap mode reboot");
+      ledOffUntilMillis = now + 2000;
+      iotsaConfig.requestReboot(1000);
+    }
+  } else {
+    // Either the first change, or too late. Reset.
+    lastButtonChangeMillis = millis();
+    buttonChangeCount = 0;
+    IFDEBUG IotsaSerial.println("tap mode 0");
+  }
+#endif
+}
+
+
+void IotsaLedstripControllerMod::dimmerValueChanged() {
+#if 1
+  IotsaSerial.println("xxxjack dimmerValueChanged()");
+#else
+  saveAtMillis = millis() + 1000;
+  ledOn();
+#endif
+}
+
 DimmerDynamicCollection::ItemType *
 IotsaLedstripControllerMod::dimmerFactory(int num) {
-  BLEDimmer *newDimmer = new BLEDimmer(num, bleClientMod, nullptr);
+  BLEDimmer *newDimmer = new BLEDimmer(num, *this, this);
   newDimmer->followDimmerChanges(true);
   return newDimmer;
 }
@@ -196,14 +239,14 @@ String IotsaLedstripControllerMod::info() {
 #endif // IOTSA_WITH_WEB
 
 bool IotsaLedstripControllerMod::getHandler(const char *path, JsonObject& reply) {
-  bleClientMod.getHandler(path, reply);
+  IotsaBLEClientMod::getHandler(path, reply);
   knownDimmers.getHandler(reply);
   return true;
 }
 
 bool IotsaLedstripControllerMod::putHandler(const char *path, const JsonVariant& request, JsonObject& reply) {
   bool anyChanged = false;
-  anyChanged = bleClientMod.putHandler(path, request, reply);
+  anyChanged = IotsaBLEClientMod::putHandler(path, request, reply);
   anyChanged |= knownDimmers.putHandler(request);
   if (anyChanged) {
     configSave();
@@ -240,8 +283,9 @@ void IotsaLedstripControllerMod::setup() {
   button.setCallback(std::bind(&IotsaLedstripControllerMod::buttonPress, this));
   encoder.setCallback(std::bind(&IotsaLedstripControllerMod::encoderChanged, this));
   auto callback = std::bind(&IotsaLedstripControllerMod::unknownDeviceFound, this, std::placeholders::_1);
-  bleClientMod.setUnknownDeviceFoundCallback(callback);
-  bleClientMod.setServiceFilter(Lissabon::Dimmer::serviceUUID);
+  setUnknownDeviceFoundCallback(callback);
+  setDuplicateNameFilter(true);
+  setServiceFilter(Lissabon::Dimmer::serviceUUID);
 }
 
 void IotsaLedstripControllerMod::_setupDisplay() {
@@ -250,7 +294,7 @@ void IotsaLedstripControllerMod::_setupDisplay() {
 }
 
 void IotsaLedstripControllerMod::startScanUnknown() {
-  bleClientMod.findUnknownDevices(true);
+  findUnknownDevices(true);
   scanUnknownUntilMillis = millis() + 20000;
   iotsaConfig.postponeSleep(21000);
 }
@@ -265,7 +309,7 @@ void IotsaLedstripControllerMod::unknownDeviceFound(BLEAdvertisedDevice& deviceA
 
 void IotsaLedstripControllerMod::loop() {
   if (scanUnknownUntilMillis != 0 && millis() > scanUnknownUntilMillis) {
-    bleClientMod.findUnknownDevices(false);
+    findUnknownDevices(false);
     scanUnknownUntilMillis = 0;
   }
 }
