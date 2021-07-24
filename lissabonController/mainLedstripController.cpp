@@ -76,7 +76,7 @@ protected:
   void _setupDisplay();
   bool getHandler(const char *path, JsonObject& reply);
   bool putHandler(const char *path, const JsonVariant& request, JsonObject& reply);
-  void unknownDeviceFound(BLEAdvertisedDevice& device);
+  void unknownBLEDimmerFound(BLEAdvertisedDevice& device);
 private:
   void uiButtonChanged();
   void dimmerValueChanged();
@@ -84,22 +84,21 @@ private:
   bool buttonPress();
   bool encoderChanged();
   void updateDisplay();
-  void startScanUnknown();
+//xxxjack   void startScanUnknown();
   uint32_t scanUnknownUntilMillis = 0;
   typedef std::pair<std::string, BLEAddress> unknownDimmerInfo;
-  std::set<unknownDimmerInfo> unknownDimmers;
-  DimmerDynamicCollection knownDimmers;
+  DimmerDynamicCollection dimmers;
   DimmerDynamicCollection::ItemType* dimmerFactory(int num);
 };
 
 void 
 IotsaLedstripControllerMod::updateDisplay() {
-  IotsaSerial.print(knownDimmers.size());
+  IotsaSerial.print(dimmers.size());
   IotsaSerial.println(" strips:");
 
   display->clearStrips();
   int index = 0;
-  for (auto& elem : knownDimmers) {
+  for (auto& elem : dimmers) {
     index++;
     String name = elem->getUserVisibleName();
     IotsaSerial.printf("device %s, available=%d\n", name.c_str(), elem->available());
@@ -176,31 +175,45 @@ IotsaLedstripControllerMod::dimmerFactory(int num) {
 void
 IotsaLedstripControllerMod::handler() {
   // xxxjack update settings for remotes?
-  bool changed = false;
+  bool anyChanged = false;
   String error;
+  anyChanged |= dimmers.formHandler_args(server, "", true);
+  anyChanged |= IotsaBLEClientMod::formHandler_args(server, "", true);
+#if 0
   if (server->hasArg("scanUnknown")) startScanUnknown();
   if (server->hasArg("add")) {
     String newDimmerName = server->arg("add");
-    if (newDimmerName != "" && knownDimmers.find(newDimmerName) == nullptr) {
-      knownDimmers.push_back_new(newDimmerName);
+    if (newDimmerName != "" && dimmers.find(newDimmerName) == nullptr) {
+      dimmers.push_back_new(newDimmerName);
       changed = true;
     } else {
       error = "Bad dimmer name";
     }
   }
   if (server->hasArg("set")) {
-    for (auto it: knownDimmers) {
+    for (auto it: dimmers) {
       String dimmerName(it->getUserVisibleName());
       changed |= it->formHandler_args(server, dimmerName, true);
     }
   }
-  if (changed) configSave();
+#endif
+  if (anyChanged) configSave();
   
   String message = "<html><head><title>Lissabon Controller</title></head><body><h1>Lissabon Controller</h1>";
   if (error != "") {
     message += "<p><em>Error: " + error + "</em></p>";
   }
-  for(auto it: knownDimmers) {
+  message += "<h2>Dimmer Settings</h2><form method='post'>";
+  dimmers.formHandler_fields(message, "", "", false);
+  message += "<input type='submit' name='set' value='Set Dimmers'></form><br>";
+
+  message += "<h2>Dimmer Configuration</h2><form method='post'>";
+  dimmers.formHandler_fields(message, "", "", true);
+  message += "<input type='submit' name='config' value='Configure Dimmers'></form><br>";
+
+  IotsaBLEClientMod::formHandler_fields(message, "BLE Dimmer", "dimmer", true);
+#if 0
+  for(auto it: dimmers) {
     String name(it->getUserVisibleName());
     message += "<h2>BLE dimmer " + name + "</h2>";
     message += "<form method='POST'>";
@@ -227,6 +240,7 @@ IotsaLedstripControllerMod::handler() {
   }
   message += "<h2>Add BLE dimmer manually</h2>";
   message += "<form>BLE name: <input name='add'><input type='submit' value='Add'></form>";
+#endif
   message += "</body></html>";
   server->send(200, "text/html", message);
 }
@@ -240,14 +254,14 @@ String IotsaLedstripControllerMod::info() {
 
 bool IotsaLedstripControllerMod::getHandler(const char *path, JsonObject& reply) {
   IotsaBLEClientMod::getHandler(path, reply);
-  knownDimmers.getHandler(reply);
+  dimmers.getHandler(reply);
   return true;
 }
 
 bool IotsaLedstripControllerMod::putHandler(const char *path, const JsonVariant& request, JsonObject& reply) {
   bool anyChanged = false;
   anyChanged = IotsaBLEClientMod::putHandler(path, request, reply);
-  anyChanged |= knownDimmers.putHandler(request);
+  anyChanged |= dimmers.putHandler(request);
   if (anyChanged) {
     configSave();
   }
@@ -265,27 +279,45 @@ void IotsaLedstripControllerMod::serverSetup() {
 
 void IotsaLedstripControllerMod::configLoad() {
   IotsaConfigFileLoad cf("/config/blecontroller.cfg");
-  knownDimmers.configLoad(cf, "");
+  dimmers.configLoad(cf, "");
 }
 
 void IotsaLedstripControllerMod::configSave() {
   IotsaConfigFileSave cf("/config/bledimmer.cfg");
   IotsaSerial.println("xxxjack save blecontroller config");
-  knownDimmers.configSave(cf, "");
+  dimmers.configSave(cf, "");
 }
 
 void IotsaLedstripControllerMod::setup() {
+  //
+  // Let our base class do its setup.
+  //
+  IotsaBLEClientMod::setup();
+  //
+  // Load configuration
+  //
+  configLoad();
+ #if 0
+  iotsaConfig.allowRCMDescription("tap any touchpad 4 times");
+#endif
 #ifdef PIN_DISABLESLEEP
   batteryMod.setPinDisableSleep(PIN_DISABLESLEEP);
 #endif
-  knownDimmers.setFactory(std::bind(&IotsaLedstripControllerMod::dimmerFactory, this, std::placeholders::_1));
+  dimmers.setFactory(std::bind(&IotsaLedstripControllerMod::dimmerFactory, this, std::placeholders::_1));
   _setupDisplay();
   button.setCallback(std::bind(&IotsaLedstripControllerMod::buttonPress, this));
   encoder.setCallback(std::bind(&IotsaLedstripControllerMod::encoderChanged, this));
-  auto callback = std::bind(&IotsaLedstripControllerMod::unknownDeviceFound, this, std::placeholders::_1);
+  auto callback = std::bind(&IotsaLedstripControllerMod::unknownBLEDimmerFound, this, std::placeholders::_1);
   setUnknownDeviceFoundCallback(callback);
   setDuplicateNameFilter(true);
   setServiceFilter(Lissabon::Dimmer::serviceUUID);
+  //
+  // Setup dimmers by getting current settings from BLE devices
+  // xxxjack move to DimmerCollection
+  //
+  for (auto d : dimmers) {
+    d->setup();
+  }
 }
 
 void IotsaLedstripControllerMod::_setupDisplay() {
@@ -293,24 +325,39 @@ void IotsaLedstripControllerMod::_setupDisplay() {
   updateDisplay();
 }
 
+#if 0
 void IotsaLedstripControllerMod::startScanUnknown() {
   findUnknownDevices(true);
   scanUnknownUntilMillis = millis() + 20000;
   iotsaConfig.postponeSleep(21000);
 }
+#endif
 
-
-void IotsaLedstripControllerMod::unknownDeviceFound(BLEAdvertisedDevice& deviceAdvertisement) {
+void IotsaLedstripControllerMod::unknownBLEDimmerFound(BLEAdvertisedDevice& deviceAdvertisement) {
   IFDEBUG IotsaSerial.printf("unknownDeviceFound: iotsaLedstrip/iotsaDimmer \"%s\"\n", deviceAdvertisement.getName().c_str());
-  deviceAdvertisement.getAddress();
-  unknownDimmerInfo info(deviceAdvertisement.getName(), deviceAdvertisement.getAddress());
-  unknownDimmers.insert(info);
+  unknownDevices.insert(deviceAdvertisement.getName());
 }
 
 void IotsaLedstripControllerMod::loop() {
-  if (scanUnknownUntilMillis != 0 && millis() > scanUnknownUntilMillis) {
-    findUnknownDevices(false);
-    scanUnknownUntilMillis = 0;
+   //
+  // Let our baseclass do its loop-y things
+  //
+  IotsaBLEClientMod::loop();
+#if 0
+  //
+  // See whether we have a value to save (because the user has been turning the dimmer)
+  //
+  if (saveAtMillis > 0 && millis() > saveAtMillis) {
+    saveAtMillis = 0;
+    configSave();
+    ledOff();
+  }
+#endif
+  //
+  // Let the dimmers do any processing they need to do
+  //
+  for (auto d : dimmers) {
+    d->loop();
   }
 }
 

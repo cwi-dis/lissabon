@@ -152,9 +152,7 @@ LissabonRemoteMod::handler() {
   anyChanged |= dimmers.formHandler_args(server, "", true);
   anyChanged |= IotsaBLEClientMod::formHandler_args(server, "", true);
   if (anyChanged) {
-    IotsaSerial.println("xxxjack saving remote config");
     configSave();
-    IotsaSerial.println("xxxjack saving remote config");
   }
   String message = "<html><head><title>BLE Dimmers</title></head><body><h1>BLE Dimmers</h1>";
   message += "<h2>Dimmer Settings</h2><form method='post'>";
@@ -262,12 +260,11 @@ void LissabonRemoteMod::setup() {
   //
   // Setup dimmers by getting current settings from BLE devices
   //
-  for (auto d : dimmers) {
-    d->setup();
-  }
+  dimmers.setup();
   ledOff();
 }
 
+// xxxjack move to IotsaBLEClientMod?
 void LissabonRemoteMod::unknownBLEDimmerFound(BLEAdvertisedDevice& deviceAdvertisement) {
   IFDEBUG IotsaSerial.printf("unknownBLEDimmerFound: iotsaLedstrip/iotsaDimmer \"%s\"\n", deviceAdvertisement.getName().c_str());
   unknownDevices.insert(deviceAdvertisement.getName());
@@ -295,12 +292,7 @@ void LissabonRemoteMod::loop() {
     configSave();
     ledOff();
   }
-  //
-  // Let the dimmers do any processing they need to do
-  //
-  for (auto d : dimmers) {
-    d->loop();
-  }
+  dimmers.loop();
 }
 
 // Instantiate our remote control module, and install it in the framework

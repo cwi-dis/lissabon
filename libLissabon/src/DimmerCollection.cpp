@@ -31,6 +31,18 @@ DimmerCollection::iterator DimmerCollection::begin() { return dimmers.begin(); }
 
 DimmerCollection::iterator DimmerCollection::end() { return dimmers.end(); }
 
+void DimmerCollection::setup() {
+  for(auto d : dimmers) {
+    d->setup();
+  }
+}
+
+void DimmerCollection::loop() {
+  for(auto d : dimmers) {
+    d->loop();
+  }
+}
+
 void DimmerCollection::getHandler(JsonObject& reply) {
   for (auto d : dimmers) {
     String ident = "dimmer" + String(d->num);
@@ -53,11 +65,13 @@ bool DimmerCollection::putHandler(const JsonVariant& request) {
 }
 
 bool DimmerCollection::configLoad(IotsaConfigFileLoad& cf, const String& f_name) {
+  bool rv = false;
   for (auto d : dimmers) {
     String ident = "dimmer" + String(d->num);
     if (f_name != "") ident = f_name + "." + ident;
-    d->configLoad(cf, ident);
+    rv |= d->configLoad(cf, ident);
   }
+  return rv;
 }
 
 void DimmerCollection::configSave(IotsaConfigFileSave& cf, const String& f_name) {
