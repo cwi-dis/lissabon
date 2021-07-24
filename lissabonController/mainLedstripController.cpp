@@ -77,6 +77,7 @@ protected:
   bool getHandler(const char *path, JsonObject& reply);
   bool putHandler(const char *path, const JsonVariant& request, JsonObject& reply);
   void unknownBLEDimmerFound(BLEAdvertisedDevice& device);
+  virtual String formHandler_field_perdevice(const char *deviceName) override;
 private:
   void uiButtonChanged();
   void dimmerValueChanged();
@@ -181,15 +182,18 @@ IotsaLedstripControllerMod::handler() {
   anyChanged |= IotsaBLEClientMod::formHandler_args(server, "", true);
 #if 0
   if (server->hasArg("scanUnknown")) startScanUnknown();
+#endif
   if (server->hasArg("add")) {
     String newDimmerName = server->arg("add");
     if (newDimmerName != "" && dimmers.find(newDimmerName) == nullptr) {
       dimmers.push_back_new(newDimmerName);
-      changed = true;
+      dimmers.setup();
+      anyChanged = true;
     } else {
       error = "Bad dimmer name";
     }
   }
+#if 0
   if (server->hasArg("set")) {
     for (auto it: dimmers) {
       String dimmerName(it->getUserVisibleName());
@@ -245,6 +249,13 @@ IotsaLedstripControllerMod::handler() {
   server->send(200, "text/html", message);
 }
 
+String IotsaLedstripControllerMod::formHandler_field_perdevice(const char *_deviceName) {
+  String deviceName(_deviceName);
+  String rv(deviceName);
+  rv += "<form><input type='hidden' name='add' value='" + deviceName + "'><input type='submit' value='Add'></form>";
+  return rv;
+}
+
 String IotsaLedstripControllerMod::info() {
   String message = "<p>See <a href='/blecontroller'>/blecontroller</a> to change settings or <a href='/api/blecontroller'>/api/blecontroller</a> for REST API.<br>";
 
@@ -283,7 +294,7 @@ void IotsaLedstripControllerMod::configLoad() {
 }
 
 void IotsaLedstripControllerMod::configSave() {
-  IotsaConfigFileSave cf("/config/bledimmer.cfg");
+  IotsaConfigFileSave cf("/config/blecontroller.cfg");
   IotsaSerial.println("xxxjack save blecontroller config");
   dimmers.configSave(cf, "");
 }

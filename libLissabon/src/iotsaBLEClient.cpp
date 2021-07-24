@@ -102,10 +102,14 @@ void IotsaBLEClientMod::formHandler_fields(String& message, const String& text, 
   } else {
     message += "<ul>";
     for (auto it: unknownDevices) {
-      message += "<li>" + String(it.c_str()) + "</li>";
+      message += "<li>" + formHandler_field_perdevice(it.c_str()) + "</li>";
     }
     message += "</ul>";
   }
+}
+
+String IotsaBLEClientMod::formHandler_field_perdevice(const char *deviceName) {
+  return String(deviceName);
 }
 
 bool IotsaBLEClientMod::formHandler_args(IotsaWebServer *server, const String& f_name, bool includeConfig) {
