@@ -120,9 +120,14 @@ void BLEDimmer::loop() {
   }
   // If we are scanning we don't try to connect
   if (!bleClientMod.canConnect()) {
-    IotsaSerial.println("BLEDimmer: BLE busy, cannot connect");
+    //xxxjack IotsaSerial.println("BLEDimmer: BLE busy, cannot connect");
+    if (millis() > noWarningPrintBefore) {
+      IotsaSerial.printf("BLEDimmer: BLE busy, cannot connect to %s\n", name.c_str());
+      noWarningPrintBefore = millis() + 4000;
+    }
     return;
   }
+  noWarningPrintBefore = 0;
   // If all that is correct, try to connect.
   if (!dimmer->connect()) {
     IotsaSerial.printf("BLEDimmer: connect to %s failed\n", dimmer->getName().c_str());

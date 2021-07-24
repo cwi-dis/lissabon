@@ -304,6 +304,7 @@ void IotsaLedstripControllerMod::setup() {
   // Let our base class do its setup.
   //
   IotsaBLEClientMod::setup();
+  dimmers.setFactory(std::bind(&IotsaLedstripControllerMod::dimmerFactory, this, std::placeholders::_1));
   //
   // Load configuration
   //
@@ -314,7 +315,6 @@ void IotsaLedstripControllerMod::setup() {
 #ifdef PIN_DISABLESLEEP
   batteryMod.setPinDisableSleep(PIN_DISABLESLEEP);
 #endif
-  dimmers.setFactory(std::bind(&IotsaLedstripControllerMod::dimmerFactory, this, std::placeholders::_1));
   _setupDisplay();
   button.setCallback(std::bind(&IotsaLedstripControllerMod::buttonPress, this));
   encoder.setCallback(std::bind(&IotsaLedstripControllerMod::encoderChanged, this));

@@ -36,6 +36,7 @@ protected:
   bool needSyncFromDevice = false;
   uint32_t needTransmitTimeoutAtMillis = 0;
   uint32_t disconnectAtMillis = 0;
+  uint32_t noWarningPrintBefore = 0;
 };
 };
 #endif // _BLEDIMMER_H_
