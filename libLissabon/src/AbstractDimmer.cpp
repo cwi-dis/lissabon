@@ -244,44 +244,45 @@ void AbstractDimmer::formHandler_fields(String& message, const String& text, con
   message += text;
   if (!available()) message += " <em>(dimmer may be unavailable)</em>";
   message += "<br>";
-  message += "<input type='checkbox' name='" + f_name + ".identify' value='1'>Identify (two rapid flashes)<br>";
-  String checkedOn = isOn ? "checked" : "";
-  String checkedOff = !isOn ? "checked " : "";
-  message += "<input type='radio' name='" + f_name +".isOn'" + checkedOff + " value='0'>Off <input type='radio' " + checkedOn + " name='" + f_name + ".isOn' value='1'>On</br>";
+  if (!includeConfig) {
+    message += "<input type='checkbox' name='" + f_name + ".identify' value='1'>Identify (two rapid flashes)<br>";
+    String checkedOn = isOn ? "checked" : "";
+    String checkedOff = !isOn ? "checked " : "";
+    message += "<input type='radio' name='" + f_name +".isOn'" + checkedOff + " value='0'>Off <input type='radio' " + checkedOn + " name='" + f_name + ".isOn' value='1'>On</br>";
 #ifdef DIMMER_WITH_LEVEL
-  message += "Level (0.0..1.0): <input name='" + f_name +".level' value='" + String(level) + "'></br>";
+    message += "Level (0.0..1.0): <input name='" + f_name +".level' value='" + String(level) + "'></br>";
 #endif
 #ifdef DIMMER_WITH_GAMMA
 #endif // DIMMER_WITH_GAMMA
 #ifdef DIMMER_WITH_ANIMATION
 #endif // DIMMER_WITH_ANIMATION
 #ifdef DIMMER_WITH_TEMPERATURE
-  message += "Color Temperature: <input name='" + f_name +".temperature' value='" + String(temperature) + "'>";
-  message += "(3000.0 is warm, 4000.0 is neutral, 6000.0 is cool)<br>";
+    message += "Color Temperature: <input name='" + f_name +".temperature' value='" + String(temperature) + "'>";
+    message += "(3000.0 is warm, 4000.0 is neutral, 6000.0 is cool)<br>";
 #endif // DIMMER_WITH_TEMPERATURE
 #ifdef DIMMER_WITH_PWMFREQUENCY
 #endif // DIMMER_WITH_PWMFREQUENCY
-
-  if(!includeConfig) return;
-  //
-  // Configuration form fields
-  //
+  } else {
+    //
+    // Configuration form fields
+    //
 #ifdef DIMMER_WITH_LEVEL
-  message += "Min Level (0.0..1.0): <input name='" + f_name +".minLevel' value='" + String(minLevel) + "'></br>";
+    message += "Min Level (0.0..1.0): <input name='" + f_name +".minLevel' value='" + String(minLevel) + "'></br>";
 #endif
 #ifdef DIMMER_WITH_GAMMA
-  message += "Gamma: <input name='" + f_name +".gamma' value='" + String(gamma) + "'>";
-  message += "(1.0 is linear, 2.2 is common for direct PWM LEDs)<br>";
+    message += "Gamma: <input name='" + f_name +".gamma' value='" + String(gamma) + "'>";
+    message += "(1.0 is linear, 2.2 is common for direct PWM LEDs)<br>";
 #endif // DIMMER_WITH_GAMMA
 #ifdef DIMMER_WITH_ANIMATION
-  message += "Animation duration (milliseconds): <input name='" + f_name +".animation' value='" + String(animationDurationMillis) + "'></br>";
+    message += "Animation duration (milliseconds): <input name='" + f_name +".animation' value='" + String(animationDurationMillis) + "'></br>";
 #endif // DIMMER_WITH_ANIMATION
 #ifdef DIMMER_WITH_TEMPERATURE
 #endif // DIMMER_WITH_TEMPERATURE
 #ifdef DIMMER_WITH_PWMFREQUENCY
-  message += "PWM Frequency: <input name='" + f_name +".pwmFrequency' value='" + String(pwmFrequency) + "'>";
-  message += "(Adapt when dimmed device flashes. 100 may be fine for dimmable LED lamps, 5000 for incandescent)<br>";
+    message += "PWM Frequency: <input name='" + f_name +".pwmFrequency' value='" + String(pwmFrequency) + "'>";
+    message += "(Adapt when dimmed device flashes. 100 may be fine for dimmable LED lamps, 5000 for incandescent)<br>";
 #endif // DIMMER_WITH_PWMFREQUENCY
+  }
 }
 
 void AbstractDimmer::formHandler_TD(String& message, bool includeConfig) {

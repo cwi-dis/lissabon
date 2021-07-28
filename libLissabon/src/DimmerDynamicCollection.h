@@ -10,6 +10,7 @@ class DimmerDynamicCollection : public DimmerCollection {
 public:
   void setFactory(FactoryFunc _factory) {factory = _factory; }
   void push_back_new(const String& name);
+  void clear();
   bool configLoad(IotsaConfigFileLoad& cf, const String& f_name) override;
   void configSave(IotsaConfigFileSave& cf, const String& f_name) override;
 protected:

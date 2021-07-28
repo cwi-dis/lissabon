@@ -72,6 +72,7 @@ protected:
   bool scanForUnknownClients = false;
   uint32_t scanUnknownUntilMillis = 0;
   bool shouldUpdateScan = false;
+  uint32_t dontUpdateScanBefore = 0;
   BLEScan *scanner = NULL;
   BleDeviceFoundCallback callback = NULL;
   bool duplicateNameFilter = false;

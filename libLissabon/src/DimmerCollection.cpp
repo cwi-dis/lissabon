@@ -96,7 +96,10 @@ void DimmerCollection::formHandler_fields(String& message, const String& text, c
   for (auto d : dimmers) {
     String ident(d->num);
     if (f_name != "") ident = f_name + "." + ident;
-    String name = "Dimmer " + ident;
+    String name = "Dimmer#" + ident;
+    if (d->hasName()) {
+      name += " " + d->getUserVisibleName();
+    }
     d->formHandler_fields(message, name, ident, includeConfig);
   }
 }

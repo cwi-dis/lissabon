@@ -152,6 +152,7 @@ void IotsaBLEClientMod::startScanUnknown() {
 void IotsaBLEClientMod::findUnknownDevices(bool on) {
   scanForUnknownClients = on;
   shouldUpdateScan = true;
+  dontUpdateScanBefore = 0;
 }
 
 void IotsaBLEClientMod::updateScanning() {
@@ -203,6 +204,7 @@ void IotsaBLEClientMod::stopScanning() {
   }
   // Next time through loop, check whether we should scan again.
   shouldUpdateScan = true;
+  dontUpdateScanBefore = millis() + 1000;
 }
 
 bool IotsaBLEClientMod::canConnect() {
@@ -244,8 +246,9 @@ void IotsaBLEClientMod::loop() {
     findUnknownDevices(false);
     scanUnknownUntilMillis = 0;
   }
-  if (shouldUpdateScan) {
+  if (shouldUpdateScan && (dontUpdateScanBefore == 0 || millis() > dontUpdateScanBefore)) {
     shouldUpdateScan = false;
+    dontUpdateScanBefore = millis() + 1000;
     updateScanning();
   }
 }
@@ -265,6 +268,7 @@ void IotsaBLEClientMod::onResult(BLEAdvertisedDevice advertisedDevice) {
       IFDEBUG IotsaSerial.printf("BLEClientMod: advertisement update byname for %s\n", deviceName.c_str());
     }
     shouldUpdateScan = true; // We may have found what we were looking for
+    dontUpdateScanBefore = 0;
     return;
   }
   auto it2 = devicesByAddress.find(advertisedDevice.getAddress().toString());
@@ -276,6 +280,7 @@ void IotsaBLEClientMod::onResult(BLEAdvertisedDevice advertisedDevice) {
       IFDEBUG IotsaSerial.printf("BLEClientMod: advertisement update byaddress for %s\n", deviceName.c_str());
     }
     shouldUpdateScan = true; // We may have found what we were looking for
+    dontUpdateScanBefore = 0;
     return;
   }
   // Do we want callbacks for unknown devices?
@@ -309,6 +314,7 @@ IotsaBLEClientConnection* IotsaBLEClientMod::addDevice(std::string id) {
     return dev;
   }
   shouldUpdateScan = true; // We probably want to scan for the new device
+  dontUpdateScanBefore = 0;
   return it->second;
 }
 

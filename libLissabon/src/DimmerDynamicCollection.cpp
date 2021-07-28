@@ -16,6 +16,13 @@ void DimmerDynamicCollection::push_back_new(const String& name) {
   push_back(item);
 }
 
+void DimmerDynamicCollection::clear() {
+  for(auto d : dimmers) {
+    delete d;
+  }
+  dimmers.clear();
+}
+
 bool DimmerDynamicCollection::configLoad(IotsaConfigFileLoad& cf, const String& f_name) {
   if (!factory) {
     IotsaSerial.println("DimmerDynamicCollection.configLoad requires factory");

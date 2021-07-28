@@ -193,14 +193,10 @@ IotsaLedstripControllerMod::handler() {
       error = "Bad dimmer name";
     }
   }
-#if 0
-  if (server->hasArg("set")) {
-    for (auto it: dimmers) {
-      String dimmerName(it->getUserVisibleName());
-      changed |= it->formHandler_args(server, dimmerName, true);
-    }
+  if (server->hasArg("clearall") && server->arg("iamsure") == "iamsure") {
+    dimmers.clear();
+    anyChanged = true;
   }
-#endif
   if (anyChanged) configSave();
   
   String message = "<html><head><title>Lissabon Controller</title></head><body><h1>Lissabon Controller</h1>";
@@ -211,40 +207,15 @@ IotsaLedstripControllerMod::handler() {
   dimmers.formHandler_fields(message, "", "", false);
   message += "<input type='submit' name='set' value='Set Dimmers'></form><br>";
 
-  message += "<h2>Dimmer Configuration</h2><form method='post'>";
+  message += "<h2>Dimmer Configurations</h2><form method='post'>";
   dimmers.formHandler_fields(message, "", "", true);
   message += "<input type='submit' name='config' value='Configure Dimmers'></form><br>";
 
+  message += "<br><form method='post'>Remove all: <input type='checkbox' name='iamsure' value='iamsure'>I am sure <input type='submit' name='clearall' value='Remove All'></form><br>";
+  message += "<br><form method='post'>Add by name: <input name='add'><input type='submit' name='addbyname' value='Add'></form><br>";
+
   IotsaBLEClientMod::formHandler_fields(message, "BLE Dimmer", "dimmer", true);
-#if 0
-  for(auto it: dimmers) {
-    String name(it->getUserVisibleName());
-    message += "<h2>BLE dimmer " + name + "</h2>";
-    message += "<form method='POST'>";
-    it->formHandler_fields(message, name, name, true);
-    message += "<input type='submit' name='set' value='Submit'></form>";
-  }
-  message += "<h2>Available Unknown/new BLE dimmer devices</h2>";
-  message += "<form><input type='submit' name='scanUnknown' value='Scan for 20 seconds'></form>";
-  message += "<form><input type='submit' name='refresh' value='Refresh'></form>";
-  if (unknownDimmers.size() == 0) {
-    message += "<p>No unassigned BLE dimmer devices seen recently.</p>";
-  } else {
-    message += "<ul>";
-    for (auto it: unknownDimmers) {
-      message += "<li>" + String(it.first.c_str()) + " " + it.second.toString().c_str();
-      if (it.first != "") {
-        message += "<form><input type='hidden' name='add' value='" + String(it.first.c_str()) + "'><input type='submit' value='Add'></form>";
-      } else {
-        message += "<em>nameless dimmer (cannot be added)</em>";
-      }
-      message += "</li>";
-    }
-    message += "</ul>";
-  }
-  message += "<h2>Add BLE dimmer manually</h2>";
-  message += "<form>BLE name: <input name='add'><input type='submit' value='Add'></form>";
-#endif
+
   message += "</body></html>";
   server->send(200, "text/html", message);
 }
