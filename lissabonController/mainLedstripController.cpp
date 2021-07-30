@@ -84,27 +84,32 @@ private:
   void handler();
   bool buttonPress();
   bool encoderChanged();
-  void updateDisplay();
+  void updateDisplay(bool clear);
 //xxxjack   void startScanUnknown();
   uint32_t scanUnknownUntilMillis = 0;
   typedef std::pair<std::string, BLEAddress> unknownDimmerInfo;
   DimmerDynamicCollection dimmers;
   DimmerDynamicCollection::ItemType* dimmerFactory(int num);
+  int selectedIndex = -1; // currently selected dimmer on display
 };
 
 void 
-IotsaLedstripControllerMod::updateDisplay() {
+IotsaLedstripControllerMod::updateDisplay(bool clear) {
   IotsaSerial.print(dimmers.size());
   IotsaSerial.println(" strips:");
 
-  display->clearStrips();
+  if (true || clear) display->clearStrips();
   int index = 0;
   for (auto& elem : dimmers) {
-    index++;
     String name = elem->getUserVisibleName();
     IotsaSerial.printf("device %s, available=%d\n", name.c_str(), elem->available());
     display->addStrip(index, name, elem->available());
+    index++;
   }
+  if (selectedIndex >= dimmers.size()) selectedIndex = dimmers.size()-1;
+  if (selectedIndex < 0) selectedIndex = 0;
+  encoder.value = selectedIndex;
+  display->selectStrip(selectedIndex);
   display->show();
 }
 
@@ -118,6 +123,8 @@ IotsaLedstripControllerMod::buttonPress() {
 bool
 IotsaLedstripControllerMod::encoderChanged() {
   IFDEBUG IotsaSerial.println("encoderChanged()");
+  selectedIndex = encoder.value;
+  updateDisplay(false);
   iotsaConfig.postponeSleep(4000);
   return true;
 }
@@ -159,7 +166,7 @@ void IotsaLedstripControllerMod::uiButtonChanged() {
 void IotsaLedstripControllerMod::dimmerValueChanged() {
 #if 1
   IotsaSerial.println("xxxjack dimmerValueChanged()");
-  updateDisplay();
+  updateDisplay(false);
 #else
   saveAtMillis = millis() + 1000;
   ledOn();
@@ -305,7 +312,7 @@ void IotsaLedstripControllerMod::setup() {
 
 void IotsaLedstripControllerMod::_setupDisplay() {
   if (display == NULL) display = new Display();
-  updateDisplay();
+  updateDisplay(true);
 }
 
 #if 0

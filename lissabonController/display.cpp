@@ -33,7 +33,7 @@ static Adafruit_SSD1306 *oled;
 #include "icons/lightbulb.h"
 
 Display::Display()
-: selected(0)
+: selected(-1)
 {
   Wire.begin(PIN_SDA, PIN_SCL);
   oled = new Adafruit_SSD1306(OLED_WIDTH, OLED_HEIGHT, &Wire, -1);
@@ -64,9 +64,8 @@ void Display::clearStrips() {
   // xxxjack clear strip area
   // xxxjack show all in 0
   oled->fillRect(STRIPS_X-2, STRIPS_Y-2, STRIPS_WIDTH+4, STRIPS_HEIGHT*N_STRIPS+4, BLACK);
-  addStrip(0, "ALL", true);
-  selected = 0;
-  selectStrip(0);
+  //addStrip(0, "ALL", true);
+  selected = -1;
 }
 
 void Display::addStrip(int index, String name, bool available) {
@@ -82,15 +81,19 @@ void Display::addStrip(int index, String name, bool available) {
 
 void Display::selectStrip(int index) {
   // xxxjack clear ring around selected
-  int x = STRIPS_X-2;
-  int y = STRIPS_Y + selected*STRIPS_HEIGHT - 2;
-  oled->drawRoundRect(x, y, STRIPS_WIDTH, STRIPS_HEIGHT, 4, BLACK);
-  
+  if (selected >= 0) {
+    int x = STRIPS_X-2;
+    int y = STRIPS_Y + selected*STRIPS_HEIGHT - 2;
+    oled->drawRoundRect(x, y, STRIPS_WIDTH, STRIPS_HEIGHT, 4, BLACK);
+  }
+
   selected = index;
-  // xxxjack draw ring around selected
-  x = STRIPS_X-2;
-  y = STRIPS_Y + selected*STRIPS_HEIGHT - 2;
-  oled->drawRoundRect(x, y, STRIPS_WIDTH, STRIPS_HEIGHT, 4, WHITE);
+  if (selected >= 0) {
+    // xxxjack draw ring around selected
+    int x = STRIPS_X-2;
+    int y = STRIPS_Y + selected*STRIPS_HEIGHT - 2;
+    oled->drawRoundRect(x, y, STRIPS_WIDTH, STRIPS_HEIGHT, 4, WHITE);
+  }
 }
 
 void Display::setIntensity(float intensity) {
