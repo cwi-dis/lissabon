@@ -106,10 +106,14 @@ IotsaLedstripControllerMod::updateDisplay(bool clear) {
     display->addStrip(index, name, elem->available());
     index++;
   }
-  if (selectedIndex >= dimmers.size()) selectedIndex = dimmers.size()-1;
   if (selectedIndex < 0) selectedIndex = 0;
+  if (selectedIndex >= dimmers.size()) selectedIndex = dimmers.size()-1;
   encoder.value = selectedIndex;
   display->selectStrip(selectedIndex);
+  if (selectedIndex >= 0) {
+    auto d = dimmers.at(selectedIndex);
+    display->setIntensity(d->level, d->isOn);
+  }
   display->show();
 }
 

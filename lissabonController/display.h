@@ -9,7 +9,7 @@ public:
   void addStrip(int index, String name, bool available);
   void selectStrip(int index);
 
-  void setIntensity(float intensity);
+  void setIntensity(float intensity, bool on);
   void clearColor();
   void addColor(float color);
 private:

@@ -96,10 +96,14 @@ void Display::selectStrip(int index) {
   }
 }
 
-void Display::setIntensity(float intensity) {
+void Display::setIntensity(float intensity, bool on) {
   oled->fillRect(INTENSITY_X, INTENSITY_Y, INTENSITY_WIDTH, INTENSITY_HEIGHT, BLACK);
   oled->drawRect(INTENSITY_X, INTENSITY_Y, INTENSITY_WIDTH, INTENSITY_HEIGHT, WHITE);
-  oled->fillRect(INTENSITY_X, INTENSITY_Y, int(intensity*INTENSITY_WIDTH), INTENSITY_HEIGHT, BLACK);
+  if (on) {
+    oled->fillRect(INTENSITY_X, INTENSITY_Y, int(intensity*INTENSITY_WIDTH), INTENSITY_HEIGHT, WHITE);
+  } else {
+    oled->drawFastVLine(INTENSITY_X+int(intensity*INTENSITY_WIDTH), INTENSITY_Y, INTENSITY_HEIGHT, WHITE);
+  }
 }
 
 void Display::clearColor() {
