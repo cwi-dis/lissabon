@@ -80,6 +80,11 @@ void BLEDimmer::followDimmerChanges(bool follow) {
     needTransmitTimeoutAtMillis = millis() + IOTSA_BLEDIMMER_CONNECT_TIMEOUT;
   }
 }
+
+void BLEDimmer::identify() {
+  needIdentify = true;
+  updateDimmer();
+}
  
 void BLEDimmer::loop() {
   // If we don't have anything to transmit we bail out quickly...
@@ -176,6 +181,15 @@ void BLEDimmer::syncToDevice(IotsaBLEClientConnection *dimmer) {
   ok = dimmer->set(Lissabon::Dimmer::serviceUUID, Lissabon::Dimmer::isOnUUID, (Lissabon::Dimmer::Type_isOn)isOn);
   if (!ok) {
     IFDEBUG IotsaSerial.println("BLEDimmer: set(isOn) failed");
+  }
+  if (needIdentify) {
+    IFDEBUG IotsaSerial.printf("BLEDimmer: Transmit identify\n");
+    ok = dimmer->set(Lissabon::Dimmer::serviceUUID, Lissabon::Dimmer::identifyUUID, (Lissabon::Dimmer::Type_isOn)1);
+    needIdentify = false;
+    if (!ok) {
+      IFDEBUG IotsaSerial.println("BLEDimmer: identify failed");
+    }
+
   }
   needSyncToDevice = false;
 }

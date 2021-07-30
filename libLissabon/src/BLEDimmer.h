@@ -23,6 +23,7 @@ public:
   bool setName(String value);
   void setup() override;
   void loop() override;
+  void identify() override;
   virtual bool configLoad(IotsaConfigFileLoad& cf, const String& name) override;
   virtual void configSave(IotsaConfigFileSave& cf, const String& name) override;
   virtual void getHandler(JsonObject& reply) override;
@@ -34,6 +35,7 @@ protected:
   bool listenForDeviceChanges = false;
   bool needSyncToDevice = false;
   bool needSyncFromDevice = false;
+  bool needIdentify = false;
   uint32_t needTransmitTimeoutAtMillis = 0;
   uint32_t disconnectAtMillis = 0;
   uint32_t noWarningPrintBefore = 0;
