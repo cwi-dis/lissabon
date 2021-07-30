@@ -226,6 +226,7 @@ void BLEDimmer::syncFromDevice(IotsaBLEClientConnection *dimmer) {
     IFDEBUG IotsaSerial.println("BLEDimmer: set(isOn) failed");
   }
   needSyncFromDevice = false;
+  if (callbacks) callbacks->dimmerValueChanged();
 }
 
 }

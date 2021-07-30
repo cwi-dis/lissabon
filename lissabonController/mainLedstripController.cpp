@@ -159,6 +159,7 @@ void IotsaLedstripControllerMod::uiButtonChanged() {
 void IotsaLedstripControllerMod::dimmerValueChanged() {
 #if 1
   IotsaSerial.println("xxxjack dimmerValueChanged()");
+  updateDisplay();
 #else
   saveAtMillis = millis() + 1000;
   ledOn();
