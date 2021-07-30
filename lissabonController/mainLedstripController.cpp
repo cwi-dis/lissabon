@@ -43,9 +43,9 @@ IotsaBatteryMod batteryMod(application);
 // A and B (northwest, northeast) are the rotary encoder pins,
 // C is the corresponding ground,
 // D and E are the pushbutton pins.
-// So, connect E and C to GND, D to GPIO0, A to GPIO4, B to GPIO2
+// So, connect E and C to GND, D to GPIO0, A to GPI14, B to GPIO2
 Button button(0, true, false, true);
-RotaryEncoder encoder(4, 2);
+RotaryEncoder encoder(14, 2);
 
 Input* inputs[] = {
   &button,
