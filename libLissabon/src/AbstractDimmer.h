@@ -16,7 +16,7 @@ namespace Lissabon {
 class DimmerCallbacks {
 public:
   ~DimmerCallbacks() {}
-  virtual void uiButtonChanged() = 0;
+  virtual void dimmerOnOffChanged() = 0;
   virtual void dimmerValueChanged() = 0;
 };
 

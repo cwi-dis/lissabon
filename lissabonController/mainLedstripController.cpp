@@ -79,18 +79,18 @@ protected:
   void unknownBLEDimmerFound(BLEAdvertisedDevice& device);
   virtual String formHandler_field_perdevice(const char *deviceName) override;
 private:
-  void uiButtonChanged();
+  void dimmerOnOffChanged();
   void dimmerValueChanged();
   void handler();
-  bool buttonPress();
-  bool encoderChanged();
+  bool uiButtonPressed();
+  bool uiEncoderChanged();
   void updateDisplay(bool clear);
-//xxxjack   void startScanUnknown();
   uint32_t scanUnknownUntilMillis = 0;
   typedef std::pair<std::string, BLEAddress> unknownDimmerInfo;
   DimmerDynamicCollection dimmers;
   DimmerDynamicCollection::ItemType* dimmerFactory(int num);
-  int selectedIndex = -1; // currently selected dimmer on display
+  int selectedDimmerIndex = -1; // currently selected dimmer on display
+  Display::DisplayMode selectedMode = Display::DisplayMode::dm_select;
 };
 
 void 
@@ -99,6 +99,7 @@ IotsaLedstripControllerMod::updateDisplay(bool clear) {
   IotsaSerial.println(" strips:");
 
   if (true || clear) display->clearStrips();
+  display->selectMode(selectedMode);
   int index = 0;
   for (auto& elem : dimmers) {
     String name = elem->getUserVisibleName();
@@ -106,37 +107,43 @@ IotsaLedstripControllerMod::updateDisplay(bool clear) {
     display->addStrip(index, name, elem->available());
     index++;
   }
-  if (selectedIndex < 0) selectedIndex = 0;
-  if (selectedIndex >= dimmers.size()) selectedIndex = dimmers.size()-1;
-  encoder.value = selectedIndex;
-  display->selectStrip(selectedIndex);
-  if (selectedIndex >= 0) {
-    auto d = dimmers.at(selectedIndex);
-    display->setIntensity(d->level, d->isOn);
+  if (selectedDimmerIndex < 0) selectedDimmerIndex = 0;
+  if (selectedDimmerIndex >= dimmers.size()) selectedDimmerIndex = dimmers.size()-1;
+  encoder.value = selectedDimmerIndex;
+  display->selectStrip(selectedDimmerIndex);
+  if (selectedDimmerIndex >= 0) {
+    auto d = dimmers.at(selectedDimmerIndex);
+    display->setLevel(d->level, d->isOn);
   }
   display->show();
 }
 
 bool
-IotsaLedstripControllerMod::buttonPress() {
-  IFDEBUG IotsaSerial.println("buttonPress()");
+IotsaLedstripControllerMod::uiButtonPressed() {
+  IFDEBUG IotsaSerial.println("uiButtonPressed()");
   iotsaConfig.postponeSleep(4000);
+  if (selectedMode == Display::DisplayMode::dm_MAX) {
+    selectedMode = Display::DisplayMode::dm_select;
+  } else {
+    selectedMode = (Display::DisplayMode)((int)selectedMode+1);
+  }
+  updateDisplay(false);
   return true;
 }
 
 bool
-IotsaLedstripControllerMod::encoderChanged() {
+IotsaLedstripControllerMod::uiEncoderChanged() {
   IFDEBUG IotsaSerial.println("encoderChanged()");
-  selectedIndex = encoder.value;
+  selectedDimmerIndex = encoder.value;
   updateDisplay(false);
   iotsaConfig.postponeSleep(4000);
   return true;
 }
 
 
-void IotsaLedstripControllerMod::uiButtonChanged() {
+void IotsaLedstripControllerMod::dimmerOnOffChanged() {
 #if 1
-  IotsaSerial.println("xxxjack IOButtonChanged()");
+  IotsaSerial.println("xxxjack dimmerOnOfChanged()");
 #else
   // Called whenever any button changed state.
   // Used to give visual feedback (led turning off) on presses and releases,
@@ -299,8 +306,8 @@ void IotsaLedstripControllerMod::setup() {
   batteryMod.setPinDisableSleep(PIN_DISABLESLEEP);
 #endif
   _setupDisplay();
-  button.setCallback(std::bind(&IotsaLedstripControllerMod::buttonPress, this));
-  encoder.setCallback(std::bind(&IotsaLedstripControllerMod::encoderChanged, this));
+  button.setCallback(std::bind(&IotsaLedstripControllerMod::uiButtonPressed, this));
+  encoder.setCallback(std::bind(&IotsaLedstripControllerMod::uiEncoderChanged, this));
   auto callback = std::bind(&IotsaLedstripControllerMod::unknownBLEDimmerFound, this, std::placeholders::_1);
   setUnknownDeviceFoundCallback(callback);
   setDuplicateNameFilter(true);
