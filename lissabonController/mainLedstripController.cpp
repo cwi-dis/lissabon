@@ -46,7 +46,7 @@ IotsaBatteryMod batteryMod(application);
 // So, connect E and C to GND, D to GPIO0, A to GPI14, B to GPIO2
 RotaryEncoder encoder(14, 2);
 #define ENCODER_STEPS 20
-Button button(0, false, true, true);
+Button button(0, true, true, true);
 #define SHORT_PRESS_DURATION 500
 
 Input* inputs[] = {
@@ -91,7 +91,7 @@ private:
   typedef std::pair<std::string, BLEAddress> unknownDimmerInfo;
   DimmerDynamicCollection dimmers;
   DimmerDynamicCollection::ItemType* dimmerFactory(int num);
-  int selectedDimmerIndex = -1; // currently selected dimmer on display
+  int selectedDimmerIndex = 0; // currently selected dimmer on display
   Display::DisplayMode selectedMode = Display::DisplayMode::dm_select;
 };
 
@@ -124,11 +124,12 @@ IotsaLedstripControllerMod::uiButtonPressed() {
   if (button.pressed) {
     // While the button is pressed the encoder modifies the dimmer selected
     encoder.value = selectedDimmerIndex;
+    IotsaSerial.printf("xxxjack start selectedDimmer=%d\n", selectedDimmerIndex);
   } else {
     // While the button is released the encoder modifies the level of the dimmer
     if (selectedDimmerIndex >= 0) {
       auto d = dimmers.at(selectedDimmerIndex);
-      float f_value = d->level;
+      float f_value = (d->level-d->minLevel) / (1-d->minLevel);
       encoder.value = (int)(f_value * ENCODER_STEPS);
     }
   }
@@ -138,7 +139,7 @@ IotsaLedstripControllerMod::uiButtonPressed() {
     bool ok = false;
     if (selectedDimmerIndex >= 0) {
       auto d = dimmers.at(selectedDimmerIndex);
-      if (d->available()) {
+      if (d && d->available()) {
         d->isOn = !d->isOn;
         d->updateDimmer();
         ok = true;
@@ -164,6 +165,7 @@ IotsaLedstripControllerMod::uiEncoderChanged() {
     if (selectedDimmerIndex < 0) selectedDimmerIndex = 0;
     if (selectedDimmerIndex >= dimmers.size()) selectedDimmerIndex = dimmers.size()-1;
     encoder.value = selectedDimmerIndex;
+    IotsaSerial.printf("xxxjack now selectedDimmer=%d\n", selectedDimmerIndex);
     updateDisplay(false);
   } else {
     if (encoder.value < 0) encoder.value = 0;
