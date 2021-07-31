@@ -44,8 +44,10 @@ IotsaBatteryMod batteryMod(application);
 // C is the corresponding ground,
 // D and E are the pushbutton pins.
 // So, connect E and C to GND, D to GPIO0, A to GPI14, B to GPIO2
-Button button(0, true, false, true);
 RotaryEncoder encoder(14, 2);
+#define ENCODER_STEPS 20
+Button button(0, false, true, true);
+#define SHORT_PRESS_DURATION 500
 
 Input* inputs[] = {
   &button,
@@ -107,9 +109,6 @@ IotsaLedstripControllerMod::updateDisplay(bool clear) {
     display->addStrip(index, name, elem->available());
     index++;
   }
-  if (selectedDimmerIndex < 0) selectedDimmerIndex = 0;
-  if (selectedDimmerIndex >= dimmers.size()) selectedDimmerIndex = dimmers.size()-1;
-  encoder.value = selectedDimmerIndex;
   display->selectStrip(selectedDimmerIndex);
   if (selectedDimmerIndex >= 0) {
     auto d = dimmers.at(selectedDimmerIndex);
@@ -120,22 +119,72 @@ IotsaLedstripControllerMod::updateDisplay(bool clear) {
 
 bool
 IotsaLedstripControllerMod::uiButtonPressed() {
-  IFDEBUG IotsaSerial.println("uiButtonPressed()");
-  iotsaConfig.postponeSleep(4000);
-  if (selectedMode == Display::DisplayMode::dm_MAX) {
-    selectedMode = Display::DisplayMode::dm_select;
+  IFDEBUG IotsaSerial.printf("uiButtonPressed: state=%d repeatCount=%d duration=%d\n", button.pressed, button.repeatCount, button.duration);
+  //iotsaConfig.postponeSleep(4000);
+  if (button.pressed) {
+    // While the button is pressed the encoder modifies the dimmer selected
+    encoder.value = selectedDimmerIndex;
   } else {
-    selectedMode = (Display::DisplayMode)((int)selectedMode+1);
+    // While the button is released the encoder modifies the level of the dimmer
+    if (selectedDimmerIndex >= 0) {
+      auto d = dimmers.at(selectedDimmerIndex);
+      float f_value = d->level;
+      encoder.value = (int)(f_value * ENCODER_STEPS);
+    }
   }
-  updateDisplay(false);
+  if (button.duration < SHORT_PRESS_DURATION) {
+    // Short press: turn current dimmer on or off
+    IotsaSerial.println("ioButtonPress: dimmer on/off");
+    bool ok = false;
+    if (selectedDimmerIndex >= 0) {
+      auto d = dimmers.at(selectedDimmerIndex);
+      if (d->available()) {
+        d->isOn = !d->isOn;
+        d->updateDimmer();
+        ok = true;
+      }
+    }
+    if (ok) {
+      updateDisplay(false);
+    } else {
+      display->flash();
+    }
+  } else {
+    // Long press: assume rotary was used for selecting dimmer
+  }
   return true;
 }
 
 bool
 IotsaLedstripControllerMod::uiEncoderChanged() {
   IFDEBUG IotsaSerial.println("encoderChanged()");
-  selectedDimmerIndex = encoder.value;
-  updateDisplay(false);
+  if (button.pressed) {
+    // The encoder controls the selected dimmer
+    selectedDimmerIndex = encoder.value;
+    if (selectedDimmerIndex < 0) selectedDimmerIndex = 0;
+    if (selectedDimmerIndex >= dimmers.size()) selectedDimmerIndex = dimmers.size()-1;
+    encoder.value = selectedDimmerIndex;
+    updateDisplay(false);
+  } else {
+    if (encoder.value < 0) encoder.value = 0;
+    if (encoder.value >= ENCODER_STEPS) encoder.value = ENCODER_STEPS;
+    float f_value = (float)encoder.value / ENCODER_STEPS;
+    bool ok = false;
+    if (selectedDimmerIndex >= 0) {
+      auto d = dimmers.at(selectedDimmerIndex);
+      if (d->available()) {
+        d->level = d->minLevel + (f_value*(1.0-d->minLevel));
+        d->isOn = true;
+        d->updateDimmer();
+        ok = true;
+      }
+    }
+    if (ok) {
+      updateDisplay(false);
+    } else {
+      display->flash();
+    }
+  }
   iotsaConfig.postponeSleep(4000);
   return true;
 }

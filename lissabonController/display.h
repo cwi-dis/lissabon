@@ -6,6 +6,7 @@ public:
   enum DisplayMode { dm_sleep=0, dm_select, dm_level, dm_temp, dm_MAX=dm_temp };
   
   Display();
+  void flash();
   void show();
   void clearStrips();
   void addStrip(int index, String name, bool available);

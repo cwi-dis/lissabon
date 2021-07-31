@@ -59,6 +59,14 @@ Display::Display()
   oled->display();
 }
 
+void Display::flash() {
+  oled->fillRect(0, 0, DISPLAY_WIDTH, DISPLAY_HEIGHT, INVERSE);
+  oled->display();
+  delay(200);
+  oled->fillRect(0, 0, DISPLAY_WIDTH, DISPLAY_HEIGHT, INVERSE);
+  oled->display();
+}
+
 void Display::clearStrips() {
   // xxxjack clear strip area
   // xxxjack show all in 0
