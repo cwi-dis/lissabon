@@ -75,7 +75,10 @@ void Display::addStrip(int index, String name, bool available) {
   oled->setCursor(x, y);
   oled->print(name.c_str());
   if (!available) {
-      oled->writeFastHLine(x, y+STRIPS_HEIGHT/2-2, STRIPS_WIDTH, WHITE);
+    int16_t x1, y1;
+    uint16_t w, h;
+    oled->getTextBounds(name, x, y, &x1, &y1, &w, &h);
+      oled->writeFastHLine(x1, y1+h/2, w, WHITE);
   }
 }
 
@@ -97,9 +100,7 @@ void Display::selectStrip(int index) {
 }
 
 void Display::selectMode(DisplayMode mode) {
-  if (selectedModeOnDisplay != dm_sleep) {
-    oled->drawFastVLine(0, 0, DISPLAY_HEIGHT, BLACK);
-  }
+  oled->drawFastVLine(0, 0, DISPLAY_HEIGHT, BLACK);
   selectedModeOnDisplay = mode;
   switch(selectedModeOnDisplay) {
   case dm_select:
