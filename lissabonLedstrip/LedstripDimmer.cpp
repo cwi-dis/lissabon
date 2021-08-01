@@ -236,17 +236,19 @@ void LedstripDimmer::configSave(IotsaConfigFileSave& cf, const String& f_name) {
 
 void LedstripDimmer::formHandler_fields(String& message, const String& text, const String& f_name, bool includeConfig) {
   AbstractDimmer::formHandler_fields(message, text, f_name, includeConfig);
-  // Configuration parameters
-  message += "White LED temperature: <input type='text' name='" + f_name + ".whiteTemperature' value='" + String(rgbwSpace.WTemperature) +"' ><br>";
-  message += "White LED brightness: <input type='text' name='" + f_name + ".whiteBrightness' value='" + String(rgbwSpace.WBrightness) +"' ><br>";
-  message += "Focal point: <input type='text' name='" + f_name + ".focalPoint' value='" + String(focalPoint) +"' > (0.0 is first LED, 1.0 is last LED)<br>";
-  message += "Focal spread: <input type='text' name='" + f_name +" .focalSpread' value='" + String(focalSpread) +"' > (0.0 is narrow, 1.0 is as full width)<br>";
-  String checkedNormal = calibrationMode == calibration_normal ? "checked" : "";
-  String checkedRGB = calibrationMode == calibration_rgb ? "checked" : "";
-  String checkedAlternate = calibrationMode ==calibration_alternating ? "checked" : "";
-  message += "RGBW calibration mode: <input type='radio' name='" + f_name + ".calibrationMode' value='0' " + checkedNormal + "> Normal mode <input type='radio' name='calibrationMode' value='1' " + checkedRGB + "> RGB only <input type='radio' name='calibrationMode' value='2' " + checkedAlternate + "> Alternate RGB and RGBW LEDs<br>";
-  message += "(hard color calibration can only be set through REST interface calibrationData)<br>";
-  message += colorDump();
+  if (includeConfig) {
+    // Configuration parameters
+    message += "White LED temperature: <input type='text' name='" + f_name + ".whiteTemperature' value='" + String(rgbwSpace.WTemperature) +"' ><br>";
+    message += "White LED brightness: <input type='text' name='" + f_name + ".whiteBrightness' value='" + String(rgbwSpace.WBrightness) +"' ><br>";
+    message += "Focal point: <input type='text' name='" + f_name + ".focalPoint' value='" + String(focalPoint) +"' > (0.0 is first LED, 1.0 is last LED)<br>";
+    message += "Focal spread: <input type='text' name='" + f_name +" .focalSpread' value='" + String(focalSpread) +"' > (0.0 is narrow, 1.0 is as full width)<br>";
+    String checkedNormal = calibrationMode == calibration_normal ? "checked" : "";
+    String checkedRGB = calibrationMode == calibration_rgb ? "checked" : "";
+    String checkedAlternate = calibrationMode ==calibration_alternating ? "checked" : "";
+    message += "RGBW calibration mode: <input type='radio' name='" + f_name + ".calibrationMode' value='0' " + checkedNormal + "> Normal mode <input type='radio' name='calibrationMode' value='1' " + checkedRGB + "> RGB only <input type='radio' name='calibrationMode' value='2' " + checkedAlternate + "> Alternate RGB and RGBW LEDs<br>";
+    message += "(hard color calibration can only be set through REST interface calibrationData)<br>";
+    message += colorDump();
+  }
 }
 
 void LedstripDimmer::formHandler_TD(String& message, bool includeConfig) {

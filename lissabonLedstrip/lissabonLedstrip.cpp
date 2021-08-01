@@ -153,8 +153,11 @@ LissabonLedstripMod::handler() {
   
   String message = "<html><head><title>Lissabon Ledstrip</title></head><body><h1>Lissabon Ledstrip</h1>";
   message += "<h2>Settings</h2><form method='post'>";
+  dimmer.formHandler_fields(message, "ledstrip", "ledstrip", false);
+  message += "<input type='submit' name='set' value='Set Level'></form>";
+  message += "<h2>Configuration</h2><form method='post'>";
   dimmer.formHandler_fields(message, "ledstrip", "ledstrip", true);
-  message += "<input type='submit' name='set' value='Submit'></form>";
+  message += "<input type='submit' name='set' value='Update Configuration'></form>";
   message += "</body></html>";
   server->send(200, "text/html", message);
   iotsaConfig.extendCurrentMode();
