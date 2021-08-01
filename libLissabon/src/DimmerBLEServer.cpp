@@ -33,10 +33,13 @@ void DimmerBLEServer::setup() {
 bool DimmerBLEServer::blePutHandler(UUIDstring charUUID) {
   bool anyChanged = false;
   if (charUUID == Lissabon::Dimmer::brightnessUUIDstring) {
-      int level = bleApi.getAsInt(Lissabon::Dimmer::brightnessUUIDstring);
+      int i_level = bleApi.getAsInt(Lissabon::Dimmer::brightnessUUIDstring);
       float maxLevel = (float)(1<<sizeof(Lissabon::Dimmer::Type_brightness)*8)-1; // Depends on max #bits in brightness type
-      dimmer.level = float(level)/maxLevel;
-      IFDEBUG IotsaSerial.printf("xxxjack ble: wrote brightness %s value %d %f\n", Lissabon::Dimmer::brightnessUUIDstring, level, dimmer.level);
+      float level = float(i_level)/maxLevel;
+      if (level < dimmer.minLevel) level = dimmer.minLevel;
+      if (level > 1) level = 1;
+      dimmer.level = level;
+      IFDEBUG IotsaSerial.printf("xxxjack ble: wrote brightness %s value %d %f\n", Lissabon::Dimmer::brightnessUUIDstring, i_level, dimmer.level);
       anyChanged = true;
   }
 #ifdef DIMMER_WITH_TEMPERATURE

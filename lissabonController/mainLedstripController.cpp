@@ -129,7 +129,7 @@ IotsaLedstripControllerMod::uiButtonPressed() {
     // While the button is released the encoder modifies the level of the dimmer
     if (selectedDimmerIndex >= 0) {
       auto d = dimmers.at(selectedDimmerIndex);
-      float f_value = (d->level-d->minLevel) / (1-d->minLevel);
+      float f_value = d->level;
       encoder.value = (int)(f_value * ENCODER_STEPS);
     }
   }
@@ -171,11 +171,19 @@ IotsaLedstripControllerMod::uiEncoderChanged() {
     if (encoder.value < 0) encoder.value = 0;
     if (encoder.value >= ENCODER_STEPS) encoder.value = ENCODER_STEPS;
     float f_value = (float)encoder.value / ENCODER_STEPS;
+    if (f_value > 1.0) {
+      f_value = 1.0;
+      encoder.value = ENCODER_STEPS;
+    }
     bool ok = false;
     if (selectedDimmerIndex >= 0) {
       auto d = dimmers.at(selectedDimmerIndex);
       if (d->available()) {
-        d->level = d->minLevel + (f_value*(1.0-d->minLevel));
+        if (f_value < d->minLevel) {
+          f_value = d->minLevel;
+          encoder.value = f_value * ENCODER_STEPS;
+        }
+        d->level = f_value;
         d->isOn = true;
         d->updateDimmer();
         ok = true;
