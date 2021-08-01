@@ -61,8 +61,8 @@ protected:
   bool putHandler(const char *path, const JsonVariant& request, JsonObject& reply);
   void unknownDeviceFound(BLEAdvertisedDevice& deviceAdvertisement);
 private:
-  void uiButtonChanged();
-  void dimmerValueChanged();
+  void dimmerOnOffChanged() override;
+  void dimmerValueChanged() override;
   void handler();
   BLEDimmer dimmer1;
 #ifdef WITH_BLESERVER
@@ -77,7 +77,7 @@ private:
 
 
 
-void IotsaBLEDimmerMod::uiButtonChanged() {
+void IotsaBLEDimmerMod::dimmerOnOffChanged() {
 
 }
 

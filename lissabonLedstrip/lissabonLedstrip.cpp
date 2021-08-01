@@ -99,8 +99,8 @@ public:
   void loop();
 
 protected:
-  void uiButtonChanged();
-  void dimmerValueChanged();
+  void dimmerOnOffChanged() override;
+  void dimmerValueChanged() override;
   bool getHandler(const char *path, JsonObject& reply) override;
   bool putHandler(const char *path, const JsonVariant& request, JsonObject& reply) override;
 private:
@@ -116,7 +116,7 @@ private:
   int buttonChangeCount = 0;
 };
 
-void LissabonLedstripMod::uiButtonChanged() {
+void LissabonLedstripMod::dimmerOnOffChanged() {
   // Called whenever any button changed state.
   // Used to give visual feedback (led turning off) on presses and releases,
   // and to enable config mod after 4 taps and reboot after 8 taps
