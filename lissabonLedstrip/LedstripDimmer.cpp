@@ -290,9 +290,6 @@ void LedstripDimmer::loop() {
   // Compute current level (taking into account isOn and animation progress)
   calcCurLevel();
 
-  // Enable power to the led strip, if needed
-  if (curLevel > 0 || prevLevel > 0) stripHandler->powerOn();
-
   // The color we want to go to
   TempFColor curTFColor = TempFColor(temperature, curLevel);
   RgbFColor curRgbCalibrationColor(curTFColor);
@@ -361,8 +358,6 @@ void LedstripDimmer::loop() {
       stripHandler->pixelSourceCallback();
     }
   }
-  // Disable power to the led strip, if we can
-  if ( millisAnimationStart == 0 && curLevel == 0) stripHandler->powerOff();
 }
 
 }
