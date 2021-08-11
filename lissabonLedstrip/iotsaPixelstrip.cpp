@@ -83,8 +83,6 @@ void IotsaPixelstripMod::setupStrip() {
   IFDEBUG IotsaSerial.printf("setup count=%d bpp=%d pin=%d\n", count, IOTSA_NPB_BPP, pin);
   if (strip) delete strip;
   strip = NULL;
-  strip = new IotsaNeoPixelBus(count, pin);
-  strip->Begin();
 #ifdef IOTSA_NPB_POWER_PIN
   pinMode(IOTSA_NPB_POWER_PIN, OUTPUT);
   powerOff(true);
@@ -137,25 +135,15 @@ void IotsaPixelstripMod::powerOn(bool force) {
   digitalWrite(IOTSA_NPB_POWER_PIN, HIGH);
   gpio_hold_en((gpio_num_t)IOTSA_NPB_POWER_PIN);
   //
-  // We also ensure the ledstrip DATA output pin will carry the data signal.
-  // This is a huge hack: We re-set the matrix to connect the pixelstrip output,
-  // which uses the i2s in our case, to the right GPIO pin.
+  // We allocate the strip, which should initialize it
   //
-  gpio_reset_pin((gpio_num_t)pin);
-  pinMode(pin, OUTPUT);
-  digitalWrite(pin, 0);
-  gpio_matrix_out(pin, I2S1O_DATA_OUT23_IDX, false, false);
+  strip = new IotsaNeoPixelBus(count, pin);
+  strip->Begin();
   delay(1);
   //
   // We clear the strip twice, because pixels may come up with random colors
   // and the may be slow coming up.
   //
-  if (strip) {
-    strip->ClearTo(RgbColor(0));
-    strip->Show();
-    strip->Dirty();
-    strip->Show();
-  }
 #endif // IOTSA_NPB_POWER_PIN
 }
 
@@ -166,12 +154,11 @@ void IotsaPixelstripMod::powerOff(bool force) {
   IFDEBUG IotsaSerial.println("poweroff");
   isPowerOn = false;
   //
-  // We also try to float the ledstrip DATA output pin (to forestall leaking
-  // current from data to very dimly power the leds).
-  // See the comment in powerOn to see what a hack this is.
+  // We delete the strip, which should set the pin back to an input
+  // (and therefore float it)
   //
-  gpio_reset_pin((gpio_num_t)pin);
-  pinMode(pin, INPUT);
+  delete strip;
+  strip = nullptr;
   //
   // The powerpin should connect to a mosfet or something that enables power to
   // the ledstrip when high (and disables power when low or floating)
@@ -259,14 +246,23 @@ void IotsaPixelstripMod::pixelSourceCallback() {
   uint8_t *ptr = buffer;
   // IFDEBUG IotsaSerial.println("Show ");
   bool anyOn = false;
+  for (int i=0; i<count*IOTSA_NPB_BPP; i++) {
+    if (ptr[i] != 0) {
+      anyOn = true;
+      break;
+    }
+  }
+  if (!anyOn) {
+    powerOff();
+    return;
+  }
+  powerOn();
   for (int i=0; i < count; i++) {
     uint8_t r = *ptr++;
     uint8_t g = *ptr++;
     uint8_t b = *ptr++;
-    if (r||g||b) anyOn = true;
     if (IOTSA_NPB_BPP == 4) {
       uint8_t w = *ptr++;
-      if (w) anyOn = true;
       RgbwColor color = RgbwColor(r, g, b, w);
       if (gammaConverter) color = gammaConverter->Correct(color);
       strip->SetPixelColor(i, color);
@@ -276,9 +272,7 @@ void IotsaPixelstripMod::pixelSourceCallback() {
       strip->SetPixelColor(i, color);
     }
   }
-  if (anyOn) powerOn();
   strip->Show();
-  if (!anyOn) powerOff();
   // IFDEBUG IotsaSerial.println(" called");
 }
 
