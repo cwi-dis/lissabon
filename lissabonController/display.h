@@ -13,6 +13,7 @@ public:
   void selectStrip(int index);
   void selectMode(DisplayMode mode);
   
+  void clearLevel();
   void setLevel(float level, bool on);
   void clearTemp();
   void setTemp(float temperature);

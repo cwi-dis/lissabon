@@ -129,8 +129,12 @@ void Display::selectMode(DisplayMode mode) {
 #endif
 }
 
-void Display::setLevel(float level, bool on) {
+void Display::clearLevel() {
   oled->fillRect(LEVEL_X, LEVEL_Y, LEVEL_WIDTH, LEVEL_HEIGHT, BLACK);
+}
+
+void Display::setLevel(float level, bool on) {
+  clearLevel();
   oled->drawRect(LEVEL_X, LEVEL_Y, LEVEL_WIDTH, LEVEL_HEIGHT, WHITE);
   if (on) {
     oled->fillRect(LEVEL_X, LEVEL_Y, int(level*LEVEL_WIDTH), LEVEL_HEIGHT, WHITE);
@@ -142,10 +146,11 @@ void Display::setLevel(float level, bool on) {
 void Display::clearTemp() {
   // xxxjack clear color area
   oled->fillRect(TEMP_X, TEMP_Y, TEMP_WIDTH, TEMP_HEIGHT, BLACK);
-  oled->drawRect(TEMP_X, TEMP_Y, TEMP_WIDTH, TEMP_HEIGHT, WHITE);
 }
 
 void Display::setTemp(float color) {
+  clearTemp();
+  oled->drawRect(TEMP_X, TEMP_Y, TEMP_WIDTH, TEMP_HEIGHT, WHITE);
   oled->drawFastVLine(TEMP_X+int(color*TEMP_WIDTH), TEMP_Y, TEMP_HEIGHT, WHITE);
 }
 

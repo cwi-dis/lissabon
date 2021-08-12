@@ -112,7 +112,13 @@ IotsaLedstripControllerMod::updateDisplay(bool clear) {
   display->selectStrip(selectedDimmerIndex);
   if (selectedDimmerIndex >= 0) {
     auto d = dimmers.at(selectedDimmerIndex);
-    display->setLevel(d->level, d->isOn);
+    if (d->available()) {
+      display->setLevel(d->level, d->isOn);
+    } else {
+      display->clearLevel();
+    }
+    // temperature not implemented yet
+    display->clearTemp();
   }
   display->show();
 }
