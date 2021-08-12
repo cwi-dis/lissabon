@@ -12,10 +12,10 @@
 #define DISPLAY_HEIGHT 128
 static Adafruit_SSD1306 *oled;
 
-#define STRIPS_X 5
+#define STRIPS_X 2
 #define STRIPS_Y 2
 #define STRIPS_HEIGHT 12
-#define STRIPS_WIDTH 55
+#define STRIPS_WIDTH 62
 #define N_STRIPS 7
 
 #define SEPARATOR_Y (STRIPS_Y+STRIPS_HEIGHT*N_STRIPS+2)
@@ -46,6 +46,7 @@ Display::Display()
   oled->setRotation(1);
   oled->setTextSize(1);
   oled->setTextColor(WHITE);
+  oled->setTextWrap(false);
 
   oled->drawFastHLine(0, SEPARATOR_Y, SEPARATOR_WIDTH, WHITE);
 
@@ -95,7 +96,7 @@ void Display::selectStrip(int index) {
   if (selectedStripOnDisplay >= 0) {
     int x = STRIPS_X-2;
     int y = STRIPS_Y + selectedStripOnDisplay*STRIPS_HEIGHT - 2;
-    oled->drawRoundRect(x, y, STRIPS_WIDTH, STRIPS_HEIGHT, 4, BLACK);
+    oled->drawRoundRect(x, y, STRIPS_WIDTH+2, STRIPS_HEIGHT + 2, 4, BLACK);
   }
 
   selectedStripOnDisplay = index;
@@ -108,8 +109,10 @@ void Display::selectStrip(int index) {
 }
 
 void Display::selectMode(DisplayMode mode) {
-  oled->drawFastVLine(0, 0, DISPLAY_HEIGHT, BLACK);
   selectedModeOnDisplay = mode;
+#if 0
+  // For now, disable drawing line beside selected item
+  oled->drawFastVLine(0, 0, DISPLAY_HEIGHT, BLACK);
   switch(selectedModeOnDisplay) {
   case dm_select:
     oled->drawFastVLine(0, STRIPS_Y, SEPARATOR_Y, WHITE);
@@ -123,6 +126,7 @@ void Display::selectMode(DisplayMode mode) {
   default:
     break;
   }
+#endif
 }
 
 void Display::setLevel(float level, bool on) {
