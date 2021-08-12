@@ -96,7 +96,7 @@ void Display::selectStrip(int index) {
   if (selectedStripOnDisplay >= 0) {
     int x = STRIPS_X-2;
     int y = STRIPS_Y + selectedStripOnDisplay*STRIPS_HEIGHT - 2;
-    oled->drawRoundRect(x, y, STRIPS_WIDTH+2, STRIPS_HEIGHT + 2, 4, BLACK);
+    oled->drawRoundRect(x, y, STRIPS_WIDTH+2, STRIPS_HEIGHT, 4, BLACK);
   }
 
   selectedStripOnDisplay = index;
@@ -104,7 +104,7 @@ void Display::selectStrip(int index) {
     // xxxjack draw ring around selected
     int x = STRIPS_X-2;
     int y = STRIPS_Y + selectedStripOnDisplay*STRIPS_HEIGHT - 2;
-    oled->drawRoundRect(x, y, STRIPS_WIDTH, STRIPS_HEIGHT, 4, WHITE);
+    oled->drawRoundRect(x, y, STRIPS_WIDTH+2, STRIPS_HEIGHT, 4, WHITE);
   }
 }
 

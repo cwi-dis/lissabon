@@ -118,6 +118,7 @@ void BLEDimmer::loop() {
       IotsaSerial.printf("BLEDimmer: Giving up on connecting to %s\n", name.c_str());
       needSyncToDevice = false;
       needSyncFromDevice = false;
+      callbacks->dimmerAvailableChanged();
       return;
     }
     // iotsaBLEClient should be listening for advertisements
@@ -137,6 +138,7 @@ void BLEDimmer::loop() {
   if (!dimmer->connect()) {
     IotsaSerial.printf("BLEDimmer: connect to %s failed\n", dimmer->getName().c_str());
     bleClientMod.deviceNotConnectable(name);
+    callbacks->dimmerAvailableChanged();
     return;
   }
   IFDEBUG IotsaSerial.printf("BLEDimmer: connected to %s\n", dimmer->getName().c_str());

@@ -83,6 +83,7 @@ protected:
 private:
   void dimmerOnOffChanged();
   void dimmerValueChanged();
+  void dimmerAvailableChanged();
   void handler();
   bool uiButtonPressed();
   bool uiEncoderChanged();
@@ -207,9 +208,14 @@ IotsaLedstripControllerMod::uiEncoderChanged() {
 }
 
 
+void IotsaLedstripControllerMod::dimmerAvailableChanged() {
+  updateDisplay(false);
+}
+
 void IotsaLedstripControllerMod::dimmerOnOffChanged() {
 #if 1
   IotsaSerial.println("xxxjack dimmerOnOfChanged()");
+  updateDisplay(false);
 #else
   // Called whenever any button changed state.
   // Used to give visual feedback (led turning off) on presses and releases,
