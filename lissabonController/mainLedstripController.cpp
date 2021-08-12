@@ -125,6 +125,7 @@ IotsaLedstripControllerMod::uiButtonPressed() {
     // While the button is pressed the encoder modifies the dimmer selected
     encoder.value = selectedDimmerIndex;
     IotsaSerial.printf("xxxjack start selectedDimmer=%d\n", selectedDimmerIndex);
+    return true;
   } else {
     // While the button is released the encoder modifies the level of the dimmer
     if (selectedDimmerIndex >= 0) {
