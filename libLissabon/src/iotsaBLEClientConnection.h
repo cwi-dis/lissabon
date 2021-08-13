@@ -14,6 +14,7 @@ public:
   bool available();
   bool connect();
   void disconnect();
+  bool isConnected();
   bool set(BLEUUID& serviceUUID, BLEUUID& charUUID, const uint8_t *data, size_t size);
   bool set(BLEUUID& serviceUUID, BLEUUID& charUUID, uint8_t value);
   bool set(BLEUUID& serviceUUID, BLEUUID& charUUID, uint16_t value);

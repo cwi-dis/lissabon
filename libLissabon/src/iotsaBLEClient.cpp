@@ -15,6 +15,12 @@
 // For debugging: define this to print all client advertisements received
 #undef DEBUG_PRINT_ALL_CLIENTS
 
+//
+// How long we should pause between scans (so connections have time to happen).
+// Picked not be a a multiple of common advertisement intervals.
+//
+#define PAUSE_BETWEEN_SCANS 1953
+
 void IotsaBLEClientMod::configLoad() {
 #ifdef IOTSA_BLE_GENERIC
   IotsaConfigFileLoad cf("/config/bleclient.cfg");
@@ -153,6 +159,7 @@ void IotsaBLEClientMod::findUnknownDevices(bool on) {
   scanForUnknownClients = on;
   shouldUpdateScan = true;
   dontUpdateScanBefore = 0;
+  disconnectClientsForScan = true;
 }
 
 void IotsaBLEClientMod::updateScanning() {
@@ -162,7 +169,7 @@ void IotsaBLEClientMod::updateScanning() {
   if (!shouldScan) {
     for (auto it: devices) {
       if (!it.second->available()) {
-        IotsaSerial.printf("BLE scan required for %s\n", it.second->getName().c_str());
+        //IotsaSerial.printf("BLE scan required for %s\n", it.second->getName().c_str());
         shouldScan = true;
         break;
       }
@@ -170,7 +177,21 @@ void IotsaBLEClientMod::updateScanning() {
   }
   if (shouldScan) {
     // if we should be scanning and we aren't we start scanning
-    if (scanner == NULL) startScanning();
+    if (scanner == NULL) {
+      IFDEBUG {
+        IotsaSerial.print("BLE scan for: ");
+        if (scanForUnknownClients) { 
+          IotsaSerial.print("(new/unknown) ");
+        }
+        for (auto it: devices) {
+          if (!it.second->available()) {
+            IotsaSerial.printf("%s ", it.second->getName().c_str());
+          }
+        }
+        IotsaSerial.println();
+      }
+      startScanning();
+    }
   } else {
     // if we should not be scanning but we are: we stop
     if (scanner != NULL) stopScanning();
@@ -178,15 +199,26 @@ void IotsaBLEClientMod::updateScanning() {
 }
 
 void IotsaBLEClientMod::startScanning() {
+  IFDEBUG IotsaSerial.println("BLE scan start");
   // First close all connections. Scanning while connected has proved to result in issues.
   for (auto it : devices) {
-    it.second->disconnect();
+    if (it.second->isConnected()) {
+      if (!disconnectClientsForScan) {
+        // Don't scan if any active clients. But next time around we will disconnect them
+        IFDEBUG IotsaSerial.println("BLE scan aborted: active connection");
+        shouldUpdateScan = true;
+        dontUpdateScanBefore = millis() + PAUSE_BETWEEN_SCANS;
+        disconnectClientsForScan = true;
+        return;
+      }
+      IFDEBUG IotsaSerial.printf("BLE scan start: disconnect %s\n", it.second->name.c_str());
+      it.second->disconnect();
+    }
   }
   // Now start the scan
   scanner = BLEDevice::getScan();
-  IFDEBUG IotsaSerial.println("BLE scan start");
   scanningMod = this;
-  scanner->start(6, &IotsaBLEClientMod::scanComplete, false);
+  scanner->start(11, &IotsaBLEClientMod::scanComplete, false);
   // Do not sleep until scan is done
   iotsaConfig.pauseSleep();
 }
@@ -204,7 +236,8 @@ void IotsaBLEClientMod::stopScanning() {
   }
   // Next time through loop, check whether we should scan again.
   shouldUpdateScan = true;
-  dontUpdateScanBefore = millis() + 1000;
+  disconnectClientsForScan = false;
+  dontUpdateScanBefore = millis() + PAUSE_BETWEEN_SCANS;
 }
 
 bool IotsaBLEClientMod::canConnect() {
@@ -248,7 +281,7 @@ void IotsaBLEClientMod::loop() {
   }
   if (shouldUpdateScan && (dontUpdateScanBefore == 0 || millis() > dontUpdateScanBefore)) {
     shouldUpdateScan = false;
-    dontUpdateScanBefore = millis() + 1000;
+    dontUpdateScanBefore = millis() + PAUSE_BETWEEN_SCANS;
     updateScanning();
   }
 }
@@ -315,6 +348,7 @@ IotsaBLEClientConnection* IotsaBLEClientMod::addDevice(std::string id) {
   }
   shouldUpdateScan = true; // We probably want to scan for the new device
   dontUpdateScanBefore = 0;
+  disconnectClientsForScan = false;
   return it->second;
 }
 

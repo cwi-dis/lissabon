@@ -51,6 +51,10 @@ void IotsaBLEClientConnection::disconnect() {
   }
 }
 
+bool IotsaBLEClientConnection::isConnected() {
+  return client.isConnected();
+}
+
 BLERemoteCharacteristic *IotsaBLEClientConnection::_getCharacteristic(BLEUUID& serviceUUID, BLEUUID& charUUID) {
   BLERemoteService *service = client.getService(serviceUUID);
   if (service == NULL) return NULL;
