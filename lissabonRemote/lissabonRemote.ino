@@ -93,6 +93,7 @@ protected:
 private:
   void dimmerOnOffChanged() override;
   void dimmerValueChanged() override;
+  void dimmerAvailableChanged() override {};
   void handler();
   void ledOn();
   void ledOff();

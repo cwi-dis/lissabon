@@ -63,6 +63,7 @@ protected:
 private:
   void dimmerOnOffChanged() override;
   void dimmerValueChanged() override;
+  void dimmerAvailableChanged() override {};
   void handler();
   BLEDimmer dimmer1;
 #ifdef WITH_BLESERVER
