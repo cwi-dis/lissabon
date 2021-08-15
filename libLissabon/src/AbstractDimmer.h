@@ -31,6 +31,7 @@ public:
   virtual void updateDimmer();
   void calcCurLevel();
   virtual bool available() = 0;
+  virtual bool dataValid() { return true; }
   String info();
   virtual void getHandler(JsonObject& reply) override;
   virtual bool putHandler(const JsonVariant& request) override;

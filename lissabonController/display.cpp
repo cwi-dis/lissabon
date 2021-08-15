@@ -137,13 +137,18 @@ void Display::clearLevel() {
   oled->fillRect(LEVEL_X, LEVEL_Y, LEVEL_WIDTH, LEVEL_HEIGHT, BLACK);
 }
 
-void Display::setLevel(float level, bool on) {
+void Display::setLevel(float level, bool on, float wantedLevel) {
   clearLevel();
   oled->drawRect(LEVEL_X, LEVEL_Y, LEVEL_WIDTH, LEVEL_HEIGHT, WHITE);
   if (on) {
     oled->fillRect(LEVEL_X, LEVEL_Y, int(level*LEVEL_WIDTH), LEVEL_HEIGHT, WHITE);
   } else {
     oled->drawFastVLine(LEVEL_X+int(level*LEVEL_WIDTH), LEVEL_Y, LEVEL_HEIGHT, WHITE);
+  }
+  if (wantedLevel >= 0) {
+    int wantedLPos = int(wantedLevel*(LEVEL_WIDTH-2));
+    oled->drawFastHLine(LEVEL_X+1, LEVEL_Y+1, wantedLPos, WHITE);
+    oled->drawFastHLine(LEVEL_X+1+wantedLPos, LEVEL_Y+1, LEVEL_WIDTH-1-wantedLPos, BLACK);
   }
 }
 

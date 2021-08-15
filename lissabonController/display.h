@@ -14,7 +14,7 @@ public:
   void selectMode(DisplayMode mode);
   
   void clearLevel();
-  void setLevel(float level, bool on);
+  void setLevel(float level, bool on, float wantedLevel = -1);
   void clearTemp();
   void setTemp(float temperature);
   void showActivity(bool activity);

@@ -30,6 +30,9 @@ bool BLEDimmer::setName(String value) {
 }
 void BLEDimmer::formHandler_fields(String& message, const String& text, const String& f_name, bool includeConfig) {
   AbstractDimmer::formHandler_fields(message, text, f_name, includeConfig);
+  if (!_dataValid) {
+    message += "<i>(data may be outdated or invalid)</i><br>";
+  }
   if (includeConfig) {
     message += "BLE device name: <input name='" + f_name +".name' value='" + name + "'><br>";
     IotsaBLEClientConnection *dimmer = bleClientMod.getDevice(name);
@@ -69,7 +72,10 @@ void BLEDimmer::getHandler(JsonObject& reply) {
 void BLEDimmer::setup() {
   if (listenForDeviceChanges) {
     needSyncFromDevice = listenForDeviceChanges;
+    _dataValid = false;
     needTransmitTimeoutAtMillis = millis() + IOTSA_BLEDIMMER_CONNECT_TIMEOUT;
+  } else {
+    _dataValid = true;
   }
 }
 
@@ -77,7 +83,10 @@ void BLEDimmer::followDimmerChanges(bool follow) {
   listenForDeviceChanges = follow; 
   if (listenForDeviceChanges) {
     needSyncFromDevice = listenForDeviceChanges;
+    _dataValid = false;
     needTransmitTimeoutAtMillis = millis() + IOTSA_BLEDIMMER_CONNECT_TIMEOUT;
+  } else {
+    _dataValid = true;
   }
 }
 
@@ -166,11 +175,16 @@ void BLEDimmer::syncToDevice(IotsaBLEClientConnection *dimmer) {
   bool ok;
 #ifdef DIMMER_WITH_LEVEL
   // Connected to dimmer.
+  if (level < 0) level = 0;
+  if (level > 1) level = 1;
   Lissabon::Dimmer::Type_brightness levelValue = level * ((1<<sizeof(Lissabon::Dimmer::Type_brightness)*8)-1);
   IFDEBUG IotsaSerial.printf("BLEDimmer: Transmit brightness %d\n", levelValue);
   ok = dimmer->set(Lissabon::Dimmer::serviceUUID, Lissabon::Dimmer::brightnessUUID, (Lissabon::Dimmer::Type_brightness)levelValue);
-  if (!ok) {
+  if (ok) {
+    _dataValid = true;
+  } else {
     IFDEBUG IotsaSerial.println("BLEDimmer: set(brightness) failed");
+    _dataValid = false;
   }
 #endif
 #ifdef DIMMER_WITH_TEMPERATURE
@@ -207,8 +221,10 @@ void BLEDimmer::syncFromDevice(IotsaBLEClientConnection *dimmer) {
   if (ok) {
     IFDEBUG IotsaSerial.printf("BLEDimmer: Received brightness %d\n", levelValue);
     level = (float)levelValue / (float)((1<<sizeof(Lissabon::Dimmer::Type_brightness)*8)-1);
+    _dataValid = true;
   } else {
     IFDEBUG IotsaSerial.println("BLEDimmer: get(brightness) failed");
+    _dataValid = false;
   }
 #endif
 #ifdef DIMMER_WITH_TEMPERATURE

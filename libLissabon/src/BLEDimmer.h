@@ -20,6 +20,7 @@ public:
   void followDimmerChanges(bool follow);
   void updateDimmer();
   bool available();
+  bool dataValid() override { return _dataValid; }
   bool setName(String value);
   void setup() override;
   void loop() override;
@@ -35,6 +36,7 @@ protected:
   bool listenForDeviceChanges = false;
   bool needSyncToDevice = false;
   bool needSyncFromDevice = false;
+  bool _dataValid = false;
   bool needIdentify = false;
   uint32_t needTransmitTimeoutAtMillis = 0;
   uint32_t disconnectAtMillis = 0;
