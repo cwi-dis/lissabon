@@ -18,7 +18,10 @@ void DimmerCollection::push_back(DimmerCollection::ItemType* dimmer) {
   dimmers.push_back(dimmer);
 }
 
-DimmerCollection::ItemType* DimmerCollection::at(int i) { return dimmers.at(i); }
+DimmerCollection::ItemType* DimmerCollection::at(int i) { 
+  if (i<0||i>=dimmers.size()) return nullptr; 
+  return dimmers.at(i); 
+}
 
 DimmerCollection::ItemType* DimmerCollection::find(const String& name) { 
   for(auto d : dimmers) {

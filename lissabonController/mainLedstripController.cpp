@@ -113,7 +113,7 @@ IotsaLedstripControllerMod::updateDisplay(bool clear) {
   display->selectStrip(selectedDimmerIndex);
   if (selectedDimmerIndex >= 0) {
     auto d = dimmers.at(selectedDimmerIndex);
-    if (d->available()) {
+    if (d && d->available()) {
       display->setLevel(d->level, d->isOn);
     } else {
       display->clearLevel();
@@ -137,7 +137,7 @@ IotsaLedstripControllerMod::uiButtonPressed() {
     // While the button is released the encoder modifies the level of the dimmer
     if (selectedDimmerIndex >= 0) {
       auto d = dimmers.at(selectedDimmerIndex);
-      float f_value = d->level;
+      float f_value = d == nullptr ? 0 : d->level;
       encoder.value = (int)(f_value * ENCODER_STEPS);
     }
   }
@@ -186,7 +186,7 @@ IotsaLedstripControllerMod::uiEncoderChanged() {
     bool ok = false;
     if (selectedDimmerIndex >= 0) {
       auto d = dimmers.at(selectedDimmerIndex);
-      if (d->available()) {
+      if (d && d->available()) {
         if (f_value < d->minLevel) {
           f_value = d->minLevel;
           encoder.value = f_value * ENCODER_STEPS;
