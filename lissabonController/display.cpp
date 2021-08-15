@@ -28,6 +28,10 @@ static Adafruit_SSD1306 *oled;
 #define TEMP_Y (LEVEL_Y + LEVEL_HEIGHT+2)
 #define TEMP_WIDTH 33
 #define TEMP_HEIGHT 12
+#define ACTIVITY_X 16
+#define ACTIVITY_Y (TEMP_Y + LEVEL_HEIGHT+2)
+#define ACTIVITY_WIDTH 33
+#define ACTIVITY_HEIGHT 8
 
 #include "icons/on.h"
 #include "icons/off.h"
@@ -152,6 +156,10 @@ void Display::setTemp(float color) {
   clearTemp();
   oled->drawRect(TEMP_X, TEMP_Y, TEMP_WIDTH, TEMP_HEIGHT, WHITE);
   oled->drawFastVLine(TEMP_X+int(color*TEMP_WIDTH), TEMP_Y, TEMP_HEIGHT, WHITE);
+}
+
+void Display::showActivity(bool activity) {
+  oled->fillRoundRect(ACTIVITY_X, ACTIVITY_Y, ACTIVITY_WIDTH, ACTIVITY_HEIGHT, ACTIVITY_HEIGHT/2, activity ? BLACK : WHITE);
 }
 
 void Display::show() {

@@ -83,7 +83,7 @@ protected:
 private:
   void dimmerOnOffChanged();
   void dimmerValueChanged();
-  void dimmerAvailableChanged();
+  void dimmerAvailableChanged(bool available, bool connected);
   void handler();
   bool uiButtonPressed();
   bool uiEncoderChanged();
@@ -208,8 +208,9 @@ IotsaLedstripControllerMod::uiEncoderChanged() {
 }
 
 
-void IotsaLedstripControllerMod::dimmerAvailableChanged() {
+void IotsaLedstripControllerMod::dimmerAvailableChanged(bool available, bool connected) {
   updateDisplay(false);
+  display->showActivity(connected);
 }
 
 void IotsaLedstripControllerMod::dimmerOnOffChanged() {

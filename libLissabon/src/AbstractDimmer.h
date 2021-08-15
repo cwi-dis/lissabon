@@ -18,7 +18,7 @@ public:
   ~DimmerCallbacks() {}
   virtual void dimmerOnOffChanged() = 0;
   virtual void dimmerValueChanged() = 0;
-  virtual void dimmerAvailableChanged() = 0;
+  virtual void dimmerAvailableChanged(bool available, bool connected) = 0;
 };
 
 class AbstractDimmer : IotsaApiModObject {

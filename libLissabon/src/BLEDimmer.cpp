@@ -8,7 +8,7 @@ namespace Lissabon {
 #define IOTSA_BLEDIMMER_CONNECT_TIMEOUT 10000
 
 // How long we keep open a ble connection (in case we have a quick new command)
-#define IOTSA_BLEDIMMER_KEEPOPEN_MILLIS 1000
+// #define IOTSA_BLEDIMMER_KEEPOPEN_MILLIS 1000
 
 bool BLEDimmer::available() {
   IotsaBLEClientConnection *dimmer = bleClientMod.getDevice(name);
@@ -118,7 +118,7 @@ void BLEDimmer::loop() {
       IotsaSerial.printf("BLEDimmer: Giving up on connecting to %s\n", name.c_str());
       needSyncToDevice = false;
       needSyncFromDevice = false;
-      callbacks->dimmerAvailableChanged();
+      callbacks->dimmerAvailableChanged(false, false);
       return;
     }
     // iotsaBLEClient should be listening for advertisements
@@ -135,10 +135,11 @@ void BLEDimmer::loop() {
   }
   noWarningPrintBefore = 0;
   // If all that is correct, try to connect.
+  callbacks->dimmerAvailableChanged(true, true);
   if (!dimmer->connect()) {
     IotsaSerial.printf("BLEDimmer: connect to %s failed\n", dimmer->getName().c_str());
     bleClientMod.deviceNotConnectable(name);
-    callbacks->dimmerAvailableChanged();
+    callbacks->dimmerAvailableChanged(false, false);
     return;
   }
   IFDEBUG IotsaSerial.printf("BLEDimmer: connected to %s\n", dimmer->getName().c_str());
@@ -158,6 +159,7 @@ void BLEDimmer::loop() {
 
   IFDEBUG IotsaSerial.printf("BLEDimmer: disconnecting %s", dimmer->getName().c_str());
   dimmer->disconnect();
+  callbacks->dimmerAvailableChanged(true, false);
 }
 
 void BLEDimmer::syncToDevice(IotsaBLEClientConnection *dimmer) {

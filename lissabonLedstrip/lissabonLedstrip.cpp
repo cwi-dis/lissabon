@@ -101,7 +101,7 @@ public:
 protected:
   void dimmerOnOffChanged() override;
   void dimmerValueChanged() override;
-  void dimmerAvailableChanged() override {};
+  void dimmerAvailableChanged(bool available, bool connected) override {};
   bool getHandler(const char *path, JsonObject& reply) override;
   bool putHandler(const char *path, const JsonVariant& request, JsonObject& reply) override;
 private:

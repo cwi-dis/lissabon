@@ -17,6 +17,7 @@ public:
   void setLevel(float level, bool on);
   void clearTemp();
   void setTemp(float temperature);
+  void showActivity(bool activity);
 private:
   int selectedStripOnDisplay = -1;
   DisplayMode selectedModeOnDisplay = dm_sleep;
