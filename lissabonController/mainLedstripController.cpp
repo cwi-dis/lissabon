@@ -87,6 +87,7 @@ private:
   void handler();
   bool uiButtonPressed();
   bool uiEncoderChanged();
+  DimmerDynamicCollection::ItemType* getDimmerForCommand(int num);
   void updateDisplay(bool clear);
   uint32_t scanUnknownUntilMillis = 0;
   typedef std::pair<std::string, BLEAddress> unknownDimmerInfo;
@@ -124,39 +125,55 @@ IotsaLedstripControllerMod::updateDisplay(bool clear) {
   display->show();
 }
 
+DimmerDynamicCollection::ItemType* 
+IotsaLedstripControllerMod::getDimmerForCommand(int num) {
+  if (num < 0) {
+    IotsaSerial.println("No dimmer selected");
+    display->flash();
+    return nullptr;
+  }
+  auto d = dimmers.at(num);  
+  if (d == nullptr) {
+    IotsaSerial.printf("Dimmer %d does not exist\n", num);
+    display->flash();
+    return nullptr;
+  }
+  if (!d->available()) {
+    IotsaSerial.printf("Dimmer %d unavailable\n", num);
+    display->flash();
+    return nullptr;
+  }
+  if (!d->dataValid()) {
+    IotsaSerial.printf("Dimmer %d current status unknown\n", num);
+    display->flash();
+    return nullptr;
+  }
+}
+  
 bool
 IotsaLedstripControllerMod::uiButtonPressed() {
   IFDEBUG IotsaSerial.printf("uiButtonPressed: state=%d repeatCount=%d duration=%d\n", button.pressed, button.repeatCount, button.duration);
   //iotsaConfig.postponeSleep(4000);
   if (button.pressed) {
-    // While the button is pressed the encoder modifies the dimmer selected
+    // While the button is pressed, changes in the encoder modifies the dimmer selected
     encoder.value = selectedDimmerIndex;
     IotsaSerial.printf("xxxjack start selectedDimmer=%d\n", selectedDimmerIndex);
     return true;
-  } else {
-    // While the button is released the encoder modifies the level of the dimmer
-    if (selectedDimmerIndex >= 0) {
-      auto d = dimmers.at(selectedDimmerIndex);
-      float f_value = d == nullptr ? 0 : d->level;
-      encoder.value = (int)(f_value * ENCODER_STEPS);
-    }
+  }
+  // While the button is released, changes in the encoder modifies the level of the dimmer
+  if (selectedDimmerIndex >= 0) {
+    auto d = dimmers.at(selectedDimmerIndex);
+    float f_value = d == nullptr ? 0 : d->level;
+    encoder.value = (int)(f_value * ENCODER_STEPS);
   }
   if (button.duration < SHORT_PRESS_DURATION) {
     // Short press: turn current dimmer on or off
     IotsaSerial.println("ioButtonPress: dimmer on/off");
-    bool ok = false;
-    if (selectedDimmerIndex >= 0) {
-      auto d = dimmers.at(selectedDimmerIndex);
-      if (d && d->available() && d->dataValid()) {
-        d->isOn = !d->isOn;
-        d->updateDimmer();
-        ok = true;
-      }
-    }
-    if (ok) {
+    auto d = getDimmerForCommand(selectedDimmerIndex);
+    if (d != nullptr) {
+      d->isOn = !d->isOn;
+      d->updateDimmer();
       updateDisplay(false);
-    } else {
-      display->flash();
     }
   } else {
     // Long press: assume rotary was used for selecting dimmer
@@ -175,34 +192,19 @@ IotsaLedstripControllerMod::uiEncoderChanged() {
     encoder.value = selectedDimmerIndex;
     IotsaSerial.printf("xxxjack now selectedDimmer=%d\n", selectedDimmerIndex);
     updateDisplay(false);
-  } else {
-    if (encoder.value < 0) encoder.value = 0;
-    if (encoder.value >= ENCODER_STEPS) encoder.value = ENCODER_STEPS;
-    float f_value = (float)encoder.value / ENCODER_STEPS;
-    if (f_value > 1.0) {
-      f_value = 1.0;
-      encoder.value = ENCODER_STEPS;
-    }
-    bool ok = false;
-    if (selectedDimmerIndex >= 0) {
-      auto d = dimmers.at(selectedDimmerIndex);
-      if (d && d->available() && d->dataValid()) {
-        if (f_value < d->minLevel) {
-          f_value = d->minLevel;
-          encoder.value = f_value * ENCODER_STEPS;
-        }
-        d->level = f_value;
-        d->isOn = true;
-        d->updateDimmer();
-        ok = true;
-      }
-    }
-    if (ok) {
-      updateDisplay(false);
-    } else {
-      display->flash();
-    }
+    iotsaConfig.postponeSleep(4000);
+    return true;
   }
+  // Button not pressed, encoder controls level.
+  if (encoder.value < 0) encoder.value = 0;
+  if (encoder.value >= ENCODER_STEPS) encoder.value = ENCODER_STEPS;
+  float f_value = (float)encoder.value / ENCODER_STEPS;
+  if (f_value > 1.0) {
+    f_value = 1.0;
+    encoder.value = ENCODER_STEPS;
+  }
+  auto d = getDimmerForCommand(selectedDimmerIndex);
+  if (d == nullptr) return true;
   iotsaConfig.postponeSleep(4000);
   return true;
 }
