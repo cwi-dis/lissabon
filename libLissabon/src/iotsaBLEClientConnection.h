@@ -3,6 +3,10 @@
 #include "iotsa.h"
 #include "iotsaBle.h"
 
+#ifndef IOTSA_WITH_BLE
+#error This module requires BLE
+#endif
+
 typedef std::function<void(uint8_t *, size_t)> BleNotificationCallback;
 
 class IotsaBLEClientConnection {
