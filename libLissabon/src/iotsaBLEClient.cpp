@@ -202,7 +202,7 @@ void IotsaBLEClientMod::startScanning() {
   IFDEBUG IotsaSerial.println("BLE scan start");
   // First close all connections. Scanning while connected has proved to result in issues.
   for (auto it : devices) {
-    if (it.second->isConnected()) {
+    if (it.second && it.second->isConnected()) {
       if (!disconnectClientsForScan) {
         // Don't scan if any active clients. But next time around we will disconnect them
         IFDEBUG IotsaSerial.println("BLE scan aborted: active connection");
@@ -286,30 +286,30 @@ void IotsaBLEClientMod::loop() {
   }
 }
 
-void IotsaBLEClientMod::onResult(BLEAdvertisedDevice advertisedDevice) {
+void IotsaBLEClientMod::onResult(BLEAdvertisedDevice *advertisedDevice) {
 #ifdef DEBUG_PRINT_ALL_CLIENTS
-  IotsaSerial.printf("BLEClientMod::onResult(%s)\n", advertisedDevice.toString().c_str());
+  IotsaSerial.printf("BLEClientMod::onResult(%s)\n", advertisedDevice->toString().c_str());
 #endif
   // Is this an advertisement for a device we know, either by name or by address?
-  std::string deviceName = advertisedDevice.getName();
+  std::string deviceName = advertisedDevice->getName();
   auto it = devices.find(deviceName);
   if (it != devices.end()) {
     auto dev = it->second;
-    bool changed = dev->receivedAdvertisement(advertisedDevice);
+    bool changed = dev->receivedAdvertisement(*advertisedDevice);
     if (changed) {
-      devicesByAddress[advertisedDevice.getAddress().toString()] = dev;
+      devicesByAddress[advertisedDevice->getAddress().toString()] = dev;
       IFDEBUG IotsaSerial.printf("BLEClientMod: advertisement update byname for %s\n", deviceName.c_str());
     }
     shouldUpdateScan = true; // We may have found what we were looking for
     dontUpdateScanBefore = 0;
     return;
   }
-  auto it2 = devicesByAddress.find(advertisedDevice.getAddress().toString());
+  auto it2 = devicesByAddress.find(advertisedDevice->getAddress().toString());
   if (it2 != devicesByAddress.end()) {
     auto dev = it->second;
-    bool changed = dev->receivedAdvertisement(advertisedDevice);
+    bool changed = dev->receivedAdvertisement(*advertisedDevice);
     if (changed) {
-      devicesByAddress[advertisedDevice.getAddress().toString()] = dev;
+      devicesByAddress[advertisedDevice->getAddress().toString()] = dev;
       IFDEBUG IotsaSerial.printf("BLEClientMod: advertisement update byaddress for %s\n", deviceName.c_str());
     }
     shouldUpdateScan = true; // We may have found what we were looking for
@@ -319,19 +319,19 @@ void IotsaBLEClientMod::onResult(BLEAdvertisedDevice advertisedDevice) {
   // Do we want callbacks for unknown devices?
   if (callback == NULL) return;
   // Have we seen this unknown device before?
-  if ( duplicateNameFilter && unknownDevices.find(advertisedDevice.getName()) != unknownDevices.end()) return;
+  if ( duplicateNameFilter && unknownDevices.find(advertisedDevice->getName()) != unknownDevices.end()) return;
   // Do we filter on services?
   if (serviceFilter != NULL) {
-    if (!advertisedDevice.isAdvertisingService(*serviceFilter)) return;
+    if (!advertisedDevice->isAdvertisingService(*serviceFilter)) return;
   }
   // Do we filter on manufacturer data?
   if (hasManufacturerFilter) {
-    std::string mfgData(advertisedDevice.getManufacturerData());
+    std::string mfgData(advertisedDevice->getManufacturerData());
     if (mfgData.length() < 2) return;
     const uint16_t *mfg = (const uint16_t *)mfgData.c_str();
     if (*mfg != manufacturerFilter) return;
   }
-  callback(advertisedDevice);
+  callback(*advertisedDevice);
 }
 
 IotsaBLEClientConnection* IotsaBLEClientMod::addDevice(std::string id) {

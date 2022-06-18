@@ -1,7 +1,7 @@
 #ifndef _IOTSABLECLIENTCONNECTION_H_
 #define _IOTSABLECLIENTCONNECTION_H_
 #include "iotsa.h"
-#include <BLEDevice.h>
+#include "iotsaBle.h"
 
 typedef std::function<void(uint8_t *, size_t)> BleNotificationCallback;
 
@@ -9,6 +9,7 @@ class IotsaBLEClientConnection {
   friend class IotsaBLEClientMod;
 public:
   IotsaBLEClientConnection(std::string& _name, std::string _address="");
+  ~IotsaBLEClientConnection();
   bool receivedAdvertisement(BLEAdvertisedDevice& _device);
   void clearDevice();
   bool available();
@@ -37,8 +38,10 @@ protected:
   std::string name;
   BLERemoteCharacteristic *_getCharacteristic(BLEUUID& serviceUUID, BLEUUID& charUUID);
   BLEAddress address;
+#ifdef IOTSA_WITHOUT_NIMBLE
   esp_ble_addr_type_t addressType;
+#endif
   bool addressValid;
-  BLEClient client;
+  BLEClient* pClient;
 };
 #endif

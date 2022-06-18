@@ -148,6 +148,7 @@ IotsaLedstripControllerMod::getDimmerForCommand(int num) {
     display->flash();
     return nullptr;
   }
+  return d;
 }
   
 bool

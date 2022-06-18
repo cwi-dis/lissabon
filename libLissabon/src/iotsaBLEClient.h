@@ -2,7 +2,7 @@
 #define _IOTSABLECLIENT_H_
 #include "iotsa.h"
 #include "iotsaApi.h"
-#include <BLEDevice.h>
+#include "iotsaBle.h"
 #include "iotsaBLEClientConnection.h"
 
 #include <set>
@@ -62,7 +62,7 @@ protected:
 protected:
   void configLoad();
   void configSave();
-  void onResult(BLEAdvertisedDevice advertisedDevice);
+  void onResult(BLEAdvertisedDevice *advertisedDevice);
   void updateScanning();
   void startScanning();
   void stopScanning();

@@ -1,5 +1,4 @@
 #include "LissabonBLE.h"
-#include <BLE2904.h>
 
 namespace Lissabon {
 namespace Dimmer {
