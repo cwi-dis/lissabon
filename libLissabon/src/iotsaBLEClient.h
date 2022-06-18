@@ -62,7 +62,7 @@ protected:
 protected:
   void configLoad();
   void configSave();
-  void onResult(BLEAdvertisedDevice advertisedDevice);
+  void onResult(BLEAdvertisedDevice *advertisedDevice);
   void updateScanning();
   void startScanning();
   void stopScanning();

@@ -72,13 +72,13 @@ bool IotsaBLEClientConnection::connect() {
 }
 
 void IotsaBLEClientConnection::disconnect() {
-  if (pClient->isConnected()) {
+  if (pClient && pClient->isConnected()) {
     pClient->disconnect();
   }
 }
 
 bool IotsaBLEClientConnection::isConnected() {
-  return pClient->isConnected();
+  return pClient && pClient->isConnected();
 }
 
 BLERemoteCharacteristic *IotsaBLEClientConnection::_getCharacteristic(BLEUUID& serviceUUID, BLEUUID& charUUID) {
