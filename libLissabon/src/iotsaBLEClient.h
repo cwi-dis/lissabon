@@ -2,7 +2,7 @@
 #define _IOTSABLECLIENT_H_
 #include "iotsa.h"
 #include "iotsaApi.h"
-#include <BLEDevice.h>
+#include "iotsaBle.h"
 #include "iotsaBLEClientConnection.h"
 
 #include <set>

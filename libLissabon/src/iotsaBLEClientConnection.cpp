@@ -2,10 +2,12 @@
 
 IotsaBLEClientConnection::IotsaBLEClientConnection(std::string& _name, std::string _address)
 : name(_name),
-  address(_address),
+  address(_address), // Public is default for address type for nimble
+#ifdef IOTSA_WITHOUT_NIMBLE
   addressType(BLE_ADDR_TYPE_PUBLIC),
+#endif
   addressValid(false),
-  client()
+  pClient(nullptr)
 {
   if (_address != "") {
     // address and addressType have already been set
@@ -13,19 +15,36 @@ IotsaBLEClientConnection::IotsaBLEClientConnection(std::string& _name, std::stri
   }
 }
 
+IotsaBLEClientConnection::~IotsaBLEClientConnection() {
+  if (pClient) {
+    BLEDevice::deleteClient(pClient);
+    pClient = nullptr;
+  }
+}
+
 std::string IotsaBLEClientConnection::getAddress() {
-  if (!addressValid || addressType != BLE_ADDR_TYPE_PUBLIC) return "";
+  if (!addressValid 
+#ifdef IOTSA_WITHOUT_NIMBLE
+    || addressType != BLE_ADDR_TYPE_PUBLIC
+#endif
+    ) return "";
   return address.toString();
 }
 
 bool IotsaBLEClientConnection::receivedAdvertisement(BLEAdvertisedDevice& _device) {
   // Check whether the address is the same, then we don't have to add anything.
-  if (addressValid && _device.getAddressType() == addressType && _device.getAddress().equals(address)) {
+  if (addressValid 
+#ifdef IOTSA_WITHOUT_NIMBLE
+    && _device.getAddressType() == addressType 
+#endif
+    && _device.getAddress().equals(address)) {
     return false;
   }
   disconnect();
   address = _device.getAddress();
+#ifdef IOTSA_WITHOUT_NIMBLE
   addressType = _device.getAddressType();
+#endif
   addressValid = true;
   return true;
 }
@@ -41,22 +60,29 @@ bool IotsaBLEClientConnection::available() {
 
 bool IotsaBLEClientConnection::connect() {
   if (!addressValid) return false;
-  if (client.isConnected()) return true;
-  return client.connect(address, addressType);
+  if (pClient == nullptr) {
+    pClient = BLEDevice::createClient(address);
+  }
+  if (pClient->isConnected()) return true;
+#ifdef IOTSA_WITHOUT_NIMBLE
+  return pClient->connect(address, addressType);
+#else
+  return pClient->connect(address, false); // Keep previously learned services
+#endif
 }
 
 void IotsaBLEClientConnection::disconnect() {
-  if (client.isConnected()) {
-    client.disconnect();
+  if (pClient->isConnected()) {
+    pClient->disconnect();
   }
 }
 
 bool IotsaBLEClientConnection::isConnected() {
-  return client.isConnected();
+  return pClient->isConnected();
 }
 
 BLERemoteCharacteristic *IotsaBLEClientConnection::_getCharacteristic(BLEUUID& serviceUUID, BLEUUID& charUUID) {
-  BLERemoteService *service = client.getService(serviceUUID);
+  BLERemoteService *service = pClient->getService(serviceUUID);
   if (service == NULL) return NULL;
   BLERemoteCharacteristic *characteristic = service->getCharacteristic(charUUID);
   return characteristic;
@@ -66,7 +92,7 @@ bool IotsaBLEClientConnection::set(BLEUUID& serviceUUID, BLEUUID& charUUID, cons
   BLERemoteCharacteristic *characteristic = _getCharacteristic(serviceUUID, charUUID);
   if (characteristic == NULL) return false;
   if (!characteristic->canWrite()) return false;
-  characteristic->writeValue((uint8_t *)data, size);
+  characteristic->writeValue(data, size);
   return true;
 }
 

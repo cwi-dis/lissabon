@@ -1,7 +1,7 @@
 #ifndef _LISSABONBLE_H_
 #define _LISSABONBLE_H_
 
-#include <BLEDevice.h>
+#include "iotsaBle.h"
 
 namespace Lissabon {
 namespace Dimmer {
