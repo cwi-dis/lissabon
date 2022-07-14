@@ -16,6 +16,7 @@ bool BLEDimmer::available() {
 }
 
 void BLEDimmer::updateDimmer() {
+  IotsaSerial.printf("%s.updateDimmer() called\n", name.c_str());
   needSyncToDevice = true;
   needTransmitTimeoutAtMillis = millis() + IOTSA_BLEDIMMER_CONNECT_TIMEOUT;
   if (callbacks) callbacks->dimmerValueChanged();
@@ -178,8 +179,8 @@ void BLEDimmer::syncToDevice(IotsaBLEClientConnection *dimmer) {
   if (level < 0) level = 0;
   if (level > 1) level = 1;
   Lissabon::Dimmer::Type_brightness levelValue = level * ((1<<sizeof(Lissabon::Dimmer::Type_brightness)*8)-1);
-  IFDEBUG IotsaSerial.printf("BLEDimmer: Transmit brightness %d\n", levelValue);
-  ok = dimmer->set(Lissabon::Dimmer::serviceUUID, Lissabon::Dimmer::brightnessUUID, (Lissabon::Dimmer::Type_brightness)levelValue);
+  IFDEBUG IotsaSerial.printf("%s.syncToDevice: Transmit brightness %f (%d)\n", name.c_str(), level, levelValue);
+  ok = dimmer->set(Lissabon::Dimmer::serviceUUID, Lissabon::Dimmer::brightnessUUID, levelValue);
   if (ok) {
     _dataValid = true;
   } else {
@@ -195,13 +196,13 @@ void BLEDimmer::syncToDevice(IotsaBLEClientConnection *dimmer) {
     IFDEBUG IotsaSerial.println("BLEDimmer: set(temperature) failed");
   }
 #endif // DIMMER_WITH_TEMPERATURE
-  IFDEBUG IotsaSerial.printf("BLEDimmer: Transmit ison %d\n", (int)isOn);
+  IFDEBUG IotsaSerial.printf("%s.syncToDevice: Transmit ison %d\n", name.c_str(), (int)isOn);
   ok = dimmer->set(Lissabon::Dimmer::serviceUUID, Lissabon::Dimmer::isOnUUID, (Lissabon::Dimmer::Type_isOn)isOn);
   if (!ok) {
     IFDEBUG IotsaSerial.println("BLEDimmer: set(isOn) failed");
   }
   if (needIdentify) {
-    IFDEBUG IotsaSerial.printf("BLEDimmer: Transmit identify\n");
+    IFDEBUG IotsaSerial.printf("%s.syncToDevice: Transmit identify\n", name.c_str());
     ok = dimmer->set(Lissabon::Dimmer::serviceUUID, Lissabon::Dimmer::identifyUUID, (Lissabon::Dimmer::Type_isOn)1);
     needIdentify = false;
     if (!ok) {
@@ -219,8 +220,8 @@ void BLEDimmer::syncFromDevice(IotsaBLEClientConnection *dimmer) {
   Lissabon::Dimmer::Type_brightness levelValue;
   ok = dimmer->get(Lissabon::Dimmer::serviceUUID, Lissabon::Dimmer::brightnessUUID, levelValue);
   if (ok) {
-    IFDEBUG IotsaSerial.printf("BLEDimmer: Received brightness %d\n", levelValue);
     level = (float)levelValue / (float)((1<<sizeof(Lissabon::Dimmer::Type_brightness)*8)-1);
+    IFDEBUG IotsaSerial.printf("%s.syncFromDevice: Received brightness %f (%d)\n", name.c_str(), level, levelValue);
     _dataValid = true;
   } else {
     IFDEBUG IotsaSerial.println("BLEDimmer: get(brightness) failed");
@@ -231,8 +232,8 @@ void BLEDimmer::syncFromDevice(IotsaBLEClientConnection *dimmer) {
   Lissabon::Dimmer::Type_temperature temperatureValue;
   ok = dimmer->get(Lissabon::Dimmer::serviceUUID, Lissabon::Dimmer::temperatureUUID, temperatureValue);
   if (ok) {
-    IFDEBUG IotsaSerial.printf("BLEDimmer: Received temperature %d\n", temperatureValue);
     temperature = (float)temperatureValue;
+    IFDEBUG IotsaSerial.printf("%s.syncFromDevice: Received temperature %f (%d)\n", name.c_str(), temperature, temperatureValue);
   } else {
     IFDEBUG IotsaSerial.println("BLEDimmer: get(temperature) failed");
   }
@@ -240,7 +241,7 @@ void BLEDimmer::syncFromDevice(IotsaBLEClientConnection *dimmer) {
   uint8_t isOnValue;
   ok = dimmer->get(Lissabon::Dimmer::serviceUUID, Lissabon::Dimmer::isOnUUID, isOnValue);
   if (ok) {
-    IFDEBUG IotsaSerial.printf("BLEDimmer received isOn %d\n", isOnValue);
+    IFDEBUG IotsaSerial.printf("%s.syncFromDevice: received isOn %d\n", name.c_str(), isOnValue);
     isOn = isOnValue;
   } else {
     IFDEBUG IotsaSerial.println("BLEDimmer: set(isOn) failed");

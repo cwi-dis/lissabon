@@ -91,7 +91,7 @@ IotsaBLEClientMod::handler() {
 
   formHandler_fields(message, "BLE devices", "bledevice", true);
 
-  message += "<form><input type='submit' name='refresh' value='Refresh'></form>";
+  message += "<form method='post'><input type='submit' name='refresh' value='Refresh'></form>";
   message += "</body></html>";
   server->send(200, "text/html", message);
 #endif
@@ -101,8 +101,8 @@ void IotsaBLEClientMod::formHandler_fields(String& message, const String& text, 
   // xxxjack fixed number of dimmers, so no need for "new" form.
 
   message += "<h2>Available Unknown/new " + text + " devices</h2>";
-  message += "<form><input type='submit' name='scanUnknown' value='Scan for 20 seconds'></form>";
-  message += "<form><input type='submit' name='refresh' value='Refresh'></form>";
+  message += "<form method='post'><input type='submit' name='scanUnknown' value='Scan for 20 seconds'></form>";
+  message += "<form method='post'><input type='submit' name='refresh' value='Refresh'></form>";
   if (unknownDevices.size() == 0) {
     message += "<p>No unassigned BLE dimmer devices seen recently.</p>";
   } else {

@@ -318,7 +318,7 @@ IotsaLedstripControllerMod::handler() {
 String IotsaLedstripControllerMod::formHandler_field_perdevice(const char *_deviceName) {
   String deviceName(_deviceName);
   String rv(deviceName);
-  rv += "<form><input type='hidden' name='add' value='" + deviceName + "'><input type='submit' value='Add'></form>";
+  rv += "<form method='post'><input type='hidden' name='add' value='" + deviceName + "'><input type='submit' value='Add'></form>";
   return rv;
 }
 

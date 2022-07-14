@@ -101,6 +101,7 @@ bool AbstractDimmer::formHandler_args(IotsaWebServer *server, const String& f_na
   if (server->hasArg(n_isOn)) {
     int val = server->arg(n_isOn).toInt();
     if (val != isOn) {
+      IotsaSerial.printf("AbstractDimmer: %s=%d (was %d)\n", n_isOn.c_str(), val, isOn);
       isOn = val;
       updateDimmer();
       anyChanged = true;
@@ -108,10 +109,13 @@ bool AbstractDimmer::formHandler_args(IotsaWebServer *server, const String& f_na
   }
 #ifdef DIMMER_WITH_LEVEL
   if (server->hasArg(n_level)) {
-    float val = server->arg(n_level).toFloat();
+    String valString = server->arg(n_level);
+    float val = valString.toFloat();
+    IotsaSerial.printf("AbstractDimmer: xxxjack level string %s float %f minLevel %f\n", valString, val, minLevel);
     if (val < minLevel) val = minLevel;
     if (val > 1) val = 1;
     if (val != level) {
+      IotsaSerial.printf("AbstractDimmer: %s=%f (was %f)\n", n_level.c_str(), val, level);
       level = val;
       updateDimmer();
       anyChanged = true;
@@ -127,6 +131,7 @@ bool AbstractDimmer::formHandler_args(IotsaWebServer *server, const String& f_na
   if (server->hasArg(n_temperature)) {
     float val = server->arg(n_temperature).toFloat();
     if (val != temperature) {
+      IotsaSerial.printf("AbstractDimmer: %s=%f (was %f)\n", n_temperature.c_str(), val, temperature);
       temperature = val;
       updateDimmer();
       anyChanged = true;
