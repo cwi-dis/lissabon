@@ -99,15 +99,14 @@ private:
 
 void 
 IotsaLedstripControllerMod::updateDisplay(bool clear) {
-  IotsaSerial.print(dimmers.size());
-  IotsaSerial.println(" strips:");
+  IotsaSerial.printf("LissabonController: %d strips:\n", dimmers.size());
 
   if (true || clear) display->clearStrips();
   display->selectMode(selectedMode);
   int index = 0;
   for (auto& elem : dimmers) {
     String name = elem->getUserVisibleName();
-    IotsaSerial.printf("device %s, available=%d\n", name.c_str(), elem->available());
+    IotsaSerial.printf("  device %s, available=%d\n", name.c_str(), elem->available());
     display->addStrip(index, name, elem->available());
     index++;
   }
@@ -184,14 +183,14 @@ IotsaLedstripControllerMod::uiButtonPressed() {
 
 bool
 IotsaLedstripControllerMod::uiEncoderChanged() {
-  IFDEBUG IotsaSerial.println("encoderChanged()");
+  IFDEBUG IotsaSerial.printf("LissabonController: encoderChanged()\n");
   if (button.pressed) {
     // The encoder controls the selected dimmer
     selectedDimmerIndex = encoder.value;
     if (selectedDimmerIndex < 0) selectedDimmerIndex = 0;
     if (selectedDimmerIndex >= dimmers.size()) selectedDimmerIndex = dimmers.size()-1;
     encoder.value = selectedDimmerIndex;
-    IotsaSerial.printf("xxxjack now selectedDimmer=%d\n", selectedDimmerIndex);
+    IotsaSerial.printf("LissabonController: now selectedDimmer=%d\n", selectedDimmerIndex);
     updateDisplay(false);
     iotsaConfig.postponeSleep(4000);
     return true;
@@ -204,21 +203,29 @@ IotsaLedstripControllerMod::uiEncoderChanged() {
     f_value = 1.0;
     encoder.value = ENCODER_STEPS;
   }
+  IotsaSerial.printf("LissabonController: now value=%f (int %d)\n", f_value, encoder.value);
   auto d = getDimmerForCommand(selectedDimmerIndex);
-  if (d == nullptr) return true;
+  if (d == nullptr) {
+    IotsaSerial.printf("LissabonController: no dimmer with number %d\n", selectedDimmerIndex);
+    return true;
+  }
+  d->level = f_value;
+  d->updateDimmer();
+  IotsaSerial.printf("LissabonController: updated dimmer %d\n", selectedDimmerIndex);
   iotsaConfig.postponeSleep(4000);
   return true;
 }
 
 
 void IotsaLedstripControllerMod::dimmerAvailableChanged(bool available, bool connected) {
+  IotsaSerial.println("LissabonController: dimmerAvailableChanged()");
   updateDisplay(false);
   display->showActivity(connected);
 }
 
 void IotsaLedstripControllerMod::dimmerOnOffChanged() {
 #if 1
-  IotsaSerial.println("xxxjack dimmerOnOfChanged()");
+  IotsaSerial.println("LissabonController: dimmerOnOfChanged()");
   updateDisplay(false);
 #else
   // Called whenever any button changed state.
@@ -252,7 +259,7 @@ void IotsaLedstripControllerMod::dimmerOnOffChanged() {
 
 void IotsaLedstripControllerMod::dimmerValueChanged() {
 #if 1
-  IotsaSerial.println("xxxjack dimmerValueChanged()");
+  IotsaSerial.println("LissabonController: dimmerValueChanged()");
   updateDisplay(false);
 #else
   saveAtMillis = millis() + 1000;

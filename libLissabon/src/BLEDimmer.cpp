@@ -167,7 +167,7 @@ void BLEDimmer::loop() {
 #endif
   }
 
-  IFDEBUG IotsaSerial.printf("BLEDimmer: disconnecting %s", dimmer->getName().c_str());
+  IFDEBUG IotsaSerial.printf("BLEDimmer: disconnecting %s\n", dimmer->getName().c_str());
   dimmer->disconnect();
   callbacks->dimmerAvailableChanged(true, false);
 }
