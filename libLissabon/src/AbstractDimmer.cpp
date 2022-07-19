@@ -20,7 +20,10 @@ bool AbstractDimmer::hasName() {
 void AbstractDimmer::updateDimmer() {
 #ifdef DIMMER_WITH_ANIMATION
   float newLevel = isOn ? level : 0;
-  // xxxjack need to cater for curLevel
+  // Need to cater for curLevel
+  if (millisAnimationEnd > 0) {
+    prevLevel = curLevel;
+  }
   int thisDuration = int(animationDurationMillis * fabs(newLevel-prevLevel));
   millisAnimationStart = millis();
   millisAnimationEnd = millis() + thisDuration;
