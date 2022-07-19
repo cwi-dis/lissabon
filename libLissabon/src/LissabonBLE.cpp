@@ -1,3 +1,4 @@
+#ifdef IOTSA_WITH_BLE
 #include "LissabonBLE.h"
 
 namespace Lissabon {
@@ -35,3 +36,4 @@ const uint16_t temperatureUUID2904unit = 0x2700;
 
 };
 };
+#endif // IOTSA_WITH_BLE

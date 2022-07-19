@@ -1,3 +1,4 @@
+#ifdef IOTSA_WITH_BLE
 #include "BLEDimmer.h"
 #include "iotsaBLEClient.h"
 #include "LissabonBLE.h"
@@ -251,3 +252,4 @@ void BLEDimmer::syncFromDevice(IotsaBLEClientConnection *dimmer) {
 }
 
 }
+#endif // IOTSA_WITH_BLE

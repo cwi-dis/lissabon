@@ -1,3 +1,4 @@
+#ifdef IOTSA_WITH_BLE
 #include "iotsa.h"
 #include "iotsaBLEClient.h"
 #include "iotsaConfigFile.h"
@@ -376,3 +377,4 @@ void IotsaBLEClientMod::delDevice(std::string id) {
   if (nDeleted > 0) configSave();
 #endif
 }
+#endif // IOTSA_WITH_BLE

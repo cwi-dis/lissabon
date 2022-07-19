@@ -1,5 +1,5 @@
 #include "iotsaBLEClientConnection.h"
-
+#ifdef IOTSA_WITH_BLE
 IotsaBLEClientConnection::IotsaBLEClientConnection(std::string& _name, std::string _address)
 : name(_name),
   address(_address), // Public is default for address type for nimble
@@ -199,4 +199,4 @@ bool IotsaBLEClientConnection::getAsNotification(BLEUUID& serviceUUID, BLEUUID& 
   characteristic->registerForNotify(_staticCallbackCaller);
   return false;
 }
-
+#endif // IOTSA_WITH_BLE

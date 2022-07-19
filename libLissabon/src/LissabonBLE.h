@@ -1,6 +1,6 @@
 #ifndef _LISSABONBLE_H_
 #define _LISSABONBLE_H_
-
+#ifdef IOTSA_WITH_BLE
 #include "iotsaBle.h"
 
 namespace Lissabon {
@@ -42,4 +42,5 @@ typedef uint16_t Type_temperature;
 
 };
 };
+#endif // IOTSA_WITH_BLE
 #endif // _LISSABONBLE_H_
