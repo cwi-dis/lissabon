@@ -20,13 +20,15 @@ bool AbstractDimmer::hasName() {
 void AbstractDimmer::updateDimmer() {
 #ifdef DIMMER_WITH_ANIMATION
   float newLevel = isOn ? level : 0;
-  // Need to cater for curLevel
-  if (millisAnimationEnd > 0) {
-    prevLevel = curLevel;
+  if (animationEndMillis > 0) {
+    // Need to cater for curLevel for animation that is in progress
+    IotsaSerial.printf("xxxjack preLevel was %f now %f\n", animationPrevLevel, curLevel);
+    animationPrevLevel = animationCurLevel;
   }
-  int thisDuration = int(animationDurationMillis * fabs(newLevel-prevLevel));
-  millisAnimationStart = millis();
-  millisAnimationEnd = millis() + thisDuration;
+  int thisDuration = int(animationDurationMillis * fabs(newLevel-animationPrevLevel));
+  animationStartMillis = millis()-1;
+  animationEndMillis = millis() + thisDuration;
+  IotsaSerial.printf("updateDimmer: level %f->%f in %d ms\n", animationPrevLevel, newLevel, thisDuration);
   iotsaConfig.postponeSleep(thisDuration+100);
 #endif
 }
@@ -34,28 +36,31 @@ void AbstractDimmer::updateDimmer() {
 void AbstractDimmer::calcCurLevel() {
 #ifdef DIMMER_WITH_LEVEL
   float wantedLevel = level;
-  if (overrideLevel > 0) wantedLevel = overrideLevel;
   if (!isOn) wantedLevel = 0;
 
 #ifdef DIMMER_WITH_ANIMATION
     // Determine how far along the animation we are, and terminate the animation when done (or if it looks preposterous)
-  uint32_t thisDur = millisAnimationEnd - millisAnimationStart;
+  uint32_t thisDur = animationEndMillis - animationStartMillis;
   if (thisDur == 0) thisDur = 1;
-  float progress = float(millis() - millisAnimationStart) / float(thisDur);
+  float progress = float(millis() - animationStartMillis) / float(thisDur);
   if (progress < 0) progress = 0;
-  if (progress >= 1) {
+  if (progress > 1) progress = 1;
+  animationCurLevel = wantedLevel*progress + animationPrevLevel*(1-progress);
+  if (progress < 1) {
+    curLevel = animationCurLevel;
+  } else {
     // We are done with the animation
     progress = 1;
-    millisAnimationStart = 0;
-    millisAnimationEnd = 0;
-    prevLevel = wantedLevel;
+    animationStartMillis = 0;
+    animationEndMillis = 0;
+    curLevel = animationPrevLevel = animationCurLevel = wantedLevel;
 
     IFDEBUG IotsaSerial.printf("IotsaDimmer: wantedLevel=%f level=%f\n", wantedLevel, level);
     callbacks->dimmerValueChanged();
   }
-  curLevel = wantedLevel*progress + prevLevel*(1-progress);
 #else
   curLevel = wantedLevel;
+  callbacks->dimmerValueChanged();
 #endif // DIMMER_WITH_ANIMATION
   
   if (curLevel < 0) curLevel = 0;

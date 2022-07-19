@@ -53,18 +53,18 @@ public:
   bool isOn = 0;        // if true we want to show level, if false we want to be off.
 #ifdef DIMMER_WITH_LEVEL
   float level = 0;      // Requested light level
-  float overrideLevel = -1; // If > 0 this is the _actual_ level we want to output, because a LED curve will cause it to be perceived as level.
-  float curLevel = 0;   // actual current light level (depends on level/isOn but also animation progress)
+  float curLevel = 0;   // actual current light level (depends level, isOn, gamma, animation progress)
   float minLevel = 0;   // minimum light level through UI
 #endif
 #ifdef DIMMER_WITH_GAMMA
   float gamma = 1;
 #endif // DIMMER_WITH_GAMMA
 #ifdef DIMMER_WITH_ANIMATION
-  float prevLevel = 0;  // actual light level at millisAnimtationStart
+  float animationPrevLevel = 0;  // actual light level at millisAnimtationStart
+  float animationCurLevel = 0; // actual current light level
   int animationDurationMillis = 0;  // Maximum duration of an animation (0-100% or reverse)
-  uint32_t millisAnimationStart = 0;  // Time current animation started
-  uint32_t millisAnimationEnd = 0;  // Time current animation should end
+  uint32_t animationStartMillis = 0;  // Time current animation started
+  uint32_t animationEndMillis = 0;  // Time current animation should end
 
 #endif // DIMMER_WITH_ANIMATION
 #ifdef DIMMER_WITH_TEMPERATURE

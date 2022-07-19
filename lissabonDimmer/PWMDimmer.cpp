@@ -50,7 +50,7 @@ void PWMDimmer::identify() {
 
 void PWMDimmer::loop() {
   // Quick return if we have nothing to do
-  if (millisAnimationStart == 0 || millisAnimationEnd == 0) {
+  if (animationStartMillis == 0 || animationEndMillis == 0) {
     // The dimmer shouldn't sleep if it is controlling the PWM output
     if (level > 0 && isOn) iotsaConfig.postponeSleep(100);
     return;
