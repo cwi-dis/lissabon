@@ -23,7 +23,7 @@ Display *display;
 #define WITH_OTA    // Enable Over The Air updates from ArduinoIDE. Needs at least 1MB flash.
 
 #define LOG_BLE if(0)
-#define LOG_UI if(0)
+#define LOG_UI if(1)
 
 IotsaApplication application("Iotsa LEDstrip Controller");
 IotsaWifiMod wifiMod(application);
@@ -51,10 +51,14 @@ RotaryEncoder encoder(14, 2);
 #define ENCODER_STEPS 20
 Button button(0, true, true, true);
 #define SHORT_PRESS_DURATION 500
+Button rockerUp(12, true, false, true);
+Button rockerDown(13, true, false, true);
 
 Input* inputs[] = {
   &button,
-  &encoder
+  &encoder,
+  &rockerUp,
+  &rockerDown,
 };
 
 IotsaInputMod touchMod(application, inputs, sizeof(inputs)/sizeof(inputs[0]));
@@ -88,6 +92,7 @@ private:
   void dimmerValueChanged();
   void dimmerAvailableChanged(bool available, bool connected);
   void handler();
+  bool uiRockerPressed();
   bool uiButtonPressed();
   bool uiEncoderChanged();
   DimmerDynamicCollection::ItemType* getDimmerForCommand(int num);
@@ -152,7 +157,41 @@ IotsaLedstripControllerMod::getDimmerForCommand(int num) {
   }
   return d;
 }
-  
+
+bool
+IotsaLedstripControllerMod::uiRockerPressed() {
+  LOG_UI IotsaSerial.printf("LissabonController: uiRockerPressed: up: state=%d repeatCount=%d duration=%d\n", rockerUp.pressed, rockerUp.repeatCount, rockerUp.duration);
+  LOG_UI IotsaSerial.printf("LissabonController: uiRockerPressed: down: state=%d repeatCount=%d duration=%d\n", rockerDown.pressed, rockerDown.repeatCount, rockerDown.duration);
+#if 0
+  //iotsaConfig.postponeSleep(4000);
+  if (button.pressed) {
+    // While the button is pressed, changes in the encoder modifies the dimmer selected
+    encoder.value = selectedDimmerIndex;
+    LOG_UI IotsaSerial.printf("LissabonController: selectedDimmer=%d\n", selectedDimmerIndex);
+    return true;
+  }
+  // While the button is released, changes in the encoder modifies the level of the dimmer
+  if (selectedDimmerIndex >= 0) {
+    auto d = dimmers.at(selectedDimmerIndex);
+    float f_value = d == nullptr ? 0 : d->level;
+    encoder.value = (int)(f_value * ENCODER_STEPS);
+  }
+  if (button.duration < SHORT_PRESS_DURATION) {
+    // Short press: turn current dimmer on or off
+    LOG_UI IotsaSerial.println("LissabonCOntroller: uiButtonPressed: dimmer on/off");
+    auto d = getDimmerForCommand(selectedDimmerIndex);
+    if (d != nullptr) {
+      d->isOn = !d->isOn;
+      d->updateDimmer();
+      updateDisplay(false);
+    }
+  } else {
+    // Long press: assume rotary was used for selecting dimmer
+  }
+#endif
+  return true;
+}
+
 bool
 IotsaLedstripControllerMod::uiButtonPressed() {
   LOG_UI IotsaSerial.printf("LissabonController: uiButtonPressed: state=%d repeatCount=%d duration=%d\n", button.pressed, button.repeatCount, button.duration);
@@ -394,6 +433,11 @@ void IotsaLedstripControllerMod::setup() {
   _setupDisplay();
   button.setCallback(std::bind(&IotsaLedstripControllerMod::uiButtonPressed, this));
   encoder.setCallback(std::bind(&IotsaLedstripControllerMod::uiEncoderChanged, this));
+
+  rockerUp.setCallback(std::bind(&IotsaLedstripControllerMod::uiRockerPressed, this));
+  rockerDown.setCallback(std::bind(&IotsaLedstripControllerMod::uiRockerPressed, this));
+  rockerUp.setRepeat(500,200);
+  rockerDown.setRepeat(500,200);
   auto callback = std::bind(&IotsaLedstripControllerMod::unknownBLEDimmerFound, this, std::placeholders::_1);
   setUnknownDeviceFoundCallback(callback);
   setDuplicateNameFilter(true);
