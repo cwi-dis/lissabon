@@ -23,7 +23,7 @@ Display *display;
 #define WITH_OTA    // Enable Over The Air updates from ArduinoIDE. Needs at least 1MB flash.
 
 #define LOG_BLE if(0)
-#define LOG_UI if(0)
+#define LOG_UI if(1)
 
 IotsaApplication application("Iotsa LEDstrip Controller");
 IotsaWifiMod wifiMod(application);
@@ -49,12 +49,20 @@ IotsaBatteryMod batteryMod(application);
 // So, connect E and C to GND, D to GPIO0, A to GPI14, B to GPIO2
 RotaryEncoder encoder(14, 2);
 #define ENCODER_STEPS 20
+#ifdef DIMMER_WITH_TEMPERATURE
+#define COLOR_TEMP_MIN 2200
+#define COLOR_TEMP_MAX 6500
+#endif
 Button button(0, true, true, true);
 #define SHORT_PRESS_DURATION 500
+Button rockerUp(12, true, false, true);
+Button rockerDown(13, true, false, true);
 
 Input* inputs[] = {
   &button,
-  &encoder
+  &encoder,
+  &rockerUp,
+  &rockerDown,
 };
 
 IotsaInputMod touchMod(application, inputs, sizeof(inputs)/sizeof(inputs[0]));
@@ -88,6 +96,7 @@ private:
   void dimmerValueChanged();
   void dimmerAvailableChanged(bool available, bool connected);
   void handler();
+  bool uiRockerPressed();
   bool uiButtonPressed();
   bool uiEncoderChanged();
   DimmerDynamicCollection::ItemType* getDimmerForCommand(int num);
@@ -152,20 +161,43 @@ IotsaLedstripControllerMod::getDimmerForCommand(int num) {
   }
   return d;
 }
-  
+
+bool
+IotsaLedstripControllerMod::uiRockerPressed() {
+  LOG_UI IotsaSerial.printf("LissabonController: uiRockerPressed: up: state=%d repeatCount=%d duration=%d\n", rockerUp.pressed, rockerUp.repeatCount, rockerUp.duration);
+  LOG_UI IotsaSerial.printf("LissabonController: uiRockerPressed: down: state=%d repeatCount=%d duration=%d\n", rockerDown.pressed, rockerDown.repeatCount, rockerDown.duration);
+  // The encoder controls the selected dimmer
+  if (rockerUp.pressed) selectedDimmerIndex++;
+  if (rockerDown.pressed) selectedDimmerIndex--;
+  if (selectedDimmerIndex < 0) {
+    display->flash();
+    selectedDimmerIndex = 0;
+  }
+  if (selectedDimmerIndex >= dimmers.size()) {
+    display->flash();
+    selectedDimmerIndex = dimmers.size()-1;
+  }
+  LOG_UI IotsaSerial.printf("LissabonController: now selectedDimmer=%d\n", selectedDimmerIndex);
+  updateDisplay(false);
+  iotsaConfig.postponeSleep(4000);
+  return true;
+}
+
 bool
 IotsaLedstripControllerMod::uiButtonPressed() {
   LOG_UI IotsaSerial.printf("LissabonController: uiButtonPressed: state=%d repeatCount=%d duration=%d\n", button.pressed, button.repeatCount, button.duration);
   //iotsaConfig.postponeSleep(4000);
+  auto d = dimmers.at(selectedDimmerIndex);
+  if (d == nullptr) return false;
+#ifdef DIMMER_WITH_TEMPERATURE
   if (button.pressed) {
-    // While the button is pressed, changes in the encoder modifies the dimmer selected
-    encoder.value = selectedDimmerIndex;
-    LOG_UI IotsaSerial.printf("LissabonController: selectedDimmer=%d\n", selectedDimmerIndex);
-    return true;
-  }
-  // While the button is released, changes in the encoder modifies the level of the dimmer
-  if (selectedDimmerIndex >= 0) {
-    auto d = dimmers.at(selectedDimmerIndex);
+    float t_value = (d->temperature - COLOR_TEMP_MIN) / (COLOR_TEMP_MAX - TCOLOR_EMP_MIN);
+    if (t_value < 0) t_value = 0;
+    if (t_value > 1) t_value = 1;
+    encoder.value = (int)(f_value * ENCODER_STEPS);
+  } else
+#endif // DIMMER_WITH_TEMPERATURE
+  {
     float f_value = d == nullptr ? 0 : d->level;
     encoder.value = (int)(f_value * ENCODER_STEPS);
   }
@@ -179,7 +211,7 @@ IotsaLedstripControllerMod::uiButtonPressed() {
       updateDisplay(false);
     }
   } else {
-    // Long press: assume rotary was used for selecting dimmer
+    // Long press: assume rotary will be used for selecting temperature
   }
   return true;
 }
@@ -187,32 +219,37 @@ IotsaLedstripControllerMod::uiButtonPressed() {
 bool
 IotsaLedstripControllerMod::uiEncoderChanged() {
   LOG_UI IotsaSerial.printf("LissabonController: uiEncoderChanged()\n");
-  if (button.pressed) {
-    // The encoder controls the selected dimmer
-    selectedDimmerIndex = encoder.value;
-    if (selectedDimmerIndex < 0) selectedDimmerIndex = 0;
-    if (selectedDimmerIndex >= dimmers.size()) selectedDimmerIndex = dimmers.size()-1;
-    encoder.value = selectedDimmerIndex;
-    LOG_UI IotsaSerial.printf("LissabonController: now selectedDimmer=%d\n", selectedDimmerIndex);
-    updateDisplay(false);
-    iotsaConfig.postponeSleep(4000);
-    return true;
-  }
-  // Button not pressed, encoder controls level.
-  if (encoder.value < 0) encoder.value = 0;
-  if (encoder.value >= ENCODER_STEPS) encoder.value = ENCODER_STEPS;
-  float f_value = (float)encoder.value / ENCODER_STEPS;
-  if (f_value > 1.0) {
-    f_value = 1.0;
-    encoder.value = ENCODER_STEPS;
-  }
-  LOG_UI IotsaSerial.printf("LissabonController: now value=%f (int %d)\n", f_value, encoder.value);
   auto d = getDimmerForCommand(selectedDimmerIndex);
   if (d == nullptr) {
-    IotsaSerial.printf("LissabonController: no dimmer with number %d\n", selectedDimmerIndex);
+    // getDimmerForCommand has already given the error message
     return true;
   }
-  d->level = f_value;
+#ifdef DIMMER_WITH_TEMPERATURE
+  if (button.pressed) {
+    if (encoder.value < 0) encoder.value = 0;
+    if (encoder.value >= ENCODER_STEPS) encoder.value = ENCODER_STEPS;
+    float f_value = (float)encoder.value / ENCODER_STEPS;
+    if (f_value > 1.0) {
+      f_value = 1.0;
+      encoder.value = ENCODER_STEPS;
+    }
+    float t_value = COLOR_TEMP_MIN + f_value * (COLOR_TEMP_MAX - COLOR_TEMP_MIN);
+    LOG_UI IotsaSerial.printf("LissabonController: now temperature=%f (int %d)\n", t_value, encoder.value);
+    d->temperature = t_value;
+  } else 
+#endif
+  {
+    // Button not pressed, encoder controls level.
+    if (encoder.value < 0) encoder.value = 0;
+    if (encoder.value >= ENCODER_STEPS) encoder.value = ENCODER_STEPS;
+    float f_value = (float)encoder.value / ENCODER_STEPS;
+    if (f_value > 1.0) {
+      f_value = 1.0;
+      encoder.value = ENCODER_STEPS;
+    }
+    LOG_UI IotsaSerial.printf("LissabonController: now level=%f (int %d)\n", f_value, encoder.value);
+    d->level = f_value;
+  }
   d->updateDimmer();
   LOG_UI IotsaSerial.printf("LissabonController: updated dimmer %d\n", selectedDimmerIndex);
   iotsaConfig.postponeSleep(4000);
@@ -394,6 +431,11 @@ void IotsaLedstripControllerMod::setup() {
   _setupDisplay();
   button.setCallback(std::bind(&IotsaLedstripControllerMod::uiButtonPressed, this));
   encoder.setCallback(std::bind(&IotsaLedstripControllerMod::uiEncoderChanged, this));
+
+  rockerUp.setCallback(std::bind(&IotsaLedstripControllerMod::uiRockerPressed, this));
+  rockerDown.setCallback(std::bind(&IotsaLedstripControllerMod::uiRockerPressed, this));
+  rockerUp.setRepeat(500,200);
+  rockerDown.setRepeat(500,200);
   auto callback = std::bind(&IotsaLedstripControllerMod::unknownBLEDimmerFound, this, std::placeholders::_1);
   setUnknownDeviceFoundCallback(callback);
   setDuplicateNameFilter(true);
