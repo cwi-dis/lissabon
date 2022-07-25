@@ -29,6 +29,7 @@ void LedstripDimmer::updateDimmer() {
   // Also if the spread is very wide we ignore it and light up all LEDs.
   //
   float maxOutputLevel = maxLevelCorrectColor();
+#ifdef ALLOW_INCORRECT_COLOR
   if (level == 0 || level >= maxOutputLevel || focalSpread > 0.9) {
     for(int i=0; i<count; i++) pixelLevels[i] = 1.0;
     overrideLevel = -1; // We use the level as provided
@@ -36,6 +37,7 @@ void LedstripDimmer::updateDimmer() {
   }
   // We will compute the per-pixel level, so we set the overrideLevel to maximum color-preserving.
   overrideLevel = maxOutputLevel;
+#endif // ALLOW_INCORRECT_COLOR
   //
   // Now determine how much light we can produce with the preferred curve
   //
@@ -153,7 +155,7 @@ bool LedstripDimmer::putHandler(const JsonVariant& request) {
           calibrationData[i] = _calibrationData[i % size];
         }
         calibrationMode = calibration_hard;
-        millisAnimationStart = millisAnimationEnd = millis();
+        animationStartMillis = animationEndMillis = millis();
         IFDEBUG IotsaSerial.println("Got calibrationData");
       } else {
         IFDEBUG IotsaSerial.println("Bad calibrationData");
@@ -285,7 +287,7 @@ void LedstripDimmer::setHandler(uint8_t *_buffer, size_t _count, int _bpp, Iotsa
 
 void LedstripDimmer::loop() {
   // Quick return if we have nothing to do
-  if (millisAnimationStart == 0 || millisAnimationEnd == 0) return;
+  if (animationStartMillis == 0 || animationEndMillis == 0) return;
 
   // Compute current level (taking into account isOn and animation progress)
   calcCurLevel();
