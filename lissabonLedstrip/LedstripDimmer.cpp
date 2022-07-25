@@ -136,6 +136,7 @@ void LedstripDimmer::getHandler(JsonObject& reply) {
   reply["focalPoint"] = focalPoint;
   reply["focalSpread"] = focalSpread;
   reply["maxLevelCorrectColor"] = maxLevelCorrectColor();
+  reply["maxLevelCorrectColorTemperature"] = temperature;
   AbstractDimmer::getHandler(reply);
 }
 

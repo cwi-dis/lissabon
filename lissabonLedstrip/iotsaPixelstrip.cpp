@@ -13,6 +13,7 @@
 void
 IotsaPixelstripMod::handler() {
   if( server->hasArg("setIndex") && server->hasArg("setValue")) {
+    // Note: this sets the value for a single LED, not the value fora single NeoPixel (3/4 leds)
     int idx = server->arg("setIndex").toInt();
     int val = server->arg("setValue").toInt();
     if (buffer && idx >= 0 && idx <= count*IOTSA_NPB_BPP) {
@@ -39,8 +40,7 @@ IotsaPixelstripMod::handler() {
     if( server->hasArg("gamma")) {
       if (needsAuthentication()) return;
       gamma = server->arg("gamma").toFloat();
-      if (gamma > 1.0) gamma = 2.2;
-      if (gamma < 1.0) gamma = 1.0;
+      if (gamma < 0) gamma = 1.0;
       anyChanged = true;
     }
     if (anyChanged) {

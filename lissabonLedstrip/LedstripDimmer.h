@@ -28,7 +28,12 @@ public:
   void setHandler(uint8_t *_buffer, size_t _count, int bpp, IotsaPixelsourceHandler *handler);
 protected:
   IotsaPixelstripMod& mod;
-  typedef enum {calibration_normal, calibration_rgb, calibration_alternating, calibration_hard} CalibrationMode;
+  typedef enum {
+    calibration_normal, // Normal mode: not calibrating
+    calibration_rgb, // RGB mode: set color only using RGB leds (keeping W led off)
+    calibration_alternating, // Alternating mode: odd/even pixels are driven with RGB and RGBW
+    calibration_hard  // Hard calibration: show RGBW values are provided through the REST calibrationData interface
+    } CalibrationMode;
   CalibrationMode calibrationMode; // When true, alternate pixels use RGBW and RGB
   float calibrationData[8];
   int count;  // Number of LEDs
