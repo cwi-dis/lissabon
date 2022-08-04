@@ -4,6 +4,8 @@
 //const float PI = atan(1)*4;
 const float SQRT_HALF = sqrt(0.5);
 
+#define DEBUG_LEDSTRIP if(1)
+
 namespace Lissabon {
 
 LedstripDimmer::LedstripDimmer(int _num, IotsaPixelstripMod& _mod, DimmerCallbacks *_callbacks)
@@ -45,7 +47,7 @@ void LedstripDimmer::updateDimmer() {
   float beginValue = levelFuncCumulative(0, curSpread);
   float endValue = levelFuncCumulative(1, curSpread);
   float cumulativeValue = endValue - beginValue;
-  //IotsaSerial.printf("xxxjack level=%f focalSpread=%f maxLevel=%f totalValue=%f\n", level, curSpread, maxOutputLevel, cumulativeValue);
+  DEBUG_LEDSTRIP IotsaSerial.printf("LedstripDimmer.updateDimmer: level=%f focalSpread=%f maxLevel=%f totalValue=%f\n", level, curSpread, maxOutputLevel, cumulativeValue);
   //
   // With this curve we can produce cumulativeValue*maxOutputLevel light.
   // If that is not enough we widen the curve.
@@ -55,7 +57,7 @@ void LedstripDimmer::updateDimmer() {
     beginValue = levelFuncCumulative(0, curSpread);
     endValue = levelFuncCumulative(1, curSpread);
     cumulativeValue = endValue - beginValue;
-    //IotsaSerial.printf("xxxjack curSpread=%f maxLevel=%f totalValue=%f\n", curSpread, maxOutputLevel, cumulativeValue);
+    DEBUG_LEDSTRIP IotsaSerial.printf("LedstripDimmer.updateDimmer: adjustForMaxLevel: curSpread=%f maxLevel=%f totalValue=%f\n", curSpread, maxOutputLevel, cumulativeValue);
   }
   //
   // cumulativeValue*maxOutputLevel is the amount of light produced. We need to
@@ -79,7 +81,7 @@ float LedstripDimmer::maxLevelCorrectColor() {
   TempFColor maxTFColor(temperature, 1.0);
   RgbwFColor maxRgbwColor = rgbwSpaceCorrect.toRgbw(maxTFColor);
   float maxLevel = maxRgbwColor.CalculateTrueBrightness(rgbwSpace.WBrightness);
-  //IotsaSerial.printf("xxxjack wTemp=%f wBright=%f wtdTemp=%f R=%f G=%f B=%f W=%f maxCorrect=%f\n", rgbwSpace.WTemperature, rgbwSpace.WTemperature, temperature, maxRgbwColor.R, maxRgbwColor.G, maxRgbwColor.B, maxRgbwColor.W, maxLevel);
+  DEBUG_LEDSTRIP IotsaSerial.printf("LedstripDimmer.maxLevelCorrectColor: wTemp=%f wBright=%f wtdTemp=%f R=%f G=%f B=%f W=%f maxCorrect=%f\n", rgbwSpace.WTemperature, rgbwSpace.WTemperature, temperature, maxRgbwColor.R, maxRgbwColor.G, maxRgbwColor.B, maxRgbwColor.W, maxLevel);
   return maxLevel;
 }
 
