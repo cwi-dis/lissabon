@@ -312,8 +312,15 @@ void LedstripDimmer::loop() {
 
   // The color we want to go to
   TempFColor curTFColor = TempFColor(temperature, curLevel);
-  RgbFColor curRgbCalibrationColor(curTFColor);
   RgbwFColor curRgbwColor = rgbwSpace.toRgbw(curTFColor);
+  // Only for calibration mode rgb or alternating we also need to color in RGB-only.
+  // We adjust for the brightness of the white LED
+  RgbFColor curRgbCalibrationColor;
+  if (calibrationMode == calibration_alternating || calibrationMode == calibration_rgb) {
+    TempFColor tmp = TempFColor(temperature, curLevel * (1+rgbwSpace.WBrightness));
+    RgbFColor tmp2(tmp);
+    curRgbCalibrationColor = tmp2;
+  }
 #if 0
   if (millisAnimationStart == 0) {
     IFDEBUG IotsaSerial.printf("LedstripDimmer: isOn=%d r=%d, g=%d, b=%d, w=%d count=%d\n", isOn, color.R, color.G, color.B, color.W, count);
