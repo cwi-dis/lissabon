@@ -2,18 +2,17 @@
 #include "iotsaPixelstrip.h"
 #include "iotsaConfigFile.h"
 
-
-// Define TESTMODE_PIN if there is a test-mode switch attached
-// to that pin. The LEDs will show a looping pattern if that input is high.
-#undef TESTMODE_PIN
-//#define TESTMODE_PIN 5
+#define STRINGIFY1(x) #x
+#define STRINGIFY(x) STRINGIFY1(x)
+#define IOTSA_NEOPIXEL_TYPE STRINGIFY(IOTSA_NPB_FEATURE)
+#define IOTSA_NEOPIXEL_METHOD STRINGIFY(IOTSA_NPB_METHOD)
 
 #ifdef IOTSA_WITH_WEB
 
 void
 IotsaPixelstripMod::handler() {
   if( server->hasArg("setIndex") && server->hasArg("setValue")) {
-    // Note: this sets the value for a single LED, not the value fora single NeoPixel (3/4 leds)
+    // Note: this sets the value for a single LED, not the value for a single NeoPixel (3/4 leds)
     int idx = server->arg("setIndex").toInt();
     int val = server->arg("setValue").toInt();
     if (buffer && idx >= 0 && idx <= count*IOTSA_NPB_BPP) {
@@ -37,12 +36,6 @@ IotsaPixelstripMod::handler() {
       count = server->arg("count").toInt();
       anyChanged = true;
     }
-    if( server->hasArg("gamma")) {
-      if (needsAuthentication()) return;
-      gamma = server->arg("gamma").toFloat();
-      if (gamma < 0) gamma = 1.0;
-      anyChanged = true;
-    }
     if (anyChanged) {
       configSave();
       setupStrip();
@@ -52,12 +45,8 @@ IotsaPixelstripMod::handler() {
   String message = "<html><head><title>Pixelstrip module</title></head><body><h1>Pixelstrip module</h1>";
   message += "<h2>Configuration</h2><form method='get'>GPIO pin: <input name='pin' value='" + String(pin) + "'><br>";
   message += "Number of NeoPixels: <input name='count' value='" + String(count) + "'><br>";
-#define STRINGIFY1(x) #x
-#define STRINGIFY(x) STRINGIFY1(x)
-#define IOTSA_NEOPIXEL_TYPE STRINGIFY(IOTSA_NPB_FEATURE)
-  message += "NeoPixel type: " + String(IOTSA_NEOPIXEL_TYPE) + "<br>";
+  message += "NeoPixel type: " + String(IOTSA_NEOPIXEL_TYPE) + ", control method: " + String(IOTSA_NEOPIXEL_METHOD) + "<br>";
   message += "LEDs per NeoPixel: " + String(IOTSA_NPB_BPP) + "<br>";
-  message += "Gamma (1.0 neutral, 2.2 suggested): <input name='gamma' value='" + String(gamma) + "'><br>";
   message += "<input type='submit'></form>";
   message += "<h2>Set pixel</h2><form method='get'><br>Set pixel <input name='setIndex'> to <input name='setValue'><br>";
   message += "<input type='submit'></form>";
@@ -74,9 +63,6 @@ String IotsaPixelstripMod::info() {
 void IotsaPixelstripMod::setup() {
   configLoad();
   setupStrip();
-#ifdef TESTMODE_PIN
-  pinMode(TESTMODE_PIN, INPUT);
-#endif
 }
 
 void IotsaPixelstripMod::setupStrip() {
@@ -93,29 +79,6 @@ void IotsaPixelstripMod::setupStrip() {
     IotsaSerial.println("No memory");
   }
   memset(buffer, 0, count*IOTSA_NPB_BPP);
-#if 1
-  if (gammaConverter) delete gammaConverter;
-  if (gamma > 1) {
-    // Ignore gamma value, just use pre-defined 2.2 value from IotsaNeoPixelBus
-    gammaConverter = new NeoGamma<NeoGammaTableMethod>();
-  }
-#else
-  if (gammaTable) free(gammaTable);
-  gammaTable = NULL;
-  if (gamma != 0 && gamma != 1) {
-    gammaTable = (uint8_t *)malloc(256);
-    if (gammaTable == NULL) {
-      IotsaSerial.println("No memory");
-    }
-    for(int i=0; i<256; i++) {
-      float gval = powf((float)i/256.0, gamma);
-      int ival = (int)(gval * 256);
-      if (ival < 0) ival = 0;
-      if (ival > 255) ival = 255;
-      gammaTable[i] = ival;
-    }
-  }
-#endif
   pixelSourceCallback();
   if (source) {
     source->setHandler(buffer, count, IOTSA_NPB_BPP, this);
@@ -175,8 +138,9 @@ bool IotsaPixelstripMod::getHandler(const char *path, JsonObject& reply) {
   if (strcmp(path, "/api/pixelstrip") == 0) {
     reply["pin"] = pin;
     reply["count"] = count;
-    reply["bpp"] = IOTSA_NPB_BPP;
-    reply["gamma"] = gamma;
+    reply["pixel_type"] = IOTSA_NEOPIXEL_TYPE;
+    reply["pixel_bpp"] = IOTSA_NPB_BPP;
+    reply["pixel_method"] = IOTSA_NEOPIXEL_METHOD;
     return true;
   } else if (strcmp(path, "/api/pixels") == 0) {
     JsonArray data = reply.createNestedArray("data");
@@ -204,12 +168,6 @@ bool IotsaPixelstripMod::putHandler(const char *path, const JsonVariant& request
         IotsaSerial.println("count set to 2 to workaround bug");
         count = 2;
       }
-      anyChanged = true;
-    }
-    if (reqObj.containsKey("gamma")) {
-      gamma = reqObj["gamma"];
-      if (gamma > 1.0) gamma = 2.2;
-      if (gamma < 1.0) gamma = 1.0;
       anyChanged = true;
     }
     if (anyChanged) {
@@ -264,11 +222,9 @@ void IotsaPixelstripMod::pixelSourceCallback() {
     if (IOTSA_NPB_BPP == 4) {
       uint8_t w = *ptr++;
       RgbwColor color = RgbwColor(r, g, b, w);
-      if (gammaConverter) color = gammaConverter->Correct(color);
       strip->SetPixelColor(i, color);
     } else {
       RgbColor color = RgbColor(r, g, b);
-      if (gammaConverter) color = gammaConverter->Correct(color);
       strip->SetPixelColor(i, color);
     }
   }
@@ -291,32 +247,13 @@ void IotsaPixelstripMod::configLoad() {
   IotsaConfigFileLoad cf("/config/pixelstrip.cfg");
   cf.get("pin", pin, IOTSA_NPB_DEFAULT_PIN);
   cf.get("count", count, IOTSA_NPB_DEFAULT_COUNT);
-  cf.get("gamma", gamma, 1.0);
 }
 
 void IotsaPixelstripMod::configSave() {
   IotsaConfigFileSave cf("/config/pixelstrip.cfg");
   cf.put("pin", pin);
   cf.put("count", count);
-  cf.put("gamma", gamma);
 }
 
 void IotsaPixelstripMod::loop() {
-#ifdef TESTMODE_PIN
-  if (digitalRead(TESTMODE_PIN) && buffer != 0) {
-    int value = (millis() >> 3) & 0xff;  // Loop intensities every 2 seconds, approximately
-    int bits = (millis() >> 11) % ((1 << IOTSA_NPB_BPP)-1); // Cycle over which colors to light
-    if (bits == 0) bits = ((1 << IOTSA_NPB_BPP)-1);
-    for (int i=0; i < count; i++) {
-      for (int b=0; b < IOTSA_NPB_BPP; b++) {
-        int thisValue = 0;
-        if (bits & (1<<((b+i) % IOTSA_NPB_BPP))) {
-          thisValue = value;
-        }
-        buffer[i*IOTSA_NPB_BPP+b] = thisValue;
-      }
-    }
-    pixelSourceCallback();
-  }
-#endif
 }

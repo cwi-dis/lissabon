@@ -62,8 +62,7 @@ public:
   IotsaPixelstripMod(IotsaApplication& app)
   : IotsaPixelstripModBaseMod(app),
     source(NULL),
-    strip(NULL),
-    gammaConverter(NULL)
+    strip(NULL)
   {}
   using IotsaPixelstripModBaseMod::IotsaPixelstripModBaseMod;
   void setup();
@@ -86,12 +85,6 @@ protected:
   uint8_t *buffer;
   int count;
   int pin;
-  float gamma;
-#if 1
-  NeoGamma<NeoGammaTableMethod> *gammaConverter;
-#else
-  uint8_t *gammaTable;
-#endif
 #ifdef IOTSA_NPB_POWER_PIN
   bool isPowerOn;
 #endif
