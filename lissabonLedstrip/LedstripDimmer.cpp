@@ -147,6 +147,7 @@ void LedstripDimmer::getHandler(JsonObject& reply) {
   reply["focalSpread"] = focalSpread;
   reply["maxLevelCorrectColor"] = maxLevelCorrectColor();
   reply["maxLevelCorrectColorTemperature"] = temperature;
+  reply["calibrationMode"] = (int)calibrationMode;
   AbstractDimmer::getHandler(reply);
 }
 
@@ -154,19 +155,12 @@ bool LedstripDimmer::putHandler(const JsonVariant& request) {
   AbstractDimmer::putHandler(request);
   // Handle configuration settings
   if (true) {
-    float whiteTemperature = rgbwSpace.WTemperature;
-    if (request.containsKey("whiteTemperature")) {
-      whiteTemperature = request["whiteTemperature"];
-    }
-    float whiteBrightness = rgbwSpace.WBrightness;
-    if (request.containsKey("whiteBrightness")) {
-      whiteBrightness = request["whiteBrightness"];
-    }
-    if (request.containsKey("focalPoint")) {
-      focalPoint = request["focalPoint"];
-    }
-    if (request.containsKey("focalSpread")) {
-      focalSpread = request["focalSpread"];
+    float whiteTemperature = request["whiteTemperature"]|rgbwSpace.WTemperature;
+    float whiteBrightness = request["whiteBrightness"]|rgbwSpace.WBrightness;
+    focalPoint = request["focalPoint"] | focalPoint;
+    focalSpread = request["focalSpread"] | focalSpread;
+    if (request.containsKey("calibrationMode")) {
+      calibrationMode = (CalibrationMode)request["calibrationMode"].as<int>();
     }
     if (request.containsKey("calibrationData")) {
       JsonArray _calibrationData = request["calibrationData"];
