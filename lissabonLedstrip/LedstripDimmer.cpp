@@ -24,8 +24,16 @@ void LedstripDimmer::updateDimmer() {
   if (calibrationMode == calibration_hard) calibrationMode = calibration_normal;
   // Compute level and animation duration
   AbstractDimmer::updateDimmer();
+  //
   // Compute curve.
   // 
+  // If spread==0 we use a uniform curve.
+  if (focalSpread == 0) {
+    for(int i=0; i<count; i++) {
+      pixelLevels[i] = 1.0;
+    }
+    return;
+  }
   // First determine the maximum output level at which no color distortion happens.
   // If we want more light than this we have to use all LEDs.
   // Also if the spread is very wide we ignore it and light up all LEDs.
@@ -219,6 +227,7 @@ bool LedstripDimmer::configLoad(IotsaConfigFileLoad& cf, const String& f_name) {
 #if 1
   calibrationMode = calibration_normal;
 #else
+  // Calibration mode should not be saved, it is reset after reboot.
   int value;
   cf.get(f_name + ".calibrationMode", value, 0);
   calibrationMode = (CalibrationMode)value;
@@ -234,6 +243,7 @@ void LedstripDimmer::configSave(IotsaConfigFileSave& cf, const String& f_name) {
   cf.put(f_name + ".focalPoint", focalPoint);
   cf.put(f_name + ".focalSpread", focalSpread);
 #if 0
+  // Calibration mode should not be saved, it is reset after reboot.
   cf.put(f_name + ".calibrationMode", (int)calibrationMode);
 #endif
   AbstractDimmer::configSave(cf, f_name);
@@ -246,7 +256,7 @@ void LedstripDimmer::formHandler_fields(String& message, const String& text, con
     message += "White LED temperature: <input type='text' name='" + f_name + ".whiteTemperature' value='" + String(rgbwSpace.WTemperature) +"' ><br>";
     message += "White LED brightness: <input type='text' name='" + f_name + ".whiteBrightness' value='" + String(rgbwSpace.WBrightness) +"' ><br>";
     message += "Focal point: <input type='text' name='" + f_name + ".focalPoint' value='" + String(focalPoint) +"' > (0.0 is first LED, 1.0 is last LED)<br>";
-    message += "Focal spread: <input type='text' name='" + f_name +" .focalSpread' value='" + String(focalSpread) +"' > (0.0 is narrow, 1.0 is as full width)<br>";
+    message += "Focal spread: <input type='text' name='" + f_name +".focalSpread' value='" + String(focalSpread) +"' > (0.0 is narrow, 1.0 is as full width)<br>";
     String checkedNormal = calibrationMode == calibration_normal ? "checked" : "";
     String checkedRGB = calibrationMode == calibration_rgb ? "checked" : "";
     String checkedAlternate = calibrationMode ==calibration_alternating ? "checked" : "";
