@@ -1,11 +1,11 @@
 from .common import Common
 
 class Ledstrip(Common):
-    def __init__(self, hostname):
+    def __init__(self, hostname : str):
         Common.__init__(self, hostname)
         self.has_pps = True
     
-    def post_open(self):
+    def post_open(self) -> bool:
         self.service = self.device.ledstrip
         self.service.transaction()
         self.service.set('isOn', True)
@@ -21,8 +21,9 @@ class Ledstrip(Common):
         return True
 
     def close(self):
+        self.service.set('calibrationMode', 0)
         if self.has_pps: self.device.battery.set('postponeSleep', 0)
         pass
 
-    def setColor(self, r=0, g=0, b=0, w=0):
+    def setColor(self, r : int =0, g : int =0, b : int =0, w : int =0):
         self.service.set('calibrationData', [r, g, b, w])
