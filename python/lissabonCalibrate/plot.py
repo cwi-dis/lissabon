@@ -1,9 +1,10 @@
 import numpy as np
 import matplotlib.pyplot
+from typing import List, Optional
 import colour
 import colour.plotting
 
-def plot_lines(values, parameters, xlabel, ylabels, variableName='LUX'):
+def plot_lines(values : List[dict], parameters : dict, xlabel : str, ylabels : List[str], y2labels : Optional[List[str]]=None, variableName : str='LUX'):
     x_values = list(map(lambda v : v[xlabel], values))
     y_values = {}
     for ylabel in ylabels:
@@ -22,9 +23,28 @@ def plot_lines(values, parameters, xlabel, ylabels, variableName='LUX'):
     p_text = []
     for k, v in parameters.items():
         if k in  ('measurement', 'interval'): continue
-        p_text.append(f'{k} = {v}')
+        if isinstance(v, float):
+            p_text.append(f'{k} = {v:.2f}')
+        else:
+            p_text.append(f'{k} = {v}')
     ax.text(0.95, 0.05, '\n'.join(p_text), transform=ax.transAxes, bbox=dict(boxstyle='round'), multialignment='left', horizontalalignment='right', verticalalignment='bottom')
     ax.legend()
+    if y2labels:
+        y2_values = {}
+        def clamp_temp(v):
+            if v < 0 or v > 10000: return None
+            return v
+        for y2label in y2labels:
+            y2_values[y2label] = list(map(lambda v : clamp_temp(v[y2label]), values))
+        print(f'y2_values {y2_values}')
+        ax2 = ax.twinx()
+        ax2.set_ylim((2000, 8000))
+        for ylabel in y2labels:
+            v = y2_values[ylabel]
+            ax2.plot(x_values, v, marker='.', label=ylabel)
+        # ax2.set_xlabel(xlabel)
+        ax2.set_ylabel(ylabel)
+        ax2.legend()
     matplotlib.pyplot.show()
     
 def plot_colors_bycct(values, parameters, ylabels):
