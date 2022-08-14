@@ -105,7 +105,7 @@ class Calibrator:
             result = {'requested' : requested}
             r_wanted, g_wanted, b_wanted = convertfunc(requested)
             #for percent in [10, 20, 50, 100]:
-            for percent in [50]:
+            for percent in [10, 20, 50]:
                 level = percent / 100
                 if self.verbose: print(f'Measure RGB CCT level={level} cct={requested}', file=sys.stderr)
                 # Do RGB-only color

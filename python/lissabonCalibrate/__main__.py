@@ -16,7 +16,7 @@ def write_csv(fp, keys, values, parameters):
         ofp.writerow(v)
     # Finally dump parameters and values
     for k, v in parameters.items():
-        if not isinstance(v, numbers.Number):
+        if isinstance(v, bool) or not isinstance(v, numbers.Number):
             v = str(v)
         ofp.writerow(dict(parameter=k, value=v))
     fp.flush()
@@ -103,7 +103,7 @@ def main():
         if parameters['measurement'] == 'rgbw_lux':
             plot_lines(values, parameters, 'requested', ['w_lux', 'rgb_lux', 'rgbw_lux'])
         elif parameters['measurement'] == 'rgb_cct':
-            plot_lines(values, parameters, 'requested', ['rgb_cct_50'])
+            plot_lines(values, parameters, 'requested', ['rgb_cct_10', 'rgb_cct_20', 'rgb_cct_50'], variableName='CCT')
             #plot_colors(values, parameters, ['50'])
             #plot_colors(values, parameters, ['100'])
         else:

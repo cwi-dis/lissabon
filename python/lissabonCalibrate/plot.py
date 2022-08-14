@@ -3,7 +3,7 @@ import matplotlib.pyplot
 import colour
 import colour.plotting
 
-def plot_lines(values, parameters, xlabel, ylabels):
+def plot_lines(values, parameters, xlabel, ylabels, variableName='LUX'):
     x_values = list(map(lambda v : v[xlabel], values))
     y_values = {}
     for ylabel in ylabels:
@@ -17,7 +17,7 @@ def plot_lines(values, parameters, xlabel, ylabels):
     ax.set_xlabel(xlabel)
     ax.set_ylabel(ylabel)
     #ax.grid()
-    ax.set_title('LUX output for different inputs')
+    ax.set_title(f'{variableName} output for different inputs')
     #ax.annotate('rabarber\nRaBarber', xytext=(0.9, 0.1), textcoords='axes fraction', bbox=dict(boxstyle='round'))
     p_text = []
     for k, v in parameters.items():
