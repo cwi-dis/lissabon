@@ -20,8 +20,13 @@ void LedstripDimmer::setup() {
 }
 
 void LedstripDimmer::updateDimmer() {
+#if 0
   // Reset RGBW-based color levels.
-  if (calibrationMode == calibration_hard) calibrationMode = calibration_normal;
+  if (calibrationMode == calibration_hard) {
+    IotsaSerial.println("LedstripDimmer: reset calibration_hard");
+    calibrationMode = calibration_normal;
+  }
+#endif
   // Compute level and animation duration
   AbstractDimmer::updateDimmer();
   //
@@ -177,7 +182,9 @@ bool LedstripDimmer::putHandler(const JsonVariant& request) {
       }
     }
     updateColorspace(whiteTemperature, whiteBrightness);
-    updateDimmer();
+    if (calibrationMode != calibration_hard) {
+      updateDimmer();
+    }
   }
   return true;
 }
@@ -329,6 +336,9 @@ void LedstripDimmer::loop() {
   if (buffer != NULL && count != 0 && stripHandler != NULL) {
     bool change = false;
     uint8_t *p = buffer;
+    if (calibrationMode != calibration_normal) {
+      IotsaSerial.printf("LedstripDimmer: calibrationMode=%d\n", (int)calibrationMode);
+    }
     for (int i=0; i<count; i++) {
       RgbwFColor thisPixelFColor = curRgbwColor;
       if (calibrationMode == calibration_hard) {
@@ -347,7 +357,7 @@ void LedstripDimmer::loop() {
       thisPixelFColor = thisPixelFColor.Dim(pixelLevels[i]);
       RgbwColor thisPixelColor = thisPixelFColor;
       if (calibrationMode && i <= 1) {
-        IotsaSerial.printf("pixel %d: r=%d g=%d b=%d w=%d\n", i, thisPixelColor.R, thisPixelColor.G, thisPixelColor.B, thisPixelColor.W);
+        IotsaSerial.printf("LedstripDimmer: calibration: pixel %d: r=%d g=%d b=%d w=%d\n", i, thisPixelColor.R, thisPixelColor.G, thisPixelColor.B, thisPixelColor.W);
       }
       //IotsaSerial.printf("xxxjack i=%d level=%f curW=%f thisW=%f\n", i, pixelLevels[i], curRgbwColor.W, thisPixelFColor.W);
       if (*p != thisPixelColor.R) {

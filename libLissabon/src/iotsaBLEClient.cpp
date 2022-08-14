@@ -133,6 +133,7 @@ bool IotsaBLEClientMod::getHandler(const char *path, JsonObject& reply) {
       unknownReply.add((char *)it.c_str());
     }
   }
+  reply["scanUnknown"] = (char *)NULL;
   return true;
 }
 bool IotsaBLEClientMod::putHandler(const char *path, const JsonVariant& request, JsonObject& reply) {
