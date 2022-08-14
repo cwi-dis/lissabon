@@ -1,19 +1,21 @@
-from .sensor import Sensor
 import sys
 import time
+from argparse import Namespace
+from typing import List
+from .sensor import Sensor
 from .ledstrip import Ledstrip
 from .colorconvert import convert_K_to_RGB
 from .colourscience_cc import cs_convert_K_to_RGB
 
 
 class Calibrator:
-    def __init__(self, sensor, ledstrip):
+    def __init__(self, sensor : Sensor, ledstrip : Ledstrip):
         self.sensor = sensor
         self.ledstrip = ledstrip
         self.verbose = True
         
-    def run_rgbw_lux(self, nsteps, args):
-        VALUES = list(map(lambda x : x / nsteps, range(nsteps+1)))
+    def run_rgbw_lux(self, nsteps : int, args : Namespace):
+        VALUES : List[float] = list(map(lambda x : x / nsteps, range(nsteps+1)))
         keys = ['requested', 'w_white', 'rgb_white', 'rgbw_white', 'rgb_r', 'rgb_g', 'rgb_b', 'w_lux', 'rgb_lux', 'rgbw_lux', 'w_cct', 'rgb_cct', 'rgbw_cct']
         values = []
 
@@ -79,7 +81,7 @@ class Calibrator:
             )
         return keys, values, parameters
             
-    def run_rgb_cct(self, nsteps, args):
+    def run_rgb_cct(self, nsteps : int, args : Namespace):
         convertfunc = convert_K_to_RGB
         if args.cs_cct:
             convertfunc = cs_convert_K_to_RGB
@@ -97,7 +99,7 @@ class Calibrator:
             keys.append(f'rgb_g_{percent}')
             keys.append(f'rgb_b_{percent}')
             keys.append(f'rgb_w_{percent}')
-        values = []
+        values : List[dict] = []
 
         for requested in VALUES:
             result = {'requested' : requested}

@@ -51,7 +51,9 @@
 """
 
 import math
-def convert_K_to_RGB(colour_temperature):
+from typing import Tuple
+
+def convert_K_to_RGB(colour_temperature : float) -> Tuple[float, float, float]:
     """
     Converts from K to RGB, algorithm courtesy of 
     http://www.tannerhelland.com/4435/convert-temperature-rgb-algorithm-code/
@@ -63,6 +65,10 @@ def convert_K_to_RGB(colour_temperature):
         colour_temperature = 40000
     
     tmp_internal = colour_temperature / 100.0
+    
+    red : float = 0
+    green : float = 0
+    blue : float = 0
     
     # red 
     if tmp_internal <= 66:

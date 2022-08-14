@@ -1,15 +1,16 @@
-import iotsa
 import socket
 import sys
+from typing import Optional
+import iotsa
 
 class Common:
     """Common code for RGBW sensor and ledstrip iotsa modules"""
-    def __init__(self, hostname):
+    def __init__(self, hostname : str):
         self.hostname = hostname
-        self.device = None
-        self.service = None
+        self.device : Optional[iotsa.IotsaDevice] = None
+        self.service : Optional[iotsa.IotsaEndpoint] = None
 
-    def open(self):
+    def open(self) -> bool:
         if not self.pre_open(): return False
         try:
             hostIP = socket.gethostbyname(self.hostname)
@@ -21,16 +22,16 @@ class Common:
         _ = self.device.config.getAll()
         return self.post_open()
 
-    def pre_open(self):
+    def pre_open(self) -> bool:
         return True
 
-    def post_open(self):
+    def post_open(self) -> bool:
         return True
 
-    def pre_close(self):
+    def pre_close(self) -> bool:
         pass
 
-    def post_close(self):
+    def post_close(self) -> bool:
         pass
 
     def close(self):
