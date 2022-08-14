@@ -1,7 +1,7 @@
 import sys
 import time
 from argparse import Namespace
-from typing import List
+from typing import List, Callable, Tuple
 from .sensor import Sensor
 from .ledstrip import Ledstrip
 from .colorconvert import convert_K_to_RGB
@@ -82,12 +82,12 @@ class Calibrator:
         return keys, values, parameters
             
     def run_rgb_cct(self, nsteps : int, args : Namespace):
-        convertfunc = convert_K_to_RGB
+        convertfunc : Callable[[float], Tuple[float, float, float]] = convert_K_to_RGB
         if args.cs_cct:
             convertfunc = cs_convert_K_to_RGB
         MIN_CCT = 2000
         MAX_CCT = 7000
-        VALUES = []
+        VALUES : List[float] = []
         for i in range(nsteps+1):
             VALUES.append(MIN_CCT + (i/nsteps*(MAX_CCT-MIN_CCT)))
 

@@ -7,7 +7,7 @@ def cs_convert_K_to_RGB(colour_temperature : float) -> Tuple[float, float, float
     xyY = np.array([xy[0], xy[1], 1])
     XYZ = colour.xyY_to_XYZ(xyY)
     sRGB = colour.RGB_COLOURSPACES['sRGB']
-    RGB = colour.XYZ_to_RGB(XYZ, sRGB.whitepoint, sRGB.whitepoint, sRGB.XYZ_to_RGB_matrix)
+    RGB = colour.XYZ_to_RGB(XYZ, sRGB.whitepoint, sRGB.whitepoint, sRGB.matrix_XYZ_to_RGB)
     return RGB[0], RGB[1], RGB[2]
 
 

@@ -80,7 +80,7 @@ def plot_colors(values, parameters, ylabels):
             g = value[f'rgb_g_{ylabel}']
             b = value[f'rgb_b_{ylabel}']
             RGB = np.array([r, g, b])
-            XYZ = colour.RGB_to_XYZ(RGB, sRGB.whitepoint, sRGB.whitepoint, sRGB.RGB_to_XYZ_matrix)
+            XYZ = colour.RGB_to_XYZ(RGB, sRGB.whitepoint, sRGB.whitepoint, sRGB.matrix_RGB_to_XYZ)
             xy = colour.XYZ_to_xy(XYZ)
             x, y = xy
             rgb_xvalues.append(x)
