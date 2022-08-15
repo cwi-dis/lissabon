@@ -103,7 +103,7 @@ def main():
         if parameters['measurement'] == 'rgbw_lux':
             plot_lines(values, parameters, 'requested', ['w_lux', 'rgb_lux', 'rgbw_lux'], ['w_cct', 'rgb_cct', 'rgbw_cct'])
         elif parameters['measurement'] == 'rgb_cct':
-            plot_lines(values, parameters, 'requested', ['rgb_cct_10', 'rgb_cct_20', 'rgb_cct_50'], variableName='CCT')
+            plot_lines(values, parameters, 'requested', ['rgb_cct_10', 'rgb_cct_20', 'rgb_cct_50', 'rgb_cct_100'], variableName='CCT')
             #plot_colors(values, parameters, ['50'])
             #plot_colors(values, parameters, ['100'])
         else:
