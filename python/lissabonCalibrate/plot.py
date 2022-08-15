@@ -7,8 +7,14 @@ import colour.plotting
 def plot_lines(values : List[dict], parameters : dict, xlabel : str, ylabels : List[str], y2labels : Optional[List[str]]=None, variableName : str='LUX'):
     x_values = list(map(lambda v : v[xlabel], values))
     y_values = {}
+    y_labels_to_delete = []
     for ylabel in ylabels:
+        if not ylabel in values[0].keys(): 
+            y_labels_to_delete.append(ylabel)
+            continue
         y_values[ylabel] = list(map(lambda v : v[ylabel], values))
+    for ylabel in y_labels_to_delete:
+        ylabels.remove(ylabel)
     print(f'x_values {x_values}')
     print(f'y_values {y_values}')
     fig, ax = matplotlib.pyplot.subplots()

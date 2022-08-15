@@ -87,6 +87,11 @@ class Calibrator:
             convertfunc = cs_convert_K_to_RGB
         MIN_CCT = 2000
         MAX_CCT = 7000
+        do_rgbw =  'w_temperature' in args and args.w_temperature
+        if do_rgbw:
+            w_led_rgb_r, w_led_rgb_g, w_led_rgb_b = convertfunc(args.w_temperature)
+            if self.verbose:
+                print(f'W LED temperature {args.w_temperature}, brightness {args.w_brightness}, r {w_led_rgb_r}, g {w_led_rgb_g}, b {w_led_rgb_b}')
         VALUES : List[float] = []
         for i in range(nsteps+1):
             VALUES.append(MIN_CCT + (i/nsteps*(MAX_CCT-MIN_CCT)))
@@ -99,11 +104,33 @@ class Calibrator:
             keys.append(f'rgb_g_{percent}')
             keys.append(f'rgb_b_{percent}')
             keys.append(f'rgb_w_{percent}')
+            if do_rgbw:
+                keys.append(f'rgbw_lux_{percent}')
+                keys.append(f'rgbw_cct_{percent}')
+                keys.append(f'rgbw_r_{percent}')
+                keys.append(f'rgbw_g_{percent}')
+                keys.append(f'rgbw_b_{percent}')
+                keys.append(f'rgbw_w_{percent}')
+
         values : List[dict] = []
 
         for requested in VALUES:
             result = {'requested' : requested}
             r_wanted, g_wanted, b_wanted = convertfunc(requested)
+            if do_rgbw:
+                # Determine how much we can transfer from the RGB channels to the W channel
+                max_r_factor = r_wanted / w_led_rgb_r
+                max_g_factor = g_wanted / w_led_rgb_g
+                max_b_factor = b_wanted / w_led_rgb_b
+                transfer_to_w = min(max_r_factor, max_g_factor, max_b_factor)
+                r_wanted_rgbw = r_wanted - transfer_to_w
+                g_wanted_rgbw = g_wanted - transfer_to_w
+                b_wanted_rgbw = b_wanted - transfer_to_w
+                w_wanted_rgbw = transfer_to_w / args.w_brightness
+                if self.verbose:
+                    print(f'RGBW r={r_wanted_rgbw}, g={g_wanted_rgbw}, b={b_wanted_rgbw}, w={w_wanted_rgbw}')
+                import pdb ; pdb.set_trace()
+                
             for percent in [10, 20, 50, 100]:
                 level = percent / 100
                 if self.verbose: print(f'Measure RGB CCT level={level} cct={requested}', file=sys.stderr)
@@ -120,6 +147,21 @@ class Calibrator:
                 result[f'rgb_g_{percent}'] = sResult['g']
                 result[f'rgb_b_{percent}'] = sResult['b']
                 result[f'rgb_w_{percent}'] = sResult['w']
+                if do_rgbw:
+                    if self.verbose: print(f'Measure RGBW CCT level={level} cct={requested}', file=sys.stderr)
+                    this_r = (r_wanted_rgbw*level) ** args.rgb_gamma
+                    this_g = (g_wanted_rgbw*level) ** args.rgb_gamma
+                    this_b = (b_wanted_rgbw*level) ** args.rgb_gamma
+                    this_w = (w_wanted_rgbw*level) ** args.w_gamma
+                    self.ledstrip.setColor(r=this_r, g=this_g, b=this_b, w=this_w)
+                    time.sleep(1)
+                    sResult = self.sensor.get()
+                    result[f'rgbw_lux_{percent}'] = sResult['lux']
+                    result[f'rgbw_cct_{percent}'] = sResult['cct']
+                    result[f'rgbw_r_{percent}'] = sResult['r']
+                    result[f'rgbw_g_{percent}'] = sResult['g']
+                    result[f'rgbw_b_{percent}'] = sResult['b']
+                    result[f'rgbw_w_{percent}'] = sResult['w']
 
             values.append(result)        
         parameters = dict(

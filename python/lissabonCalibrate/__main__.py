@@ -51,6 +51,7 @@ def main():
     parser.add_argument('--steps', action='store', type=int, default=16, metavar='N', help='Use N steps for calibration (default 16)')
     parser.add_argument('--w_gamma', action='store', default=1, type=float, metavar='GAMMA', help='Gamma value for W channel (default 1.0)')
     parser.add_argument('--w_brightness', action='store', type=float, metavar='W', help='Treat W channel as having this brightness relative to RGB  (default 1.0)')
+    parser.add_argument('--w_temperature', action='store', type=float, metavar='W', help='W channel has this temperature, for CCT measurements (default: not use W channel)')
     parser.add_argument('--rgb_gamma', action='store', default=1, type=float, metavar='GAMMA', help='Gamma value for W channel (default 1.0)')
     parser.add_argument('--g_hack', action='store', type=float, metavar='FACTOR', help='G-channel multiplication factor (default 1.0)')
     parser.add_argument('--b_hack', action='store', type=float, metavar='FACTOR', help='B-channel multiplication factor (default 1.0)')
@@ -103,7 +104,7 @@ def main():
         if parameters['measurement'] == 'rgbw_lux':
             plot_lines(values, parameters, 'requested', ['w_lux', 'rgb_lux', 'rgbw_lux'], ['w_cct', 'rgb_cct', 'rgbw_cct'])
         elif parameters['measurement'] == 'rgb_cct':
-            plot_lines(values, parameters, 'requested', ['rgb_cct_10', 'rgb_cct_20', 'rgb_cct_50', 'rgb_cct_100'], variableName='CCT')
+            plot_lines(values, parameters, 'requested', ['rgb_cct_10', 'rgb_cct_20', 'rgb_cct_50', 'rgb_cct_100', 'rgbw_cct_10', 'rgbw_cct_20', 'rgbw_cct_50', 'rgbw_cct_100'], variableName='CCT')
             #plot_colors(values, parameters, ['50'])
             #plot_colors(values, parameters, ['100'])
         else:
