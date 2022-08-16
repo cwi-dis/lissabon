@@ -123,6 +123,8 @@ class Calibrator:
         for requested in VALUES:
             result = {'requested' : requested}
             r_wanted, g_wanted, b_wanted = convertfunc(requested)
+            if self.verbose:
+                print(f'RGB r={r_wanted}, g={g_wanted}, b={b_wanted}')
             if do_rgbw:
                 # Determine how much we can transfer from the RGB channels to the W channel
                 max_r_factor = r_wanted / w_led_rgb_r
