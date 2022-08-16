@@ -47,7 +47,7 @@ def main():
     parser.add_argument('--measurement', '-m', action='store', choices=['lux', 'cct'], help='Type of mesurement to do')
     parser.add_argument('--ledstrip', '-l', action='store', metavar='IP', help='Ledstrip hostname')
     parser.add_argument('--sensor', '-s', action='store', metavar='IP', help='Ledstrip sensor')
-    parser.add_argument('--interval', action='store', type=int, metavar='DUR', help='Sensor integration duration (ms, between 40 and 1280)')
+    parser.add_argument('--interval', action='store', type=int, default=320, metavar='DUR', help='Sensor integration duration (ms, between 40 and 1280, default 320)')
     parser.add_argument('--steps', action='store', type=int, default=16, metavar='N', help='Use N steps for calibration (default 16)')
     parser.add_argument('--w_gamma', action='store', default=1, type=float, metavar='GAMMA', help='Gamma value for W channel (default 1.0)')
     parser.add_argument('--w_brightness', action='store', type=float, metavar='W', help='Treat W channel as having this brightness relative to RGB  (default 1.0)')
