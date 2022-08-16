@@ -44,7 +44,7 @@ def read_csv(fp):
         
 def main():
     parser = argparse.ArgumentParser(description="Calibrate lissabonLedstrip using iotsaRGBWSensor")
-    parser.add_argument('--measurement', '-m', action='store', choices=['rgbw_lux', 'rgb_cct'], help='Type of mesurement to do')
+    parser.add_argument('--measurement', '-m', action='store', choices=['lux', 'cct'], help='Type of mesurement to do')
     parser.add_argument('--ledstrip', '-l', action='store', metavar='IP', help='Ledstrip hostname')
     parser.add_argument('--sensor', '-s', action='store', metavar='IP', help='Ledstrip sensor')
     parser.add_argument('--interval', action='store', type=int, metavar='DUR', help='Sensor integration duration (ms, between 40 and 1280)')
@@ -88,10 +88,10 @@ def main():
 
         calibrator = Calibrator(sObj, lObj)
     
-        if args.measurement == 'rgbw_lux':
-            keys, values, parameters = calibrator.run_rgbw_lux(args.steps, args)
-        elif args.measurement == 'rgb_cct':
-            keys, values, parameters = calibrator.run_rgb_cct(args.steps, args)
+        if args.measurement == 'lux':
+            keys, values, parameters = calibrator.run_lux(args.steps, args)
+        elif args.measurement == 'cct':
+            keys, values, parameters = calibrator.run_cct(args.steps, args)
         else:
             assert False, f'Unknown measurement type {args.measurement}'
     
@@ -101,9 +101,9 @@ def main():
         outputFile.close()
         
     if args.plot:
-        if parameters['measurement'] == 'rgbw_lux':
+        if parameters['measurement'] == 'lux':
             plot_lines(values, parameters, 'requested', ['w_lux', 'rgb_lux', 'rgbw_lux'], ['w_cct', 'rgb_cct', 'rgbw_cct'])
-        elif parameters['measurement'] == 'rgb_cct':
+        elif parameters['measurement'] == 'cct':
             plot_lines(values, parameters, 'requested', ['rgb_cct_10', 'rgb_cct_20', 'rgb_cct_50', 'rgb_cct_100', 'rgbw_cct_10', 'rgbw_cct_20', 'rgbw_cct_50', 'rgbw_cct_100'], variableName='CCT')
             #plot_colors(values, parameters, ['50'])
             #plot_colors(values, parameters, ['100'])

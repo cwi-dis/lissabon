@@ -1,4 +1,5 @@
 from .common import Common
+import requests
 
 class Ledstrip(Common):
     def __init__(self, hostname : str):
@@ -26,4 +27,8 @@ class Ledstrip(Common):
         pass
 
     def setColor(self, r : int =0, g : int =0, b : int =0, w : int =0):
-        self.service.set('calibrationData', [r, g, b, w])
+        try:
+            self.service.set('calibrationData', [r, g, b, w])
+        except requests.exceptions.HTTPError:
+            print('xxxjack retry')
+            self.service.set('calibrationData', [r, g, b, w])
