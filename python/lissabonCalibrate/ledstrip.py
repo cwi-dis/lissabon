@@ -32,3 +32,12 @@ class Ledstrip(Common):
         except requests.exceptions.HTTPError:
             print('xxxjack retry')
             self.service.set('calibrationData', [r, g, b, w])
+
+    def setCT(self, intensity, temperature, useRGBW=True, whiteTemperature=None, whiteBrightness=None):
+        self.service.transaction()
+        self.service.set('calibrationMode', 0 if useRGBW else 1)
+        self.service.set('level', intensity)
+        self.service.set('temperature', temperature)
+        if whiteTemperature != None: self.service.set('whiteTemperature', whiteTemperature)
+        if whiteBrightness != None: self.service.set('whiteBrightness', whiteBrightness)
+        self.service.commit()

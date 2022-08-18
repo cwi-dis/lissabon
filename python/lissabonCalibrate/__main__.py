@@ -55,7 +55,7 @@ def main():
     parser.add_argument('--rgb_gamma', action='store', default=1, type=float, metavar='GAMMA', help='Gamma value for W channel (default 1.0)')
     parser.add_argument('--rgb_temperature', action='store', type=float, metavar='KELVIN', help='Color temperature for RGB (default: no correction)')
     parser.add_argument('--cs_cct', action='store_true', help='Use colourscience for CCT to RGB conversion')
-    
+    parser.add_argument('--native', action='store_true', help='Use ledstrip native conversion of intensity and CCT')
     parser.add_argument('--input', action='store', metavar='INPUT', help="CSV input filename, skips measurement but reads previous data from previous run")
     parser.add_argument('--csv', '-o', action='store', metavar='OUTPUT', help='CSV output filename')
     parser.add_argument('--plot', action='store_true', help='Show output as a plot')

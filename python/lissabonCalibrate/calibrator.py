@@ -21,6 +21,56 @@ class Calibrator:
         if args.cs_cct:
             self.convertfunc = cs_convert_K_to_RGB
         
+    def setstrip_rgb_ct(self, intensity : float):
+        if self.args.native:
+            self.setstrip_native_ct(intensity, use_rgbw=False)
+            return
+        r_factor = g_factor = b_factor = 1
+        if self.args.rgb_temperature:
+            r_factor, g_factor, b_factor = self.convertfunc(self.args.rgb_temperature)
+        rgb_wanted = intensity
+        # Do RGB-only color
+        if self.verbose: print(f'Set RGB lux level={intensity}', file=sys.stderr)
+        this_r = (rgb_wanted*r_factor) ** self.args.rgb_gamma
+        this_g = (rgb_wanted*g_factor) ** self.args.rgb_gamma
+        this_b = (rgb_wanted*b_factor) ** self.args.rgb_gamma
+        self.ledstrip.setColor(r=this_r, g=this_g, b=this_b)
+
+    def setstrip_w(self, intensity : float):
+        w_factor = 1
+        if self.args.w_brightness:
+            w_factor = 1 / self.args.w_brightness
+        if self.verbose: print(f'Set W lux level={intensity}', file=sys.stderr)
+        this_w = (intensity*w_factor) ** self.args.w_gamma
+        self.ledstrip.setColor(w=this_w)
+    
+    def setstrip_rgbw_ct(self, intensity : float):
+        if self.args.native:
+            self.setstrip_native_ct(intensity, use_rgbw=True)
+            return
+        r_factor = g_factor = b_factor = w_factor = 1
+        if self.args.rgb_temperature:
+            r_factor, g_factor, b_factor = self.convertfunc(self.args.rgb_temperature)
+        if self.args.w_brightness:
+            w_factor = 1 / self.args.w_brightness
+        if self.verbose: print(f'Set RGBW lux level={intensity}', file=sys.stderr)
+        this_r = (intensity*r_factor*0.5) ** self.args.rgb_gamma
+        this_g = (intensity*g_factor*0.5) ** self.args.rgb_gamma
+        this_b = (intensity*b_factor*0.5) ** self.args.rgb_gamma
+        this_w = (intensity*w_factor*0.5) ** self.args.w_gamma
+        self.ledstrip.setColor(r=this_r, g=this_g, b=this_b, w=this_w)
+
+    def setstrip_native_ct(self, intensity : float, use_rgbw=True):
+        assert self.args.w_temperature
+        if self.verbose: print(f'Set CT {self.args.w_temperature} {intensity}', 'rgbw' if use_rgbw else 'rgb')
+        self.ledstrip.setCT(
+            intensity, 
+            self.args.w_temperature, 
+            useRGBW=use_rgbw, 
+            whiteTemperature=self.args.w_temperature,
+            whiteBrightness=self.args.w_brightness
+        )
+
     def run_lux(self):
         args = self.args
         nsteps = args.steps
@@ -34,19 +84,7 @@ class Calibrator:
             #
             # Measure RGB-only intensity with the requested RGB temperature
             #
-            r_factor = g_factor = b_factor = w_factor = 1
-            if args.w_brightness:
-                w_factor = 1 / args.w_brightness
-            if args.rgb_temperature:
-                r_factor, g_factor, b_factor = self.convertfunc(args.rgb_temperature)
-            w_wanted = requested
-            rgb_wanted = requested
-            # Do RGB-only color
-            if self.verbose: print(f'Set RGB lux level={requested}', file=sys.stderr)
-            this_r = (rgb_wanted*r_factor) ** args.rgb_gamma
-            this_g = (rgb_wanted*g_factor) ** args.rgb_gamma
-            this_b = (rgb_wanted*b_factor) ** args.rgb_gamma
-            self.ledstrip.setColor(r=this_r, g=this_g, b=this_b)
+            self.setstrip_rgb_ct(requested)
 
             time.sleep(1)
             sResult = self.sensor.get()
@@ -59,9 +97,7 @@ class Calibrator:
             #
             # Measure W-only intensity
             #
-            if self.verbose: print(f'Measure W lux level={requested}', file=sys.stderr)
-            this_w = (w_wanted*w_factor) ** args.w_gamma
-            self.ledstrip.setColor(w=this_w)
+            self.setstrip_w(requested)
             time.sleep(1)
             sResult = self.sensor.get()
             result['w_white'] = sResult['w']
@@ -70,12 +106,7 @@ class Calibrator:
             #
             # Measure RGBW intensity given the W led relative brightness and RGB CT
             #
-            if self.verbose: print(f'Measure RGBW lux level={requested}', file=sys.stderr)
-            this_r = (rgb_wanted*r_factor*0.5) ** args.rgb_gamma
-            this_g = (rgb_wanted*g_factor*0.5) ** args.rgb_gamma
-            this_b = (rgb_wanted*b_factor*0.5) ** args.rgb_gamma
-            this_w = (w_wanted*w_factor*0.5) ** args.w_gamma
-            self.ledstrip.setColor(r=this_r, g=this_g, b=this_b, w=this_w)
+            self.setstrip_rgbw_ct(requested)
             time.sleep(1)
             sResult = self.sensor.get()
             result['rgbw_white'] = sResult['w']
@@ -89,10 +120,8 @@ class Calibrator:
             rgb_gamma=args.rgb_gamma,
             rgb_temperature=args.rgb_temperature,
             w_temperature=args.w_temperature,
-            r_factor=r_factor,
-            g_factor=g_factor,
-            b_factor=b_factor,
-            w_factor=w_factor,
+            w_brightness=args.w_brightness or 0,
+            method='native' if args.native else 'cs_cct' if args.cs_cct else 'python'
             )
         return keys, results, parameters
             
