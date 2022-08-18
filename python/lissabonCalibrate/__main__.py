@@ -53,8 +53,6 @@ def main():
     parser.add_argument('--w_brightness', action='store', type=float, metavar='W', help='Treat W channel as having this brightness relative to RGB  (default 1.0)')
     parser.add_argument('--w_temperature', action='store', type=float, metavar='W', help='W channel has this temperature, for CCT measurements (default: not use W channel)')
     parser.add_argument('--rgb_gamma', action='store', default=1, type=float, metavar='GAMMA', help='Gamma value for W channel (default 1.0)')
-    parser.add_argument('--g_hack', action='store', type=float, metavar='FACTOR', help='G-channel multiplication factor (default 1.0)')
-    parser.add_argument('--b_hack', action='store', type=float, metavar='FACTOR', help='B-channel multiplication factor (default 1.0)')
     parser.add_argument('--rgb_temperature', action='store', type=float, metavar='KELVIN', help='Color temperature for RGB (default: no correction)')
     parser.add_argument('--cs_cct', action='store_true', help='Use colourscience for CCT to RGB conversion')
     
@@ -88,11 +86,12 @@ def main():
     
 
         calibrator = Calibrator(sObj, lObj)
-    
+        calibrator.set_args(args)
+
         if args.measurement == 'lux':
-            keys, values, parameters = calibrator.run_lux(args.steps, args)
+            keys, values, parameters = calibrator.run_lux()
         elif args.measurement == 'cct':
-            keys, values, parameters = calibrator.run_cct(args.steps, args)
+            keys, values, parameters = calibrator.run_cct()
         else:
             assert False, f'Unknown measurement type {args.measurement}'
     

@@ -13,31 +13,41 @@ class Calibrator:
         self.sensor = sensor
         self.ledstrip = ledstrip
         self.verbose = True
-        
-    def run_lux(self, nsteps : int, args : Namespace):
-        VALUES : List[float] = list(map(lambda x : x / nsteps, range(nsteps+1)))
-        keys = ['requested', 'w_white', 'rgb_white', 'rgbw_white', 'rgb_r', 'rgb_g', 'rgb_b', 'w_lux', 'rgb_lux', 'rgbw_lux', 'w_cct', 'rgb_cct', 'rgbw_cct']
-        values = []
+        self.args = Namespace()
+        self.convertfunc : Callable[[float], Tuple[float, float, float]] = convert_K_to_RGB
 
-        r_factor = g_factor = b_factor = w_factor = 1
-        if args.w_brightness:
-            w_factor = 1 / args.w_brightness
-        if args.rgb_temperature:
-            r_factor, g_factor, b_factor = convert_K_to_RGB(args.rgb_temperature)
-        if args.g_hack:
-            g_factor = g_factor * args.g_hack
-        if args.b_hack:
-            b_factor = b_factor * args.b_hack
-        for requested in VALUES:
+    def set_args(self, args : Namespace):
+        self.args = args
+        if args.cs_cct:
+            self.convertfunc = cs_convert_K_to_RGB
+        
+    def run_lux(self):
+        args = self.args
+        nsteps = args.steps
+
+        intensity_levels_wanted : List[float] = list(map(lambda x : x / nsteps, range(nsteps+1)))
+        keys = ['requested', 'w_white', 'rgb_white', 'rgbw_white', 'rgb_r', 'rgb_g', 'rgb_b', 'w_lux', 'rgb_lux', 'rgbw_lux', 'w_cct', 'rgb_cct', 'rgbw_cct']
+        results = []
+
+        for requested in intensity_levels_wanted:
             result = {'requested' : requested}
+            #
+            # Measure RGB-only intensity with the requested RGB temperature
+            #
+            r_factor = g_factor = b_factor = w_factor = 1
+            if args.w_brightness:
+                w_factor = 1 / args.w_brightness
+            if args.rgb_temperature:
+                r_factor, g_factor, b_factor = self.convertfunc(args.rgb_temperature)
             w_wanted = requested
             rgb_wanted = requested
             # Do RGB-only color
-            if self.verbose: print(f'Measure RGB lux level={requested}', file=sys.stderr)
+            if self.verbose: print(f'Set RGB lux level={requested}', file=sys.stderr)
             this_r = (rgb_wanted*r_factor) ** args.rgb_gamma
             this_g = (rgb_wanted*g_factor) ** args.rgb_gamma
             this_b = (rgb_wanted*b_factor) ** args.rgb_gamma
             self.ledstrip.setColor(r=this_r, g=this_g, b=this_b)
+
             time.sleep(1)
             sResult = self.sensor.get()
             result['rgb_white'] = sResult['w']
@@ -46,7 +56,9 @@ class Calibrator:
             result['rgb_r'] = sResult['r']
             result['rgb_g'] = sResult['g']
             result['rgb_b'] = sResult['b']
-            # Do W-only color
+            #
+            # Measure W-only intensity
+            #
             if self.verbose: print(f'Measure W lux level={requested}', file=sys.stderr)
             this_w = (w_wanted*w_factor) ** args.w_gamma
             self.ledstrip.setColor(w=this_w)
@@ -55,7 +67,9 @@ class Calibrator:
             result['w_white'] = sResult['w']
             result['w_lux'] = sResult['lux']
             result['w_cct'] = sResult['cct']
-            # Do RGBW color
+            #
+            # Measure RGBW intensity given the W led relative brightness and RGB CT
+            #
             if self.verbose: print(f'Measure RGBW lux level={requested}', file=sys.stderr)
             this_r = (rgb_wanted*r_factor*0.5) ** args.rgb_gamma
             this_g = (rgb_wanted*g_factor*0.5) ** args.rgb_gamma
@@ -67,7 +81,7 @@ class Calibrator:
             result['rgbw_white'] = sResult['w']
             result['rgbw_lux'] = sResult['lux']
             result['rgbw_cct'] = sResult['cct']
-            values.append(result)        
+            results.append(result)        
         parameters = dict(
             measurement='lux',
             interval=args.interval,
@@ -80,27 +94,27 @@ class Calibrator:
             b_factor=b_factor,
             w_factor=w_factor,
             )
-        return keys, values, parameters
+        return keys, results, parameters
             
-    def run_cct(self, nsteps : int, args : Namespace):
-        convertfunc : Callable[[float], Tuple[float, float, float]] = convert_K_to_RGB
-        if args.cs_cct:
-            convertfunc = cs_convert_K_to_RGB
+    def run_cct(self):
+        args = self.args
+        nsteps = args.steps
+
         MIN_CCT = 2000
         MAX_CCT = 7000
         do_rgbw =  'w_temperature' in args and args.w_temperature
         w_factor = 0
         if do_rgbw:
             w_factor = 1 / args.w_brightness
-            w_led_rgb_r, w_led_rgb_g, w_led_rgb_b = convertfunc(args.w_temperature)
+            w_led_rgb_r, w_led_rgb_g, w_led_rgb_b = self.convertfunc(args.w_temperature)
             if self.verbose:
                 print(f'W LED temperature {args.w_temperature}, brightness {args.w_brightness}, r {w_led_rgb_r}, g {w_led_rgb_g}, b {w_led_rgb_b}')
-        VALUES : List[float] = []
+        ct_values_wanted : List[float] = []
         for i in range(nsteps+1):
-            VALUES.append(MIN_CCT + (i/nsteps*(MAX_CCT-MIN_CCT)))
-        if do_rgbw and not args.w_temperature in VALUES:
-            VALUES.append(args.w_temperature)
-            VALUES.sort()
+            ct_values_wanted.append(MIN_CCT + (i/nsteps*(MAX_CCT-MIN_CCT)))
+        if do_rgbw and not args.w_temperature in ct_values_wanted:
+            ct_values_wanted.append(args.w_temperature)
+            ct_values_wanted.sort()
 
         keys = ['requested']
         for percent in [10, 20, 50, 100]:
@@ -118,11 +132,11 @@ class Calibrator:
                 keys.append(f'rgbw_b_{percent}')
                 keys.append(f'rgbw_w_{percent}')
 
-        values : List[dict] = []
+        results : List[dict] = []
 
-        for requested in VALUES:
+        for requested in ct_values_wanted:
             result = {'requested' : requested}
-            r_wanted, g_wanted, b_wanted = convertfunc(requested)
+            r_wanted, g_wanted, b_wanted = self.convertfunc(requested)
             if self.verbose:
                 print(f'RGB r={r_wanted}, g={g_wanted}, b={b_wanted}')
             if do_rgbw:
@@ -173,7 +187,7 @@ class Calibrator:
                     result[f'rgbw_b_{percent}'] = sResult['b']
                     result[f'rgbw_w_{percent}'] = sResult['w']
 
-            values.append(result)        
+            results.append(result)        
         parameters = dict(
             measurement='cct',
             interval=args.interval,
@@ -184,4 +198,4 @@ class Calibrator:
             w_factor=w_factor,
             cs_cct=args.cs_cct
             )
-        return keys, values, parameters
+        return keys, results, parameters
