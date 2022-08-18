@@ -61,6 +61,7 @@ def main():
     parser.add_argument('--input', action='store', metavar='INPUT', help="CSV input filename, skips measurement but reads previous data from previous run")
     parser.add_argument('--csv', '-o', action='store', metavar='OUTPUT', help='CSV output filename')
     parser.add_argument('--plot', action='store_true', help='Show output as a plot')
+    parser.add_argument('--plotfile', action='store', metavar="OUTPUT", help='Save output plot to OUTPUT')
     
     args = parser.parse_args()
 
@@ -68,9 +69,9 @@ def main():
             parser.print_usage(sys.stderr)
             print('Either --input or all of --measurement, --ledstrip and --sensor must be specified', file=sys.stderr)
             return -1
-    if not args.csv and not args.plot:
+    if not args.csv and not args.plot and not args.plotfile:
             parser.print_usage(sys.stderr)
-            print('Either --csv or --plot must be specified', file=sys.stderr)
+            print('Either --csv, --plot or --plotfile must be specified', file=sys.stderr)
             return -1
     sObj = None
     lObj = None
@@ -100,11 +101,24 @@ def main():
         write_csv(outputFile, keys, values, parameters)
         outputFile.close()
         
-    if args.plot:
+    if args.plot or args.plotfile:
         if parameters['measurement'] == 'lux':
-            plot_lines(values, parameters, 'requested', ['w_lux', 'rgb_lux', 'rgbw_lux'], ['w_cct', 'rgb_cct', 'rgbw_cct'])
+            plot_lines(
+                values, 
+                parameters,
+                'requested', 
+                ['w_lux', 'rgb_lux', 'rgbw_lux'], ['w_cct', 'rgb_cct', 'rgbw_cct'],
+                filename=args.plotfile
+                )
         elif parameters['measurement'] == 'cct':
-            plot_lines(values, parameters, 'requested', ['rgb_cct_10', 'rgb_cct_20', 'rgb_cct_50', 'rgb_cct_100', 'rgbw_cct_10', 'rgbw_cct_20', 'rgbw_cct_50', 'rgbw_cct_100'], variableName='CCT')
+            plot_lines(
+                values, 
+                parameters, 
+                'requested', 
+                ['rgb_cct_10', 'rgb_cct_20', 'rgb_cct_50', 'rgb_cct_100', 'rgbw_cct_10', 'rgbw_cct_20', 'rgbw_cct_50', 'rgbw_cct_100'], 
+                variableName='CCT', 
+                filename=args.plotfile
+                )
             #plot_colors(values, parameters, ['50'])
             #plot_colors(values, parameters, ['100'])
         else:

@@ -4,7 +4,7 @@ from typing import List, Optional
 import colour
 import colour.plotting
 
-def plot_lines(values : List[dict], parameters : dict, xlabel : str, ylabels : List[str], y2labels : Optional[List[str]]=None, variableName : str='LUX'):
+def plot_lines(values : List[dict], parameters : dict, xlabel : str, ylabels : List[str], y2labels : Optional[List[str]]=None, variableName : str='LUX', filename : Optional[str]=None):
     x_values = list(map(lambda v : v[xlabel], values))
     y_values = {}
     y_labels_to_delete = []
@@ -51,9 +51,12 @@ def plot_lines(values : List[dict], parameters : dict, xlabel : str, ylabels : L
         # ax2.set_xlabel(xlabel)
         ax2.set_ylabel(ylabel)
         ax2.legend()
-    matplotlib.pyplot.show()
+    if filename:
+        matplotlib.pyplot.savefig(filename)
+    else:
+        matplotlib.pyplot.show()
     
-def plot_colors_bycct(values, parameters, ylabels):
+def plot_colors_bycct(values, parameters, ylabels, filename=None):
     fig, ax = colour.plotting.plot_chromaticity_diagram_CIE1931(standalone=False)
     mincct = values[0]['requested']
     maxcct = values[-1]['requested']
@@ -79,9 +82,12 @@ def plot_colors_bycct(values, parameters, ylabels):
 #            xytext=(-50, 30),
 #            textcoords='offset points',
 #            arrowprops=dict(arrowstyle='->', connectionstyle='arc3, rad=-0.2'))
-    matplotlib.pyplot.show()
+    if filename:
+        matplotlib.pyplot.savefig(filename)
+    else:
+        matplotlib.pyplot.show()
 
-def plot_colors(values, parameters, ylabels):
+def plot_colors(values, parameters, ylabels, filename : Optional[str]=None):
     #fig, ax = colour.plotting.plot_chromaticity_diagram_CIE1931(standalone=False)
     fig, ax = colour.plotting.plot_planckian_locus_in_chromaticity_diagram_CIE1931([], standalone=False)
     mincct = values[0]['requested']
@@ -129,4 +135,7 @@ def plot_colors(values, parameters, ylabels):
 #            xytext=(-50, 30),
 #            textcoords='offset points',
 #            arrowprops=dict(arrowstyle='->', connectionstyle='arc3, rad=-0.2'))
-    matplotlib.pyplot.show()
+    if filename:
+        matplotlib.pyplot.savefig(filename)
+    else:
+        matplotlib.pyplot.show()
