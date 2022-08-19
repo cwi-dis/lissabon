@@ -26,22 +26,21 @@ class Calibrator:
             self.setstrip_native_ct(intensity, use_rgbw=False)
             return
         r_factor = g_factor = b_factor = 1
-        if self.args.rgb_temperature:
-            r_factor, g_factor, b_factor = self.convertfunc(self.args.rgb_temperature)
-        rgb_wanted = intensity
+        if self.args.temperature:
+            r_factor, g_factor, b_factor = self.convertfunc(self.args.temperature)
         # Do RGB-only color
-        if self.verbose: print(f'Set RGB lux level={intensity}', file=sys.stderr)
-        this_r = (rgb_wanted*r_factor) ** self.args.rgb_gamma
-        this_g = (rgb_wanted*g_factor) ** self.args.rgb_gamma
-        this_b = (rgb_wanted*b_factor) ** self.args.rgb_gamma
+        if self.verbose: print(f'Set RGB lux level={intensity} CT={self.args.temperature}', file=sys.stderr)
+        this_r = (intensity*r_factor) ** self.args.gamma
+        this_g = (intensity*g_factor) ** self.args.gamma
+        this_b = (intensity*b_factor) ** self.args.gamma
         self.ledstrip.setColor(r=this_r, g=this_g, b=this_b)
 
     def setstrip_w(self, intensity : float):
         w_factor = 1
         if self.args.w_brightness:
             w_factor = 1 / self.args.w_brightness
-        if self.verbose: print(f'Set W lux level={intensity}', file=sys.stderr)
-        this_w = (intensity*w_factor) ** self.args.w_gamma
+        if self.verbose: print(f'Set W lux level={intensity} CT={self.args.w_temperature}', file=sys.stderr)
+        this_w = (intensity*w_factor) ** self.args.gamma
         self.ledstrip.setColor(w=this_w)
     
     def setstrip_rgbw_ct(self, intensity : float):
@@ -49,23 +48,23 @@ class Calibrator:
             self.setstrip_native_ct(intensity, use_rgbw=True)
             return
         r_factor = g_factor = b_factor = w_factor = 1
-        if self.args.rgb_temperature:
-            r_factor, g_factor, b_factor = self.convertfunc(self.args.rgb_temperature)
+        if self.args.temperature:
+            r_factor, g_factor, b_factor = self.convertfunc(self.args.temperature)
         if self.args.w_brightness:
             w_factor = 1 / self.args.w_brightness
-        if self.verbose: print(f'Set RGBW lux level={intensity}', file=sys.stderr)
-        this_r = (intensity*r_factor*0.5) ** self.args.rgb_gamma
-        this_g = (intensity*g_factor*0.5) ** self.args.rgb_gamma
-        this_b = (intensity*b_factor*0.5) ** self.args.rgb_gamma
-        this_w = (intensity*w_factor*0.5) ** self.args.w_gamma
+        if self.verbose: print(f'Set RGBW lux level={intensity} CT={self.args.temperature}', file=sys.stderr)
+        this_r = (intensity*r_factor*0.5) ** self.args.gamma
+        this_g = (intensity*g_factor*0.5) ** self.args.gamma
+        this_b = (intensity*b_factor*0.5) ** self.args.gamma
+        this_w = (intensity*w_factor*0.5) ** self.args.gamma
         self.ledstrip.setColor(r=this_r, g=this_g, b=this_b, w=this_w)
 
     def setstrip_native_ct(self, intensity : float, use_rgbw=True):
         assert self.args.w_temperature
-        if self.verbose: print(f'Set CT {self.args.w_temperature} {intensity}', 'rgbw' if use_rgbw else 'rgb')
+        if self.verbose: print(f'Set CT {self.args.temperature} {intensity}', 'rgbw' if use_rgbw else 'rgb')
         self.ledstrip.setCT(
             intensity, 
-            self.args.w_temperature, 
+            self.args.temperature, 
             useRGBW=use_rgbw, 
             whiteTemperature=self.args.w_temperature,
             whiteBrightness=self.args.w_brightness
@@ -116,13 +115,13 @@ class Calibrator:
         parameters = dict(
             measurement='lux',
             interval=args.interval,
-            w_gamma=args.w_gamma,
-            rgb_gamma=args.rgb_gamma,
-            rgb_temperature=args.rgb_temperature,
-            w_temperature=args.w_temperature,
+            gamma=args.gamma,
+            temperature=args.temperature,
             w_brightness=args.w_brightness or 0,
             method='native' if args.native else 'cs_cct' if args.cs_cct else 'python'
             )
+        if args.w_temperature and args.w_temperature != args.temperature:
+            parameters['w_temperature'] = args.w_temperature
         return keys, results, parameters
             
     def run_cct(self):
@@ -188,9 +187,9 @@ class Calibrator:
                 level = percent / 100
                 if self.verbose: print(f'Measure RGB CCT level={level} cct={requested}', file=sys.stderr)
                 # Do RGB-only color
-                this_r = (r_wanted*level) ** args.rgb_gamma
-                this_g = (g_wanted*level) ** args.rgb_gamma
-                this_b = (b_wanted*level) ** args.rgb_gamma
+                this_r = (r_wanted*level) ** args.gamma
+                this_g = (g_wanted*level) ** args.gamma
+                this_b = (b_wanted*level) ** args.gamma
                 self.ledstrip.setColor(r=this_r, g=this_g, b=this_b)
                 time.sleep(1)
                 sResult = self.sensor.get()
@@ -202,10 +201,10 @@ class Calibrator:
                 result[f'rgb_w_{percent}'] = sResult['w']
                 if do_rgbw:
                     if self.verbose: print(f'Measure RGBW CCT level={level} cct={requested}', file=sys.stderr)
-                    this_r = (r_wanted_rgbw*level) ** args.rgb_gamma
-                    this_g = (g_wanted_rgbw*level) ** args.rgb_gamma
-                    this_b = (b_wanted_rgbw*level) ** args.rgb_gamma
-                    this_w = (w_wanted_rgbw*level) ** args.w_gamma
+                    this_r = (r_wanted_rgbw*level) ** args.gamma
+                    this_g = (g_wanted_rgbw*level) ** args.gamma
+                    this_b = (b_wanted_rgbw*level) ** args.gamma
+                    this_w = (w_wanted_rgbw*level) ** args.gamma
                     self.ledstrip.setColor(r=this_r, g=this_g, b=this_b, w=this_w)
                     time.sleep(1)
                     sResult = self.sensor.get()
@@ -220,9 +219,7 @@ class Calibrator:
         parameters = dict(
             measurement='cct',
             interval=args.interval,
-            w_gamma=args.w_gamma,
-            rgb_gamma=args.rgb_gamma,
-            rgb_temperature=args.rgb_temperature,
+            gamma=args.gamma,
             w_temperature=args.w_temperature,
             w_factor=w_factor,
             cs_cct=args.cs_cct
