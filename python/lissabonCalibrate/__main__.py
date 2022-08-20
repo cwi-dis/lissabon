@@ -59,9 +59,12 @@ def main():
     parser.add_argument('--csv', '-o', action='store', metavar='OUTPUT', help='CSV output filename')
     parser.add_argument('--plot', action='store_true', help='Show output as a plot')
     parser.add_argument('--plotfile', action='store', metavar="OUTPUT", help='Save output plot to OUTPUT')
+    parser.add_argument('--verbose', '-v', action='count', default=0, help='Print verbose message. Specify twice for more verbosity')
     
     args = parser.parse_args()
-
+    if args.verbose >= 2:
+        import iotsa
+        iotsa.VERBOSE.append(True)
     if not args.input and not (args.measurement and args.sensor and args.ledstrip):
             parser.print_usage(sys.stderr)
             print('Either --input or all of --measurement, --ledstrip and --sensor must be specified', file=sys.stderr)

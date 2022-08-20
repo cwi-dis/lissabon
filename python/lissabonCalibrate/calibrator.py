@@ -47,16 +47,50 @@ class Calibrator:
         if self.args.native:
             self.setstrip_native_ct(intensity, use_rgbw=True)
             return
-        r_factor = g_factor = b_factor = w_factor = 1
+        # Determine RGB for wanted temperature (default: all equal, probably 6500)
+        r_factor = g_factor = b_factor = 1
         if self.args.temperature:
             r_factor, g_factor, b_factor = self.convertfunc(self.args.temperature)
+        # Determine levels for RGB-only
+        intensity_multiplier = 1 # xxxjack alternative: 1+w_brightness, or something in between
+        r_wanted_rgb = r_factor * intensity * intensity_multiplier
+        g_wanted_rgb = g_factor * intensity * intensity_multiplier
+        b_wanted_rgb = b_factor * intensity * intensity_multiplier
+        # Determine W relative brightness (default: same as RGB)
+        w_factor = 1
         if self.args.w_brightness:
             w_factor = 1 / self.args.w_brightness
+        # Determine RGB for W temperature (default: same as RGB leds)
+        w_led_rgb_r = r_factor
+        w_led_rgb_g = g_factor
+        w_led_rgb_b = b_factor
+        if self.args.w_temperature:
+            w_led_rgb_r, w_led_rgb_g, w_led_rgb_b = self.convertfunc(self.args.w_temperature)
         if self.verbose: print(f'Set RGBW lux level={intensity} CT={self.args.temperature}', file=sys.stderr)
-        this_r = (intensity*r_factor*0.5) ** self.args.gamma
-        this_g = (intensity*g_factor*0.5) ** self.args.gamma
-        this_b = (intensity*b_factor*0.5) ** self.args.gamma
-        this_w = (intensity*w_factor*0.5) ** self.args.gamma
+        # Now determine how much intensity we can remove from RGB leds and transfer to W led
+        print(f"\txxxjack RGBW-RGB {r_factor} {g_factor} {b_factor} W-LED {w_led_rgb_r} {w_led_rgb_g} {w_led_rgb_b}")
+        max_r_remove = r_wanted_rgb / w_led_rgb_r
+        max_g_remove = g_wanted_rgb / w_led_rgb_g
+        max_b_remove = b_wanted_rgb / w_led_rgb_b
+        transfer_to_w = min(max_r_remove, max_g_remove, max_b_remove)
+        assert transfer_to_w >= 0 and transfer_to_w <= 1
+        r_wanted_rgbw = r_wanted_rgb - (transfer_to_w * w_led_rgb_r)
+        g_wanted_rgbw = g_wanted_rgb - (transfer_to_w * w_led_rgb_g)
+        b_wanted_rgbw = b_wanted_rgb - (transfer_to_w * w_led_rgb_b)
+        w_wanted_rgbw = transfer_to_w * w_factor
+        assert r_wanted_rgbw >= 0 and r_wanted_rgbw <= 1
+        assert g_wanted_rgbw >= 0 and g_wanted_rgbw <= 1
+        assert b_wanted_rgbw >= 0 and b_wanted_rgbw <= 1
+        assert w_wanted_rgbw >= 0 and w_wanted_rgbw <= 1
+        this_r = r_wanted_rgbw ** self.args.gamma
+        this_g = g_wanted_rgbw ** self.args.gamma
+        this_b = b_wanted_rgbw ** self.args.gamma
+        this_w = w_wanted_rgbw ** self.args.gamma
+        assert this_r >= 0 and this_r <= 1
+        assert this_g >= 0 and this_g <= 1
+        assert this_b >= 0 and this_b <= 1
+        assert this_w >= 0 and this_w <= 1
+        print(f"\txxxjack RGBW {this_r} {this_g} {this_b} {this_w}")
         self.ledstrip.setColor(r=this_r, g=this_g, b=this_b, w=this_w)
 
     def setstrip_native_ct(self, intensity : float, use_rgbw=True):
