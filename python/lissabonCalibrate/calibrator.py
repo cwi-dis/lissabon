@@ -13,6 +13,7 @@ class Calibrator:
         self.sensor = sensor
         self.ledstrip = ledstrip
         self.verbose = True
+        self.maxlevel = 1.0
         self.args = Namespace()
         self.convertfunc : Callable[[float], Tuple[float, float, float]] = convert_K_to_RGB
 
@@ -20,52 +21,91 @@ class Calibrator:
         self.args = args
         if args.cs_cct:
             self.convertfunc = cs_convert_K_to_RGB
-        
-    def setstrip_rgb_ct(self, intensity : float):
-        if self.args.native:
-            self.setstrip_native_ct(intensity, use_rgbw=False)
-            return
-        r_factor = g_factor = b_factor = 1
+        if args.maxlevel == "rgb":
+            self.maxlevel = 1.0
+        elif args.maxlevel == "max":
+            self.maxlevel = 1.0 + args.w_brightness
+        elif args.maxlevel == "correct":
+            w_r, w_g, w_b = self._get_w_rgb()
+            self.maxlevel = 1.0 + min([w_r, w_g, w_b]) * args.w_brightness
+            import pdb ; pdb.set_trace()
+        else:
+            assert f"Unknown maxlevel {args.maxlevel}"
+        print(f"xxxjack maxlevel={self.maxlevel}")
+
+    def _get_w_factor(self) -> float:
+        """Return the brightness of the W led (relative to the RGB leds combined)"""
+        w_factor = 1
+        if self.args.w_brightness:
+            w_factor = 1 / self.args.w_brightness
+        return w_factor
+
+    def _get_w_rgb(self) -> Tuple[float, float, float]:
+        """Return the R, G, B relative intensities of the W led given its temperature"""
+        r_factor = g_factor = b_factor = 1.0
+        if self.args.w_temperature:
+            r_factor, g_factor, b_factor = self.convertfunc(self.args.w_temperature)
+        return r_factor, g_factor, b_factor
+
+    def _get_ct_rgb(self) -> Tuple[float, float, float]:
+        """Return the R, G, B relative intensities of the given temperature"""
+        r_factor = g_factor = b_factor = 1.0
         if self.args.temperature:
             r_factor, g_factor, b_factor = self.convertfunc(self.args.temperature)
+        return r_factor, g_factor, b_factor
+
+    
+    def setstrip_rgb_ct(self, requested_intensity : float):
+        if self.args.native:
+            self.setstrip_native_ct(requested_intensity, use_rgbw=False)
+            return
+        
+        intensity = requested_intensity * self.maxlevel
+
+        r_factor, g_factor, b_factor = self._get_ct_rgb()
         # Do RGB-only color
         if self.verbose: print(f'Set RGB lux level={intensity} CT={self.args.temperature}', file=sys.stderr)
         this_r = (intensity*r_factor) ** self.args.gamma
         this_g = (intensity*g_factor) ** self.args.gamma
         this_b = (intensity*b_factor) ** self.args.gamma
+        if this_r > 1:
+            if self.verbose: print(f"Set RGB: R clipped from {this_r}")
+            this_r = 1
+        if this_g > 1:
+            if self.verbose: print(f"Set RGB: G clipped from {this_g}")
+            this_g = 1
+        if this_b > 1:
+            if self.verbose: print(f"Set RGB: B clipped from {this_b}")
+            this_b = 1
         self.ledstrip.setColor(r=this_r, g=this_g, b=this_b)
 
-    def setstrip_w(self, intensity : float):
-        w_factor = 1
-        if self.args.w_brightness:
-            w_factor = 1 / self.args.w_brightness
+    def setstrip_w(self, requested_intensity : float):
+        intensity = requested_intensity * self.maxlevel
+        w_factor = self._get_w_factor()
         if self.verbose: print(f'Set W lux level={intensity} CT={self.args.w_temperature}', file=sys.stderr)
         this_w = (intensity*w_factor) ** self.args.gamma
+        if this_w > 1:
+            if self.verbose: print(f"Set W: W clipped from {this_w}")
+            this_w = 1
         self.ledstrip.setColor(w=this_w)
     
-    def setstrip_rgbw_ct(self, intensity : float):
+    def setstrip_rgbw_ct(self, requested_intensity : float):
         if self.args.native:
-            self.setstrip_native_ct(intensity, use_rgbw=True)
+            self.setstrip_native_ct(requested_intensity, use_rgbw=True)
             return
+        # Scale intensity to cater for the W led
+        intensity = requested_intensity * self.maxlevel
         # Determine RGB for wanted temperature (default: all equal, probably 6500)
-        r_factor = g_factor = b_factor = 1
-        if self.args.temperature:
-            r_factor, g_factor, b_factor = self.convertfunc(self.args.temperature)
+        r_factor, g_factor, b_factor = self._get_ct_rgb()
         # Determine levels for RGB-only
         intensity_multiplier = 1 # xxxjack alternative: 1+w_brightness, or something in between
         r_wanted_rgb = r_factor * intensity * intensity_multiplier
         g_wanted_rgb = g_factor * intensity * intensity_multiplier
         b_wanted_rgb = b_factor * intensity * intensity_multiplier
         # Determine W relative brightness (default: same as RGB)
-        w_factor = 1
-        if self.args.w_brightness:
-            w_factor = 1 / self.args.w_brightness
+        w_factor = self._get_w_factor()
         # Determine RGB for W temperature (default: same as RGB leds)
-        w_led_rgb_r = r_factor
-        w_led_rgb_g = g_factor
-        w_led_rgb_b = b_factor
-        if self.args.w_temperature:
-            w_led_rgb_r, w_led_rgb_g, w_led_rgb_b = self.convertfunc(self.args.w_temperature)
+        w_led_rgb_r, w_led_rgb_g, w_led_rgb_b = self._get_w_rgb()
         if self.verbose: print(f'Set RGBW lux level={intensity} CT={self.args.temperature}', file=sys.stderr)
         # Now determine how much intensity we can remove from RGB leds and transfer to W led
         print(f"\txxxjack RGBW-RGB {r_factor} {g_factor} {b_factor} W-LED {w_led_rgb_r} {w_led_rgb_g} {w_led_rgb_b}")
@@ -73,19 +113,34 @@ class Calibrator:
         max_g_remove = g_wanted_rgb / w_led_rgb_g
         max_b_remove = b_wanted_rgb / w_led_rgb_b
         transfer_to_w = min(max_r_remove, max_g_remove, max_b_remove)
-        assert transfer_to_w >= 0 and transfer_to_w <= 1
+        if transfer_to_w > (1/w_factor):
+            print(f"Set RGBW: clip W-transfer from {transfer_to_w} to {1/w_factor}")
+            transfer_to_w = 1/w_factor
+        assert transfer_to_w >= 0
         r_wanted_rgbw = r_wanted_rgb - (transfer_to_w * w_led_rgb_r)
         g_wanted_rgbw = g_wanted_rgb - (transfer_to_w * w_led_rgb_g)
         b_wanted_rgbw = b_wanted_rgb - (transfer_to_w * w_led_rgb_b)
         w_wanted_rgbw = transfer_to_w * w_factor
-        assert r_wanted_rgbw >= 0 and r_wanted_rgbw <= 1
-        assert g_wanted_rgbw >= 0 and g_wanted_rgbw <= 1
-        assert b_wanted_rgbw >= 0 and b_wanted_rgbw <= 1
-        assert w_wanted_rgbw >= 0 and w_wanted_rgbw <= 1
+        assert r_wanted_rgbw >= 0 
+        assert g_wanted_rgbw >= 0 
+        assert b_wanted_rgbw >= 0 
+        assert w_wanted_rgbw >= 0
         this_r = r_wanted_rgbw ** self.args.gamma
         this_g = g_wanted_rgbw ** self.args.gamma
         this_b = b_wanted_rgbw ** self.args.gamma
         this_w = w_wanted_rgbw ** self.args.gamma
+        if this_r > 1:
+            if self.verbose: print(f"Set RGBW: R clipped from {this_r}")
+            this_r = 1
+        if this_g > 1:
+            if self.verbose: print(f"Set RGBW: G clipped from {this_g}")
+            this_g = 1
+        if this_b > 1:
+            if self.verbose: print(f"Set RGBW: B clipped from {this_b}")
+            this_b = 1
+        if this_w > 1:
+            if self.verbose: print(f"Set RGBW: W clipped from {this_w}")
+            this_w = 1
         assert this_r >= 0 and this_r <= 1
         assert this_g >= 0 and this_g <= 1
         assert this_b >= 0 and this_b <= 1
@@ -152,6 +207,7 @@ class Calibrator:
             gamma=args.gamma,
             temperature=args.temperature,
             w_brightness=args.w_brightness or 0,
+            maxlevel=self.maxlevel,
             method='native' if args.native else 'cs_cct' if args.cs_cct else 'python'
             )
         if args.w_temperature and args.w_temperature != args.temperature:

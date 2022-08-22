@@ -51,6 +51,7 @@ def main():
     parser.add_argument('--steps', action='store', type=int, default=16, metavar='N', help='Use N steps for calibration (default 16)')
     parser.add_argument('--gamma', action='store', default=1, type=float, metavar='GAMMA', help='Gamma value for LED output (default 1.0)')
     parser.add_argument('--w_brightness', action='store', type=float, metavar='W', help='Treat W channel as having this brightness relative to RGB  (default 1.0)')
+    parser.add_argument("--maxlevel", action="store", choices=["rgb", "correct", "max"], default="rgb", help="Max level (1.0) is determined by this")
     parser.add_argument('--w_temperature', action='store', type=float, metavar='W', help='W channel has this temperature (default: dont use W channel for CCT, assume temperature for LUX)')
     parser.add_argument('--temperature', action='store', type=float, metavar='KELVIN', help='Color temperature for RGB and RGBW (default: no correction)')
     parser.add_argument('--cs_cct', action='store_true', help='Use colourscience for CCT to RGB conversion')
