@@ -1,5 +1,7 @@
 # lissabon off-grid lighting control
 
+![build-platformio](https://github.com/cwi-dis/lissabon/workflows/build-platformio/badge.svg)
+
 Lissabon is an experiment in smart control over off-grid lighting. The intention is to provide a set of small dimmers, remotes and user interfaces that allow you to control lighting. The target application area is strictly low-voltage, battery operated and solar powered. 
 
 > The project got its name from [Tuinpark Lissabon](https://www.tuinparklissabon.nl), an allotment (_"volkstuintje"_ in dutch) in Amsterdam, where the experiment was conducted... 
