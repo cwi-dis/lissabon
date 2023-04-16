@@ -72,6 +72,9 @@ void IotsaPixelstripMod::setupStrip() {
 #ifdef IOTSA_NPB_POWER_PIN
   pinMode(IOTSA_NPB_POWER_PIN, OUTPUT);
   powerOff(true);
+#else
+  strip = new IotsaNeoPixelBus(count, pin);
+  strip->Begin();
 #endif
   if (buffer) free(buffer);
   buffer = (uint8_t *)malloc(count*IOTSA_NPB_BPP);
@@ -97,7 +100,7 @@ void IotsaPixelstripMod::powerOn(bool force) {
   gpio_hold_dis((gpio_num_t)IOTSA_NPB_POWER_PIN);
   digitalWrite(IOTSA_NPB_POWER_PIN, HIGH);
   gpio_hold_en((gpio_num_t)IOTSA_NPB_POWER_PIN);
-  //
+ //
   // We allocate the strip, which should initialize it
   //
   strip = new IotsaNeoPixelBus(count, pin);
@@ -215,6 +218,10 @@ void IotsaPixelstripMod::pixelSourceCallback() {
     return;
   }
   powerOn();
+  if (strip == nullptr) {
+    IotsaSerial.println("IotsaPixelStrip: strip is NULL");
+    return;
+  }
   for (int i=0; i < count; i++) {
     uint8_t r = *ptr++;
     uint8_t g = *ptr++;
