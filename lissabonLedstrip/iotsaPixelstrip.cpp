@@ -91,7 +91,7 @@ void IotsaPixelstripMod::setupStrip() {
 void IotsaPixelstripMod::powerOn(bool force) {
 #ifdef IOTSA_NPB_POWER_PIN
   if (isPowerOn && !force) return;
-  IFDEBUG IotsaSerial.println("poweron");
+  IFDEBUG IotsaSerial.printf("PixelStrip: poweron via pin %d\n", IOTSA_NPB_POWER_PIN);
   isPowerOn = true;
   //
   // The powerpin should connect to a mosfet or something that enables power to
@@ -117,7 +117,7 @@ void IotsaPixelstripMod::powerOff(bool force) {
 #ifdef IOTSA_NPB_POWER_PIN
   if (!isPowerOn && !force) return;
   delay(1);
-  IFDEBUG IotsaSerial.println("poweroff");
+  IFDEBUG IotsaSerial.printf("PixelStrip: poweroff via pin %d\n", IOTSA_NPB_POWER_PIN);
   isPowerOn = false;
   //
   // We delete the strip, which should set the pin back to an input
@@ -210,6 +210,7 @@ void IotsaPixelstripMod::pixelSourceCallback() {
   for (int i=0; i<count*IOTSA_NPB_BPP; i++) {
     if (ptr[i] != 0) {
       anyOn = true;
+      IotsaSerial.printf("xxxjack pixel %d of %d is 0x%x\n", i,count*IOTSA_NPB_BPP, ptr[i]);
       break;
     }
   }

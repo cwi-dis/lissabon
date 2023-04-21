@@ -39,10 +39,11 @@ protected:
   int count;  // Number of LEDs
   int bpp; // Number of colors per LED (3 or 4)
   uint8_t *buffer = NULL; // per-pixel 8bit RGBW values (to pass to pixelstrip module)
-  float *pixelLevels = NULL; // per-pixel intensities
+  float *pixelLevels = NULL; // per-pixel relative intensities
   IotsaPixelsourceHandler *stripHandler;
 
   void updateColorspace(float whiteTemperature, float whiteBrightness);
+  void updatePixelLevels();
   float maxLevelCorrectColor();
   String colorDump();
   Colorspace rgbwSpace;

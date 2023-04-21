@@ -20,20 +20,17 @@ void LedstripDimmer::setup() {
 }
 
 void LedstripDimmer::updateDimmer() {
-#if 0
-  // Reset RGBW-based color levels.
-  if (calibrationMode == calibration_hard) {
-    IotsaSerial.println("LedstripDimmer: reset calibration_hard");
-    calibrationMode = calibration_normal;
-  }
-#endif
-  // Compute level and animation duration
+  updatePixelLevels();
+  // Compute animation duration, which signals to loop() that things neeed to change.
   AbstractDimmer::updateDimmer();
+}
+
+void LedstripDimmer::updatePixelLevels() {
   //
   // Compute curve.
   // 
   // If spread==0 we use a uniform curve.
-  if (focalSpread == 0) {
+  if (focalSpread < 0.01 || focalSpread > 0.99) {
     for(int i=0; i<count; i++) {
       pixelLevels[i] = 1.0;
     }
@@ -44,15 +41,6 @@ void LedstripDimmer::updateDimmer() {
   // Also if the spread is very wide we ignore it and light up all LEDs.
   //
   float maxOutputLevel = maxLevelCorrectColor();
-#ifdef ALLOW_INCORRECT_COLOR
-  if (level == 0 || level >= maxOutputLevel || focalSpread > 0.9) {
-    for(int i=0; i<count; i++) pixelLevels[i] = 1.0;
-    overrideLevel = -1; // We use the level as provided
-    return;
-  }
-  // We will compute the per-pixel level, so we set the overrideLevel to maximum color-preserving.
-  overrideLevel = maxOutputLevel;
-#endif // ALLOW_INCORRECT_COLOR
   //
   // Now determine how much light we can produce with the preferred curve
   //
@@ -60,32 +48,40 @@ void LedstripDimmer::updateDimmer() {
   float beginValue = levelFuncCumulative(0, curSpread);
   float endValue = levelFuncCumulative(1, curSpread);
   float cumulativeValue = endValue - beginValue;
-  DEBUG_LEDSTRIP IotsaSerial.printf("LedstripDimmer.updateDimmer: level=%f focalSpread=%f maxLevel=%f totalValue=%f\n", level, curSpread, maxOutputLevel, cumulativeValue);
+  DEBUG_LEDSTRIP IotsaSerial.printf("LedstripDimmer.updatePixelLevels: level=%f focalSpread=%f maxLevel=%f totalValue=%f\n", level, curSpread, maxOutputLevel, cumulativeValue);
   //
   // With this curve we can produce cumulativeValue*maxOutputLevel light.
   // If that is not enough we widen the curve.
   //
-  while (level > cumulativeValue*maxOutputLevel && curSpread < 1) {
-    curSpread = curSpread + 0.05;
-    beginValue = levelFuncCumulative(0, curSpread);
-    endValue = levelFuncCumulative(1, curSpread);
-    cumulativeValue = endValue - beginValue;
+  if (level > cumulativeValue*maxOutputLevel) {
+    while (level > cumulativeValue*maxOutputLevel && curSpread < 1) {
+      curSpread = curSpread + 0.05;
+      beginValue = levelFuncCumulative(0, curSpread);
+      endValue = levelFuncCumulative(1, curSpread);
+      cumulativeValue = endValue - beginValue;
+    }
     DEBUG_LEDSTRIP IotsaSerial.printf("LedstripDimmer.updateDimmer: adjustForMaxLevel: curSpread=%f maxLevel=%f totalValue=%f\n", curSpread, maxOutputLevel, cumulativeValue);
   }
+
   //
   // cumulativeValue*maxOutputLevel is the amount of light produced. We need to
   // correct this so level is what is actually produced.
   float correction = level / cumulativeValue*maxOutputLevel;
+  float sumLevel = 0;
   if (pixelLevels != NULL) {
     for(int i=0; i<count; i++) {
       float peakValue = levelFunc((float)(i+1)/count, curSpread) * correction;
       pixelLevels[i] = peakValue;
+      DEBUG_LEDSTRIP IotsaSerial.printf("LedstripDimmer.updateDimmer: pixelLevel[%d] = %f\n", i, peakValue);
+      sumLevel += peakValue;
     }
   }
+  DEBUG_LEDSTRIP IotsaSerial.printf("LedstripDimmer.updateDimmer: sum(pixelLevel)=%f avg=%f\n", sumLevel, sumLevel/configNUM_THREAD_LOCAL_STORAGE_POINTERS);
+  DEBUG_LEDSTRIP IotsaSerial.printf("LedstripDimmer.updateDimmer: pixelLevels updated\n");
 }
 
 void LedstripDimmer::updateColorspace(float whiteTemperature, float whiteBrightness) {
-  rgbwSpace = Colorspace(whiteTemperature, whiteBrightness, false, false);
+  rgbwSpace = Colorspace(whiteTemperature, whiteBrightness, true, false);
 }
 
 float LedstripDimmer::maxLevelCorrectColor() {
@@ -132,7 +128,7 @@ float LedstripDimmer::levelFuncCumulative(float x, float spreadOverride) {
   float spread = spreadOverride;
   if (spread < 0) spread = focalSpread;
   // If spread is close to 1.0 we use all lights
-  if (spread > 0.99) return 1;
+  if (spread > 0.99) return x;
   // We turn spread into a [0, inf) number
   spread = (1/(1-powf(spread, 2)))-1;
   // Now we can compute the level function. Similar shape to a normal distribution.
@@ -320,6 +316,7 @@ void LedstripDimmer::loop() {
   // The color we want to go to
   TempFColor curTFColor = TempFColor(temperature, curLevel);
   RgbwFColor curRgbwColor = rgbwSpace.toRgbw(curTFColor);
+  DEBUG_LEDSTRIP IotsaSerial.printf("LedstripDimmer.loop: curRgbwColor(temp=%f,level=%f): %f %f %f %f\n", temperature, curLevel, curRgbwColor.R, curRgbwColor.G, curRgbwColor.B, curRgbwColor.W);
   // Only for calibration mode rgb or alternating we also need to color in RGB-only.
   // We adjust for the brightness of the white LED
   RgbFColor curRgbCalibrationColor;
@@ -328,16 +325,11 @@ void LedstripDimmer::loop() {
     RgbFColor tmp2(tmp);
     curRgbCalibrationColor = tmp2;
   }
-#if 0
-  if (millisAnimationStart == 0) {
-    IFDEBUG IotsaSerial.printf("LedstripDimmer: isOn=%d r=%d, g=%d, b=%d, w=%d count=%d\n", isOn, color.R, color.G, color.B, color.W, count);
-  }
-#endif
   if (buffer != NULL && count != 0 && stripHandler != NULL) {
     bool change = false;
     uint8_t *p = buffer;
     if (calibrationMode != calibration_normal) {
-      IotsaSerial.printf("LedstripDimmer: calibrationMode=%d\n", (int)calibrationMode);
+      IotsaSerial.printf("LedstripDimmer.loop: calibrationMode=%d\n", (int)calibrationMode);
     }
     for (int i=0; i<count; i++) {
       RgbwFColor thisPixelFColor = curRgbwColor;
@@ -353,13 +345,14 @@ void LedstripDimmer::loop() {
         // checking the white led temperature and intensity, because for levels that are attainable
         // using only the RGB LEDs the resulting light should be the same intensity and color.
         thisPixelFColor = curRgbCalibrationColor;
+      } else {
+        float thisLevel = curLevel*pixelLevels[i];
+        TempFColor thisPixelTFColor = TempFColor(temperature, thisLevel);
+        thisPixelFColor = rgbwSpace.toRgbw(curTFColor);
+        DEBUG_LEDSTRIP IotsaSerial.printf("LedstripDimmer.loop: pixel %d: level=%f r=%f g=%f b=%f w=%f\n", i, thisLevel, thisPixelFColor.R, thisPixelFColor.G, thisPixelFColor.B, thisPixelFColor.W);
       }
-      thisPixelFColor = thisPixelFColor.Dim(pixelLevels[i]);
       RgbwColor thisPixelColor = thisPixelFColor;
-      if (calibrationMode && i <= 1) {
-        IotsaSerial.printf("LedstripDimmer: calibration: pixel %d: r=%d g=%d b=%d w=%d\n", i, thisPixelColor.R, thisPixelColor.G, thisPixelColor.B, thisPixelColor.W);
-      }
-      //IotsaSerial.printf("xxxjack i=%d level=%f curW=%f thisW=%f\n", i, pixelLevels[i], curRgbwColor.W, thisPixelFColor.W);
+      DEBUG_LEDSTRIP IotsaSerial.printf("LedstripDimmer.loop: pixel %d: r=%d g=%d b=%d w=%d\n", i, thisPixelColor.R, thisPixelColor.G, thisPixelColor.B, thisPixelColor.W);
       if (*p != thisPixelColor.R) {
         *p = thisPixelColor.R;
         change = true;
@@ -383,7 +376,9 @@ void LedstripDimmer::loop() {
         p++;
       }
     }
+    change = true; // xxxjack atempt to fix a bug.
     if (change) {
+      IotsaSerial.printf("xxxjack dimmer: change, p[0]=%x %x %x %x\n", buffer[0], buffer[1], buffer[2], buffer[3]);
       stripHandler->pixelSourceCallback();
     }
   }
