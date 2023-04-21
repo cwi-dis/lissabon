@@ -6,8 +6,7 @@ namespace Lissabon {
 void DimmerBLEServer::setup() {
 #ifdef IOTSA_WITH_BLE
   // Set default advertising interval to be between 200ms and 600ms
-  IotsaBLEServerMod::setAdvertisingInterval(300, 900);
-
+  
   bleApi.setup(Lissabon::Dimmer::serviceUUIDstring, this);
 
   bleApi.addCharacteristic(
