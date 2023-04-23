@@ -126,17 +126,21 @@ void LissabonLedstripMod::dimmerOnOffChanged() {
     // A button change that was quick enough for a tap
     lastButtonChangeMillis = now;
     buttonChangeCount++;
+    IFDEBUG IotsaSerial.printf("TapCount: %d\n", buttonChangeCount);
     if (buttonChangeCount == TAP_COUNT_MODE_CHANGE) {
-      IFDEBUG IotsaSerial.println("tap mode change");
+      IotsaSerial.println("TapCount: mode change");
       iotsaConfig.allowRequestedConfigurationMode();
     }
     if (buttonChangeCount == TAP_COUNT_REBOOT) {
-      IFDEBUG IotsaSerial.println("tap mode reboot");
+      IotsaSerial.println("TapCount: reboot");
       iotsaConfig.requestReboot(1000);
     }
   } else {
     // Either the first change, or too late. Reset.
     lastButtonChangeMillis = millis();
+    if (buttonChangeCount > 0) {
+      IotsaSerial.println("TapCount: reset");
+    }
     buttonChangeCount = 0;
   }
 }
