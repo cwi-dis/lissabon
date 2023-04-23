@@ -103,6 +103,7 @@ void IotsaPixelstripMod::powerOn(bool force) {
  //
   // We allocate the strip, which should initialize it
   //
+  pinMode(pin, OUTPUT);
   strip = new IotsaNeoPixelBus(count, pin);
   strip->Begin();
   delay(1);
@@ -125,6 +126,7 @@ void IotsaPixelstripMod::powerOff(bool force) {
   //
   delete strip;
   strip = nullptr;
+  pinMode(pin, INPUT);
   //
   // The powerpin should connect to a mosfet or something that enables power to
   // the ledstrip when high (and disables power when low or floating)
