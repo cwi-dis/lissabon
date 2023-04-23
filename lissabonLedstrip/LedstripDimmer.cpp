@@ -4,7 +4,7 @@
 //const float PI = atan(1)*4;
 const float SQRT_HALF = sqrt(0.5);
 
-#define DEBUG_LEDSTRIP if(1)
+#define DEBUG_LEDSTRIP if(0)
 
 namespace Lissabon {
 
@@ -378,7 +378,7 @@ void LedstripDimmer::loop() {
     }
     change = true; // xxxjack atempt to fix a bug.
     if (change) {
-      IotsaSerial.printf("xxxjack dimmer: change, p[0]=%x %x %x %x\n", buffer[0], buffer[1], buffer[2], buffer[3]);
+      //IotsaSerial.printf("xxxjack dimmer: change, p[0]=%x %x %x %x\n", buffer[0], buffer[1], buffer[2], buffer[3]);
       stripHandler->pixelSourceCallback();
     }
   }

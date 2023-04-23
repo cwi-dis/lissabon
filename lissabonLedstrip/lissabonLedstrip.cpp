@@ -17,8 +17,8 @@
 //
 // Device can be rebooted or configuration mode can be requested by quickly tapping any button.
 // TAP_DURATION sets the maximum time between press-release-press-etc.
-#define TAP_COUNT_MODE_CHANGE 4
-#define TAP_COUNT_REBOOT 8
+#define TAP_COUNT_MODE_CHANGE 3
+#define TAP_COUNT_REBOOT 6
 #define TAP_DURATION 1000
 
 // Enable Over The Air updates from ArduinoIDE. Needs at least 1MB flash.
@@ -105,6 +105,7 @@ protected:
   bool getHandler(const char *path, JsonObject& reply) override;
   bool putHandler(const char *path, const JsonVariant& request, JsonObject& reply) override;
 private:
+  void _tap();
   LedstripDimmer dimmer;
 #ifdef WITH_TOUCHPADS
   DimmerUI dimmerUI;
@@ -117,11 +118,19 @@ private:
   int buttonChangeCount = 0;
 };
 
-void LissabonLedstripMod::dimmerOnOffChanged() {
+void LissabonLedstripMod::_tap() {
   // Called whenever any button changed state.
   // Used to give visual feedback (led turning off) on presses and releases,
   // and to enable config mod after 4 taps and reboot after 8 taps
   uint32_t now = millis();
+  if (now >= lastButtonChangeMillis + TAP_DURATION) {
+    // Either the first change, or too late. Reset.
+    if (lastButtonChangeMillis > 0) {
+      IotsaSerial.println("TapCount: reset");
+    }
+    lastButtonChangeMillis = millis();
+    buttonChangeCount = 0;
+  }
   if (lastButtonChangeMillis > 0 && now < lastButtonChangeMillis + TAP_DURATION) {
     // A button change that was quick enough for a tap
     lastButtonChangeMillis = now;
@@ -135,14 +144,12 @@ void LissabonLedstripMod::dimmerOnOffChanged() {
       IotsaSerial.println("TapCount: reboot");
       iotsaConfig.requestReboot(1000);
     }
-  } else {
-    // Either the first change, or too late. Reset.
-    lastButtonChangeMillis = millis();
-    if (buttonChangeCount > 0) {
-      IotsaSerial.println("TapCount: reset");
-    }
-    buttonChangeCount = 0;
   }
+}
+
+void LissabonLedstripMod::dimmerOnOffChanged() {
+  _tap();
+
 }
 #ifdef IOTSA_WITH_WEB
 void

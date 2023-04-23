@@ -212,7 +212,7 @@ void IotsaPixelstripMod::pixelSourceCallback() {
   for (int i=0; i<count*IOTSA_NPB_BPP; i++) {
     if (ptr[i] != 0) {
       anyOn = true;
-      IotsaSerial.printf("xxxjack pixel %d of %d is 0x%x\n", i,count*IOTSA_NPB_BPP, ptr[i]);
+      //IotsaSerial.printf("xxxjack pixel %d of %d is 0x%x\n", i,count*IOTSA_NPB_BPP, ptr[i]);
       break;
     }
   }
