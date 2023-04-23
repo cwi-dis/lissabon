@@ -20,9 +20,18 @@ void LedstripDimmer::setup() {
 }
 
 void LedstripDimmer::updateDimmer() {
+  updateLevel();
   updatePixelLevels();
   // Compute animation duration, which signals to loop() that things neeed to change.
   AbstractDimmer::updateDimmer();
+}
+
+void LedstripDimmer::updateLevel() {
+  float maxOutputLevel = maxLevelCorrectColor();
+  if (level > maxOutputLevel) {
+    IotsaSerial.printf("LodstripDimmer.updateLevel: level clamped to %f\n", maxOutputLevel);
+    level = maxOutputLevel;
+  }
 }
 
 void LedstripDimmer::updatePixelLevels() {
@@ -48,36 +57,36 @@ void LedstripDimmer::updatePixelLevels() {
   float beginValue = levelFuncCumulative(0, curSpread);
   float endValue = levelFuncCumulative(1, curSpread);
   float cumulativeValue = endValue - beginValue;
-  DEBUG_LEDSTRIP IotsaSerial.printf("LedstripDimmer.updatePixelLevels: level=%f focalSpread=%f maxLevel=%f totalValue=%f\n", level, curSpread, maxOutputLevel, cumulativeValue);
+  DEBUG_LEDSTRIP IotsaSerial.printf("LedstripDimmer.updatePixelLevels: level=%f curSpread=%f cumulativeValue=%f\n", level, curSpread, cumulativeValue);
   //
   // With this curve we can produce cumulativeValue*maxOutputLevel light.
   // If that is not enough we widen the curve.
   //
-  if (level > cumulativeValue*maxOutputLevel) {
-    while (level > cumulativeValue*maxOutputLevel && curSpread < 1) {
-      curSpread = curSpread + 0.05;
+  if (level > cumulativeValue) {
+    while (level > cumulativeValue && curSpread < 1) {
+      curSpread = (curSpread + 0.05)*1.05;
       beginValue = levelFuncCumulative(0, curSpread);
       endValue = levelFuncCumulative(1, curSpread);
       cumulativeValue = endValue - beginValue;
     }
-    DEBUG_LEDSTRIP IotsaSerial.printf("LedstripDimmer.updateDimmer: adjustForMaxLevel: curSpread=%f maxLevel=%f totalValue=%f\n", curSpread, maxOutputLevel, cumulativeValue);
+    DEBUG_LEDSTRIP IotsaSerial.printf("LedstripDimmer.updatePixelLevels: level=%f adjusted_curSpread=%f cumulativeValue=%f\n", level, curSpread, cumulativeValue);
   }
 
   //
-  // cumulativeValue*maxOutputLevel is the amount of light produced. We need to
+  // cumulativeValue is the amount of light produced. We need to
   // correct this so level is what is actually produced.
-  float correction = level / cumulativeValue*maxOutputLevel;
+  float correction = cumulativeValue / level;
   float sumLevel = 0;
   if (pixelLevels != NULL) {
     for(int i=0; i<count; i++) {
-      float peakValue = levelFunc((float)(i+1)/count, curSpread) * correction;
-      pixelLevels[i] = peakValue;
-      DEBUG_LEDSTRIP IotsaSerial.printf("LedstripDimmer.updateDimmer: pixelLevel[%d] = %f\n", i, peakValue);
-      sumLevel += peakValue;
+      float thisValue = levelFunc((float)(i+1)/count, curSpread) * correction;
+      pixelLevels[i] = thisValue;
+      DEBUG_LEDSTRIP IotsaSerial.printf("LedstripDimmer.updatePixelLevels: pixelLevel[%d] = %f\n", i, thisValue);
+      sumLevel += thisValue;
     }
   }
-  DEBUG_LEDSTRIP IotsaSerial.printf("LedstripDimmer.updateDimmer: sum(pixelLevel)=%f avg=%f\n", sumLevel, sumLevel/configNUM_THREAD_LOCAL_STORAGE_POINTERS);
-  DEBUG_LEDSTRIP IotsaSerial.printf("LedstripDimmer.updateDimmer: pixelLevels updated\n");
+  DEBUG_LEDSTRIP IotsaSerial.printf("LedstripDimmer.updatePixelLevels: sum(pixelLevel)=%f avg=%f\n", sumLevel, sumLevel/configNUM_THREAD_LOCAL_STORAGE_POINTERS);
+  DEBUG_LEDSTRIP IotsaSerial.printf("LedstripDimmer.updatePixelLevels: pixelLevels updated\n");
 }
 
 void LedstripDimmer::updateColorspace(float whiteTemperature, float whiteBrightness) {

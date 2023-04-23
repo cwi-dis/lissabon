@@ -22,7 +22,7 @@ void AbstractDimmer::updateDimmer() {
   float newLevel = isOn ? level : 0;
   if (animationEndMillis > 0) {
     // Need to cater for curLevel for animation that is in progress
-    IotsaSerial.printf("xxxjack preLevel was %f now %f\n", animationPrevLevel, curLevel);
+    IotsaSerial.printf("xxxjack animationPrevLevel was %f now %f\n", animationPrevLevel, curLevel);
     animationPrevLevel = animationCurLevel;
   }
   int thisDuration = int(animationDurationMillis * fabs(newLevel-animationPrevLevel));
