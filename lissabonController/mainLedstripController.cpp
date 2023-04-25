@@ -18,7 +18,13 @@ using namespace Lissabon;
 #include "display.h"
 Display *display;
 
-// CHANGE: Add application includes and declarations here
+//
+// Device can be rebooted or configuration mode can be requested by quickly tapping any button.
+// TAP_DURATION sets the maximum time between press-release-press-etc.
+// Note that the controller records both press and release, so we need to double the count.
+#define TAP_COUNT_MODE_CHANGE 6
+#define TAP_COUNT_REBOOT 12
+#define TAP_DURATION 1000
 
 #define WITH_OTA    // Enable Over The Air updates from ArduinoIDE. Needs at least 1MB flash.
 
@@ -97,6 +103,7 @@ protected:
   void unknownBLEDimmerFound(BLEAdvertisedDevice& device);
   virtual String formHandler_field_perdevice(const char *deviceName) override;
 private:
+  void _tap();
   void dimmerOnOffChanged();
   void dimmerValueChanged();
   void dimmerAvailableChanged(bool available, bool connected);
@@ -112,7 +119,38 @@ private:
   DimmerDynamicCollection::ItemType* dimmerFactory(int num);
   int selectedDimmerIndex = 0; // currently selected dimmer on display
   Display::DisplayMode selectedMode = Display::DisplayMode::dm_select;
+  uint32_t lastButtonChangeMillis = 0;
+  int buttonChangeCount = 0;
 };
+
+void IotsaLedstripControllerMod::_tap() {
+  // Called whenever any button changed state.
+  // Used to give visual feedback (led turning off) on presses and releases,
+  // and to enable config mod after 4 taps and reboot after 8 taps
+  uint32_t now = millis();
+  if (now >= lastButtonChangeMillis + TAP_DURATION) {
+    // Either the first change, or too late. Reset.
+    if (lastButtonChangeMillis > 0) {
+      IotsaSerial.println("TapCount: reset");
+    }
+    lastButtonChangeMillis = millis();
+    buttonChangeCount = 0;
+  }
+  if (lastButtonChangeMillis > 0 && now < lastButtonChangeMillis + TAP_DURATION) {
+    // A button change that was quick enough for a tap
+    lastButtonChangeMillis = now;
+    buttonChangeCount++;
+    IFDEBUG IotsaSerial.printf("TapCount: %d\n", buttonChangeCount);
+    if (buttonChangeCount == TAP_COUNT_MODE_CHANGE) {
+      IotsaSerial.println("TapCount: mode change");
+      iotsaConfig.allowRequestedConfigurationMode();
+    }
+    if (buttonChangeCount == TAP_COUNT_REBOOT) {
+      IotsaSerial.println("TapCount: reboot");
+      iotsaConfig.requestReboot(1000);
+    }
+  }
+}
 
 void 
 IotsaLedstripControllerMod::updateDisplay(bool clear) {
@@ -191,6 +229,7 @@ IotsaLedstripControllerMod::uiRockerPressed() {
 bool
 IotsaLedstripControllerMod::uiButtonPressed() {
   LOG_UI IotsaSerial.printf("LissabonController: uiButtonPressed: state=%d repeatCount=%d duration=%d\n", button.pressed, button.repeatCount, button.duration);
+  _tap();
   //iotsaConfig.postponeSleep(4000);
   auto d = dimmers.at(selectedDimmerIndex);
   if (d == nullptr) return false;
