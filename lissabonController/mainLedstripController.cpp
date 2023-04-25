@@ -33,6 +33,11 @@ IotsaWifiMod wifiMod(application);
 IotsaOtaMod otaMod(application);
 #endif
 
+#include "iotsaBLEServer.h"
+#ifdef IOTSA_WITH_BLE
+IotsaBLEServerMod bleserverMod(application);
+#endif
+
 #include "iotsaBattery.h"
 #define PIN_DISABLESLEEP 0
 #define PIN_VBAT 37
