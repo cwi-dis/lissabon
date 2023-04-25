@@ -86,14 +86,14 @@ void LedstripDimmer::calcPixelLevels(float wantedLevel) {
 }
 
 void LedstripDimmer::updateColorspace(float whiteTemperature, float whiteBrightness) {
-  rgbwSpace = Colorspace(whiteTemperature, whiteBrightness, true, false);
+  bool doGamma = false; // gamma > 1.1;
+  rgbwSpace = Colorspace(whiteTemperature, whiteBrightness, true, doGamma);
 }
 
 float LedstripDimmer::maxLevelCorrectColor() {
     // Check the maximum brightness we can correctly render and remember that
-  Colorspace rgbwSpaceCorrect = Colorspace(rgbwSpace.WTemperature, rgbwSpace.WBrightness, true, false);
   TempFColor maxTFColor(temperature, 1.0);
-  correctRgbwColor = rgbwSpaceCorrect.toRgbw(maxTFColor);
+  correctRgbwColor = rgbwSpace.toRgbw(maxTFColor);
   float maxLevel = correctRgbwColor.CalculateTrueBrightness(rgbwSpace.WBrightness);
   DEBUG_LEDSTRIP IotsaSerial.printf("LedstripDimmer.maxLevelCorrectColor: wTemp=%f wBright=%f wtdTemp=%f R=%f G=%f B=%f W=%f maxCorrect=%f\n", rgbwSpace.WTemperature, rgbwSpace.WTemperature, temperature, correctRgbwColor.R, correctRgbwColor.G, correctRgbwColor.B, correctRgbwColor.W, maxLevel);
   return maxLevel;
