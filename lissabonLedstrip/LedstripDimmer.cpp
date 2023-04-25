@@ -41,37 +41,41 @@ void LedstripDimmer::calcPixelLevels(float wantedLevel) {
   //
   // Determine how much light we can produce with the preferred curve
   //
-  float curSpread = focalSpread;
-  float cumulativeValue = levelFuncCumulative(0, count, curSpread);
-  DEBUG_LEDSTRIP IotsaSerial.printf("LedstripDimmer.calcPixelLevels: wantedLevel=%f curSpread=%f cumulativeValue=%f\n", wantedLevel, curSpread, cumulativeValue);
-#if 0
+  float cumulativeValue = levelFuncCumulative(0, count, 1);
+  DEBUG_LEDSTRIP IotsaSerial.printf("LedstripDimmer.calcPixelLevels: wantedLevel=%f focalSpread=%f focalPoint=%f cumulativeValue=%f\n", wantedLevel, focalSpread, focalPoint, cumulativeValue);
   //
-  // With this curve we can produce cumulativeValue light.
-  // If that is not enough we widen the curve.
-  // xxxjack there must be a mathematical to do this, in stead of approximating.
+  // We may need to increase spread, because the current curve may result in brightness > 1 for some
+  // pixels.
   //
-  if (wantedLevel > cumulativeValue) {
-    while (wantedLevel > cumulativeValue && curSpread < 1) {
-      curSpread = (curSpread + 0.05)*1.05;
-      cumulativeValue = levelFuncCumulative(0, count, curSpread);
+  float spreadCorrection = 1;
+  float correction = count / cumulativeValue;
+  if (pixelLevels != NULL) {
+    for(int i=0; i<count; i++) {
+      float thisValue = levelFuncCumulative(i, i+1, 1) * correction;
+      DEBUG_LEDSTRIP IotsaSerial.printf("LedstripDimmer.calcPixelLevels: uncorrected pixelLevel[%d] = %f\n", i, thisValue);
+      if (thisValue*wantedLevel > spreadCorrection) spreadCorrection = thisValue*wantedLevel;
     }
-    DEBUG_LEDSTRIP IotsaSerial.printf("LedstripDimmer.calcPixelLevels: wantedLevel=%f adjusted_curSpread=%f cumulativeValue=%f\n", wantedLevel, curSpread, cumulativeValue);
   }
-#endif
+  cumulativeValue = levelFuncCumulative(0, count, spreadCorrection);
+  DEBUG_LEDSTRIP IotsaSerial.printf("LedstripDimmer.calcPixelLevels: spreadCorrection=%f cumulativeValue=%f\n", spreadCorrection, cumulativeValue);
   //
   // cumulativeValue is the amount of light produced. We need to
   // correct this so level is what is actually produced.
-  float correction = 1 / cumulativeValue;
+  //
+  // This will still produce some curve values slightly bigger than 1.0 but we simply  clamp
+  // those in loop().
+  //
+  correction = count / cumulativeValue;
   float sumLevel = 0;
   if (pixelLevels != NULL) {
     for(int i=0; i<count; i++) {
-      float thisValue = levelFuncCumulative(i, i+1, curSpread) * correction;
+      float thisValue = levelFuncCumulative(i, i+1, spreadCorrection) * correction;
       pixelLevels[i] = thisValue;
       DEBUG_LEDSTRIP IotsaSerial.printf("LedstripDimmer.calcPixelLevels: pixelLevel[%d] = %f\n", i, thisValue);
       sumLevel += thisValue;
     }
   }
-  DEBUG_LEDSTRIP IotsaSerial.printf("LedstripDimmer.calcPixelLevels: sum(pixelLevel)=%f avg=%f\n", sumLevel, sumLevel/configNUM_THREAD_LOCAL_STORAGE_POINTERS);
+  DEBUG_LEDSTRIP IotsaSerial.printf("LedstripDimmer.calcPixelLevels: sum(pixelLevel)=%f avg=%f\n", sumLevel, sumLevel/count);
   DEBUG_LEDSTRIP IotsaSerial.printf("LedstripDimmer.calcPixelLevels: pixelLevels updated\n");
 }
 
@@ -103,16 +107,15 @@ String LedstripDimmer::colorDump() {
   return rv;
 }
 
-float LedstripDimmer::levelFuncCumulative(int left, int right, float spread) {
+float LedstripDimmer::levelFuncCumulative(int left, int right, float spreadFactor) {
   // Cumulative light function. left and right are 0..1 values.
   // We assume a range of -8..8 is "close enough" that erf(8)-erf(-8) is 2.
   float leftFraction = (float)left / count;
   float rightFraction = (float) right / count;
-  // xxxjack -8 needs to be adjusted for focalPoint
-  spread = 1 - spread;
-  if (spread <= 0) spread = 0.01;
-  float leftEdge = -8 * spread;
-  float rightEdge = 8 * spread;
+  float range  = (1 - focalSpread)/spreadFactor;
+  if (range <= 0) range = 0.001;
+  float leftEdge = (0-focalPoint*16) * range;
+  float rightEdge =(16-focalPoint*16) * range;
   float leftScaled = leftEdge + leftFraction * (rightEdge-leftEdge);
   float rightScaled = leftEdge + rightFraction * (rightEdge-leftEdge);
   float erfLeft = erf(leftScaled);
@@ -301,6 +304,7 @@ void LedstripDimmer::loop() {
   
   for (int i=0; i<count; i++) {
     float thisLevel = curLevel*pixelLevels[i];
+    if (thisLevel > 1) thisLevel = 1;
     RgbwFColor thisPixelFColor = correctRgbwColor.Dim(thisLevel);
     RgbwColor thisPixelColor = thisPixelFColor;
     DEBUG_LEDSTRIP IotsaSerial.printf("LedstripDimmer.loop: pixel %d: level=%f r=%d g=%d b=%d w=%d\n", i, thisLevel, thisPixelColor.R, thisPixelColor.G, thisPixelColor.B, thisPixelColor.W);
