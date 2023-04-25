@@ -28,27 +28,22 @@ public:
   void setHandler(uint8_t *_buffer, size_t _count, int bpp, IotsaPixelsourceHandler *handler);
 protected:
   IotsaPixelstripMod& mod;
-  typedef enum {
-    calibration_normal, // Normal mode: not calibrating
-    calibration_rgb, // RGB mode: set color only using RGB leds (keeping W led off)
-    calibration_alternating, // Alternating mode: odd/even pixels are driven with RGB and RGBW
-    calibration_hard  // Hard calibration: show RGBW values are provided through the REST calibrationData interface
-    } CalibrationMode;
-  CalibrationMode calibrationMode; // When true, alternate pixels use RGBW and RGB
-  float calibrationData[8];
   int count;  // Number of LEDs
   int bpp; // Number of colors per LED (3 or 4)
-  uint8_t *buffer = NULL; // per-pixel 8bit RGBW values (to pass to pixelstrip module)
+  uint8_t *pixelBuffer = NULL; // per-pixel 8bit RGBW values (to pass to pixelstrip module)
   float *pixelLevels = NULL; // per-pixel relative intensities
   IotsaPixelsourceHandler *stripHandler;
 
   void updateColorspace(float whiteTemperature, float whiteBrightness);
-  void updateLevel();
-  void updatePixelLevels();
+  void calcLevel();
+  void calcPixelLevels(float wantedLevel);
   float maxLevelCorrectColor();
   String colorDump();
   Colorspace rgbwSpace;
-
+  RgbwFColor correctRgbwColor;
+  float calibrationData[8]; // for calibration: 2 sets of RGBW values, for alternating pixels.
+  bool inCalibrationMode = false; // Use calibrationData in stead of correctRgbwColor and
+  
   float focalPoint;  // Where the focus of the light is (0.0 .. 1.0)
   float focalSpread;  // How wide the focus is (0.0 .. 1.0)
   float levelFunc(float x, float spreadOverride=-1); // Relative level at point (0..1)

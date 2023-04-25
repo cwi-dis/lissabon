@@ -15,13 +15,13 @@ IotsaPixelstripMod::handler() {
     // Note: this sets the value for a single LED, not the value for a single NeoPixel (3/4 leds)
     int idx = server->arg("setIndex").toInt();
     int val = server->arg("setValue").toInt();
-    if (buffer && idx >= 0 && idx <= count*IOTSA_NPB_BPP) {
-      buffer[idx] = val;
+    if (pixelBuffer && idx >= 0 && idx <= count*IOTSA_NPB_BPP) {
+      pixelBuffer[idx] = val;
       pixelSourceCallback();
     }
   } else if (server->hasArg("clear")) {
-    if (buffer) {
-      memset(buffer, 0, count*IOTSA_NPB_BPP);
+    if (pixelBuffer) {
+      memset(pixelBuffer, 0, count*IOTSA_NPB_BPP);
       pixelSourceCallback();
     }
   } else {
@@ -76,15 +76,15 @@ void IotsaPixelstripMod::setupStrip() {
   strip = new IotsaNeoPixelBus(count, pin);
   strip->Begin();
 #endif
-  if (buffer) free(buffer);
-  buffer = (uint8_t *)malloc(count*IOTSA_NPB_BPP);
-  if (buffer == NULL) {
+  if (pixelBuffer) free(pixelBuffer);
+  pixelBuffer = (uint8_t *)malloc(count*IOTSA_NPB_BPP);
+  if (pixelBuffer == NULL) {
     IotsaSerial.println("No memory");
   }
-  memset(buffer, 0, count*IOTSA_NPB_BPP);
+  memset(pixelBuffer, 0, count*IOTSA_NPB_BPP);
   pixelSourceCallback();
   if (source) {
-    source->setHandler(buffer, count, IOTSA_NPB_BPP, this);
+    source->setHandler(pixelBuffer, count, IOTSA_NPB_BPP, this);
   }
 }
 
@@ -149,9 +149,9 @@ bool IotsaPixelstripMod::getHandler(const char *path, JsonObject& reply) {
     return true;
   } else if (strcmp(path, "/api/pixels") == 0) {
     JsonArray data = reply.createNestedArray("data");
-    if (buffer) {
+    if (pixelBuffer) {
       for(int i=0; i<count*IOTSA_NPB_BPP; i++) {
-        data.add(buffer[i]);
+        data.add(pixelBuffer[i]);
       }
     }
     return true;
@@ -181,9 +181,9 @@ bool IotsaPixelstripMod::putHandler(const char *path, const JsonVariant& request
     }
     return anyChanged;
   } else if (strcmp(path, "/api/pixels") == 0) {
-    if (buffer == NULL) return false;
+    if (pixelBuffer == NULL) return false;
     if (reqObj.containsKey("clear") && reqObj["clear"]) {
-      memset(buffer, 0, count*IOTSA_NPB_BPP);
+      memset(pixelBuffer, 0, count*IOTSA_NPB_BPP);
     }
     int start = 0;
     if (reqObj.containsKey("start")) {
@@ -193,7 +193,7 @@ bool IotsaPixelstripMod::putHandler(const char *path, const JsonVariant& request
     for(JsonArray::iterator it=data.begin(); it!=data.end(); ++it) {
       if (start >= count*IOTSA_NPB_BPP) return false;
       int value = it->as<int>();
-      buffer[start++] = value;
+      pixelBuffer[start++] = value;
     }
     pixelSourceCallback();
     return true;
@@ -203,10 +203,10 @@ bool IotsaPixelstripMod::putHandler(const char *path, const JsonVariant& request
 #endif // IOTSA_WITH_API
 
 void IotsaPixelstripMod::pixelSourceCallback() {
-  if (buffer == NULL) {
+  if (pixelBuffer == NULL) {
     return;
   }
-  uint8_t *ptr = buffer;
+  uint8_t *ptr = pixelBuffer;
   // IFDEBUG IotsaSerial.println("Show ");
   bool anyOn = false;
   for (int i=0; i<count*IOTSA_NPB_BPP; i++) {

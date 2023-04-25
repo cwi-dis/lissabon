@@ -82,7 +82,7 @@ protected:
   void handler();
   IotsaPixelsource *source;
   IotsaNeoPixelBus *strip;
-  uint8_t *buffer;
+  uint8_t *pixelBuffer;
   int count;
   int pin;
 #ifdef IOTSA_NPB_POWER_PIN
