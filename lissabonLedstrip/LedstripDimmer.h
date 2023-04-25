@@ -46,8 +46,7 @@ protected:
   
   float focalPoint;  // Where the focus of the light is (0.0 .. 1.0)
   float focalSpread;  // How wide the focus is (0.0 .. 1.0)
-  float levelFunc(float x, float spreadOverride=-1); // Relative level at point (0..1)
-  float levelFuncCumulative(float x, float spreadOverride=-1); // Cumulative level at point
+  float levelFuncCumulative(int left, int right, float spreadOverride); // Cumulative level at point
 };
 };
 #endif // _LEDSTRIPDIMMER_H_

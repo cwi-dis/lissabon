@@ -37,24 +37,14 @@ void LedstripDimmer::calcLevel() {
 }
 
 void LedstripDimmer::calcPixelLevels(float wantedLevel) {
-  //
-  // Compute curve.
-  // 
-  // If spread==0 we use a uniform curve.
-  if (focalSpread < 0.01 || focalSpread > 0.99) {
-    for(int i=0; i<count; i++) {
-      pixelLevels[i] = 1.0;
-    }
-    return;
-  }
+ 
   //
   // Determine how much light we can produce with the preferred curve
   //
   float curSpread = focalSpread;
-  float beginValue = levelFuncCumulative(0, curSpread);
-  float endValue = levelFuncCumulative(1, curSpread);
-  float cumulativeValue = endValue - beginValue;
+  float cumulativeValue = levelFuncCumulative(0, count, curSpread);
   DEBUG_LEDSTRIP IotsaSerial.printf("LedstripDimmer.calcPixelLevels: wantedLevel=%f curSpread=%f cumulativeValue=%f\n", wantedLevel, curSpread, cumulativeValue);
+#if 0
   //
   // With this curve we can produce cumulativeValue light.
   // If that is not enough we widen the curve.
@@ -63,21 +53,19 @@ void LedstripDimmer::calcPixelLevels(float wantedLevel) {
   if (wantedLevel > cumulativeValue) {
     while (wantedLevel > cumulativeValue && curSpread < 1) {
       curSpread = (curSpread + 0.05)*1.05;
-      beginValue = levelFuncCumulative(0, curSpread);
-      endValue = levelFuncCumulative(1, curSpread);
-      cumulativeValue = endValue - beginValue;
+      cumulativeValue = levelFuncCumulative(0, count, curSpread);
     }
     DEBUG_LEDSTRIP IotsaSerial.printf("LedstripDimmer.calcPixelLevels: wantedLevel=%f adjusted_curSpread=%f cumulativeValue=%f\n", wantedLevel, curSpread, cumulativeValue);
   }
-
+#endif
   //
   // cumulativeValue is the amount of light produced. We need to
   // correct this so level is what is actually produced.
-  float correction = wantedLevel / cumulativeValue;
+  float correction = 1 / cumulativeValue;
   float sumLevel = 0;
   if (pixelLevels != NULL) {
     for(int i=0; i<count; i++) {
-      float thisValue = levelFunc((float)(i+1)/count, curSpread) * correction;
+      float thisValue = levelFuncCumulative(i, i+1, curSpread) * correction;
       pixelLevels[i] = thisValue;
       DEBUG_LEDSTRIP IotsaSerial.printf("LedstripDimmer.calcPixelLevels: pixelLevel[%d] = %f\n", i, thisValue);
       sumLevel += thisValue;
@@ -115,32 +103,21 @@ String LedstripDimmer::colorDump() {
   return rv;
 }
 
-float LedstripDimmer::levelFunc(float x, float spreadOverride) {
-  // Light distribution function. Returns light level for position x (0<=x<1).
-  // First determine which spread we want to use
-  float spread = spreadOverride;
-  if (spread < 0) spread = focalSpread;
-  // If spread is close to 1.0 we use all lights
-  if (spread > 0.99) return 1;
-  // We turn spread into a [0, inf) number
-  spread = (1/(1-powf(spread, 2)))-1;
-  // Now we can compute the level function. Similar shape to a normal distribution.
-  float xprime = (x-focalPoint)/spread;
-  return exp(-powf(xprime, 2));
-}
-
-float LedstripDimmer::levelFuncCumulative(float x, float spreadOverride) {
-  // Culumative light function, integral of levelFunc. See levelFunc for details.
-  // First determine which spread we want to use
-  float spread = spreadOverride;
-  if (spread < 0) spread = focalSpread;
-  // If spread is close to 1.0 we use all lights
-  if (spread > 0.99) return x;
-  // We turn spread into a [0, inf) number
-  spread = (1/(1-powf(spread, 2)))-1;
-  // Now we can compute the level function. Similar shape to a normal distribution.
-  float xprime = (x-focalPoint)/spread;
-  return -0.5*sqrt(PI)*spread*erf(-xprime);
+float LedstripDimmer::levelFuncCumulative(int left, int right, float spread) {
+  // Cumulative light function. left and right are 0..1 values.
+  // We assume a range of -8..8 is "close enough" that erf(8)-erf(-8) is 2.
+  float leftFraction = (float)left / count;
+  float rightFraction = (float) right / count;
+  // xxxjack -8 needs to be adjusted for focalPoint
+  spread = 1 - spread;
+  if (spread <= 0) spread = 0.01;
+  float leftEdge = -8 * spread;
+  float rightEdge = 8 * spread;
+  float leftScaled = leftEdge + leftFraction * (rightEdge-leftEdge);
+  float rightScaled = leftEdge + rightFraction * (rightEdge-leftEdge);
+  float erfLeft = erf(leftScaled);
+  float erfRight = erf(rightScaled);
+  return (erfRight - erfLeft) / 2;
 }
 
 
