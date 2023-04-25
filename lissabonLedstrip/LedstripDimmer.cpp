@@ -4,7 +4,10 @@
 //const float PI = atan(1)*4;
 const float SQRT_HALF = sqrt(0.5);
 
-#define DEBUG_LEDSTRIP if(1)
+#define DEBUG_LEDSTRIP if(0)
+
+// Calculating the curve every loop is more cpu-intensitive but animations look much better.
+#define LEDSTRIP_CALCULATE_LEVELS_EVERY_LOOP
 
 namespace Lissabon {
 
@@ -20,10 +23,13 @@ void LedstripDimmer::setup() {
 }
 
 void LedstripDimmer::updateDimmer() {
+  DEBUG_LEDSTRIP IotsaSerial.println("LedstripDimmer.updateDimmer()");
   calcLevel();
+#ifndef LEDSTRIP_CALCULATE_LEVELS_EVERY_LOOP
   // xxxjack calling calcPixelLevels here (in stead of in loop) means the curve
   // remains the same during fades. Calling it in loop() would fix that.
   calcPixelLevels(level);
+#endif
   // Compute animation duration, which signals to loop() that things neeed to change.
   AbstractDimmer::updateDimmer();
 }
@@ -297,9 +303,10 @@ void LedstripDimmer::loop() {
   // Compute current level (taking into account isOn and animation progress)
   //
   calcCurLevel();
-  // Only for calibration mode rgb or alternating we also need to color in RGB-only.
-  // We adjust for the brightness of the white LED
-
+#ifdef LEDSTRIP_CALCULATE_LEVELS_EVERY_LOOP
+  calcPixelLevels(curLevel);
+#endif
+  
   uint8_t *p = pixelBuffer;
   
   for (int i=0; i<count; i++) {
