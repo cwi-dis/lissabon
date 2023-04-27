@@ -23,8 +23,10 @@
 #define PAUSE_BETWEEN_SCANS 1953
 
 void IotsaBLEClientMod::configLoad() {
-#ifdef IOTSA_BLE_GENERIC
   IotsaConfigFileLoad cf("/config/bleclient.cfg");
+  cf.get("scan_interval", scan_interval, scan_interval);
+  cf.get("scan_window", scan_window, scan_window);
+#ifdef IOTSA_BLE_GENERIC
   devices.clear();
   int nDevice;
   cf.get("nDevice", nDevice, 0);
@@ -42,8 +44,10 @@ void IotsaBLEClientMod::configLoad() {
 }
 
 void IotsaBLEClientMod::configSave() {
-#ifdef IOTSA_BLE_GENERIC
   IotsaConfigFileSave cf("/config/bleclient.cfg");
+  cf.put("scan_interval", scan_interval);
+  cf.put("scan_window", scan_window);
+#ifdef IOTSA_BLE_GENERIC
   cf.put("nDevice", (int)devices.size());
   int i = 0;
   for (auto it : devices) {
@@ -58,13 +62,7 @@ void IotsaBLEClientMod::setup() {
   IFDEBUG IotsaSerial.println("BLEClientmod::setup()");
   configLoad();
   BLEDevice::init(iotsaConfig.hostName.c_str());
-  // The scanner is a singleton. We initialize it once.
-  scanner = BLEDevice::getScan();
-  scanner->setAdvertisedDeviceCallbacks(this, true);
-  scanner->setActiveScan(true);
-  scanner->setInterval(155);
-  scanner->setWindow(151);
-  scanner = NULL;
+  setupScanner();
 #ifdef IOTSA_BLE_GENERIC
   //
   // Setup callback so we are informaed of unknown dimmers.
@@ -72,6 +70,17 @@ void IotsaBLEClientMod::setup() {
   auto callback = std::bind(&IotsaBLEClientMod::unknownBLEDeviceFound, this, std::placeholders::_1);
   setUnknownDeviceFoundCallback(callback);
 #endif // IOTSA_BLE_GENERIC
+}
+
+void IotsaBLEClientMod::setupScanner() {
+  // The scanner is a singleton. We initialize it once.
+  scanner = BLEDevice::getScan();
+  scanner->setAdvertisedDeviceCallbacks(this, true);
+  scanner->setActiveScan(true);
+  scanner->setInterval(scan_interval);
+  scanner->setWindow(scan_window);
+  scanner = NULL;
+
 }
 
 #ifdef IOTSA_BLE_GENERIC
@@ -127,6 +136,8 @@ bool IotsaBLEClientMod::formHandler_args(IotsaWebServer *server, const String& f
 #endif // IOTSA_WITH_WEB
 
 bool IotsaBLEClientMod::getHandler(const char *path, JsonObject& reply) {
+  reply["scan_interval"] = scan_interval;
+  reply["scan_window"] = scan_window;
   if (unknownDevices.size()) {
     JsonArray unknownReply = reply.createNestedArray("unassigned");
     for (auto it : unknownDevices) {
@@ -138,16 +149,26 @@ bool IotsaBLEClientMod::getHandler(const char *path, JsonObject& reply) {
 }
 bool IotsaBLEClientMod::putHandler(const char *path, const JsonVariant& request, JsonObject& reply) {
   bool anyChanged = false;
+  bool _startScanUnknown = false;
   JsonObject reqObj = request.as<JsonObject>();
-  if (reqObj["scanUnknown"]|0) {
+  if (reqObj.containsKey("scan_interval")) {
+    scan_interval = reqObj["scan_interval"];
     anyChanged = true;
-    startScanUnknown();
   }
-#if 0
+  if (reqObj.containsKey("scan_window")) {
+    scan_window = reqObj["scan_window"];
+    anyChanged = true;
+  }
+  if (reqObj["scanUnknown"]|0) {
+    _startScanUnknown = true;
+  }
   if (anyChanged) {
     configSave();
+    setupScanner();
   }
-#endif
+  if (_startScanUnknown) {
+    startScanUnknown();
+  }
   return anyChanged;
 }
 
@@ -243,8 +264,12 @@ void IotsaBLEClientMod::stopScanning() {
 }
 
 bool IotsaBLEClientMod::canConnect() {
+#if 0
   // Connecting to a device while we are scanning has proved to result in issues.
   return scanner == NULL;
+#else
+  return true;
+#endif
 }
 
 IotsaBLEClientMod* IotsaBLEClientMod::scanningMod = NULL;
@@ -256,6 +281,8 @@ void IotsaBLEClientMod::scanComplete(BLEScanResults results) {
 }
 
 void IotsaBLEClientMod::serverSetup() {
+  api.setup("/api/bleclient", true, true, false);
+  name = "bleclient";
 }
 
 void IotsaBLEClientMod::setUnknownDeviceFoundCallback(BleDeviceFoundCallback _callback) {

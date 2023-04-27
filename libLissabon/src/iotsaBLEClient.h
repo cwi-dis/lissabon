@@ -64,12 +64,15 @@ protected:
   void configLoad();
   void configSave();
   void onResult(BLEAdvertisedDevice *advertisedDevice);
+  void setupScanner();
   void updateScanning();
   void startScanning();
   void stopScanning();
   void startScanUnknown();
   static void scanComplete(BLEScanResults results);
   static IotsaBLEClientMod *scanningMod;
+  int scan_interval = 155;
+  int scan_window = 151;
   bool scanForUnknownClients = false;
   uint32_t scanUnknownUntilMillis = 0;
   bool shouldUpdateScan = false;
