@@ -57,10 +57,11 @@ Display::Display()
   oled->drawXBitmap(LEVEL_X-off_width, LEVEL_Y, off_bits, off_width, off_height, WHITE);
   oled->drawRect(LEVEL_X, LEVEL_Y, LEVEL_WIDTH, LEVEL_HEIGHT, WHITE);
   oled->drawXBitmap(LEVEL_X+LEVEL_WIDTH+1, LEVEL_Y, on_bits, on_width, on_height, WHITE);
-
+#ifdef DIMMER_WITH_TEMPERATURE
   oled->drawXBitmap(TEMP_X-off_width, TEMP_Y, lightbulb_bits, lightbulb_width, lightbulb_height, WHITE);
   oled->drawRect(TEMP_X, TEMP_Y, TEMP_WIDTH, TEMP_HEIGHT, WHITE);
   oled->drawXBitmap(TEMP_X+TEMP_WIDTH+1, TEMP_Y, sun_bits, sun_width, sun_height, WHITE);
+#endif
   oled->display();
 }
 
@@ -88,10 +89,20 @@ void Display::addStrip(int index, String name, bool available) {
   oled->setCursor(x, y);
   oled->print(name.c_str());
   if (!available) {
+    IotsaSerial.printf("xxxjack %d unavailable\n", index);
     int16_t x1, y1;
     uint16_t w, h;
     oled->getTextBounds(name, x, y, &x1, &y1, &w, &h);
-      oled->writeFastHLine(x1, y1+h/2, w, WHITE);
+#if 0
+    oled->writeFastHLine(x1, y1+h/2, w, WHITE);
+#else
+    for (int iy=y1; iy < y1+h; iy++) {
+      int oddY = iy & 1;
+      for(int ix=x1+oddY; ix < x1+w; ix+=2) {
+        oled->drawPixel(ix, iy, BLACK);
+      }
+    }
+#endif
   }
 }
 
@@ -153,14 +164,18 @@ void Display::setLevel(float level, bool on, float wantedLevel) {
 }
 
 void Display::clearTemp() {
+#ifdef DIMMER_WITH_TEMPERATURE
   // xxxjack clear color area
   oled->fillRect(TEMP_X, TEMP_Y, TEMP_WIDTH, TEMP_HEIGHT, BLACK);
+#endif
 }
 
 void Display::setTemp(float color) {
+#ifdef DIMMER_WITH_TEMPERATURE
   clearTemp();
   oled->drawRect(TEMP_X, TEMP_Y, TEMP_WIDTH, TEMP_HEIGHT, WHITE);
   oled->drawFastVLine(TEMP_X+int(color*TEMP_WIDTH), TEMP_Y, TEMP_HEIGHT, WHITE);
+#endif
 }
 
 void Display::showActivity(bool activity) {

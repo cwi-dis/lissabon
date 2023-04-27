@@ -124,6 +124,10 @@ Buttons::uiEncoderChanged() {
     if (encoder.value < 0) encoder.value = 0;
     if (encoder.value >= ENCODER_STEPS) encoder.value = ENCODER_STEPS;
     float f_value = (float)encoder.value / ENCODER_STEPS;
+    if (f_value < 0) {
+        f_value = 0;
+        encoder.value = 0;
+    }
     if (f_value > 1.0) {
       f_value = 1.0;
       encoder.value = ENCODER_STEPS;
@@ -138,6 +142,10 @@ Buttons::uiEncoderChanged() {
     if (encoder.value < 0) encoder.value = 0;
     if (encoder.value >= ENCODER_STEPS) encoder.value = ENCODER_STEPS;
     float f_value = (float)encoder.value / ENCODER_STEPS;
+    if (f_value < 0) {
+        f_value = 0;
+        encoder.value = 0;
+    }
     if (f_value > 1.0) {
       f_value = 1.0;
       encoder.value = ENCODER_STEPS;
