@@ -259,7 +259,11 @@ void IotsaBLEClientMod::serverSetup() {
 }
 
 void IotsaBLEClientMod::setUnknownDeviceFoundCallback(BleDeviceFoundCallback _callback) {
-  callback = _callback;
+  unknownDeviceCallback = _callback;
+}
+
+void IotsaBLEClientMod::setKnownDeviceChangedCallback(BleDeviceFoundCallback _callback) {
+  knownDeviceCallback = _callback;
 }
 
 void IotsaBLEClientMod::setDuplicateNameFilter(bool noDuplicateNames) {
@@ -301,6 +305,7 @@ void IotsaBLEClientMod::onResult(BLEAdvertisedDevice *advertisedDevice) {
     if (changed) {
       devicesByAddress[advertisedDevice->getAddress().toString()] = dev;
       IFDEBUG IotsaSerial.printf("BLEClientMod: advertisement update byname for %s\n", deviceName.c_str());
+      knownDeviceCallback(*advertisedDevice);
     }
     shouldUpdateScan = true; // We may have found what we were looking for
     dontUpdateScanBefore = 0;
@@ -313,13 +318,14 @@ void IotsaBLEClientMod::onResult(BLEAdvertisedDevice *advertisedDevice) {
     if (changed) {
       devicesByAddress[advertisedDevice->getAddress().toString()] = dev;
       IFDEBUG IotsaSerial.printf("BLEClientMod: advertisement update byaddress for %s\n", deviceName.c_str());
+      knownDeviceCallback(*advertisedDevice);
     }
     shouldUpdateScan = true; // We may have found what we were looking for
     dontUpdateScanBefore = 0;
     return;
   }
   // Do we want callbacks for unknown devices?
-  if (callback == NULL) return;
+  if (unknownDeviceCallback == NULL) return;
   // Have we seen this unknown device before?
   if ( duplicateNameFilter && unknownDevices.find(advertisedDevice->getName()) != unknownDevices.end()) return;
   // Do we filter on services?
@@ -333,7 +339,7 @@ void IotsaBLEClientMod::onResult(BLEAdvertisedDevice *advertisedDevice) {
     const uint16_t *mfg = (const uint16_t *)mfgData.c_str();
     if (*mfg != manufacturerFilter) return;
   }
-  callback(*advertisedDevice);
+  unknownDeviceCallback(*advertisedDevice);
 }
 
 IotsaBLEClientConnection* IotsaBLEClientMod::addDevice(std::string id) {

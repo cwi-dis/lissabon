@@ -89,7 +89,7 @@ void Display::addStrip(int index, String name, bool available) {
   oled->setCursor(x, y);
   oled->print(name.c_str());
   if (!available) {
-    IotsaSerial.printf("xxxjack %d unavailable\n", index);
+    //IotsaSerial.printf("xxxjack %d unavailable\n", index);
     int16_t x1, y1;
     uint16_t w, h;
     oled->getTextBounds(name, x, y, &x1, &y1, &w, &h);

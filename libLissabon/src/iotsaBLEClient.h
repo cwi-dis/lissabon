@@ -49,6 +49,7 @@ public:
   //
   void findUnknownDevices(bool on);
   void setUnknownDeviceFoundCallback(BleDeviceFoundCallback _callback);
+  void setKnownDeviceChangedCallback(BleDeviceFoundCallback _callback);
   void setDuplicateNameFilter(bool noDuplicates);
   void setServiceFilter(const BLEUUID& serviceUUID);
   void setManufacturerFilter(uint16_t manufacturerID);
@@ -75,7 +76,8 @@ protected:
   uint32_t dontUpdateScanBefore = 0;
   bool disconnectClientsForScan = false;
   BLEScan *scanner = NULL;
-  BleDeviceFoundCallback callback = NULL;
+  BleDeviceFoundCallback unknownDeviceCallback = NULL;
+  BleDeviceFoundCallback knownDeviceCallback = NULL;
   bool duplicateNameFilter = false;
   BLEUUID* serviceFilter = NULL;
   uint16_t manufacturerFilter;

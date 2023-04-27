@@ -80,6 +80,7 @@ protected:
   bool getHandler(const char *path, JsonObject& reply);
   bool putHandler(const char *path, const JsonVariant& request, JsonObject& reply);
   void unknownBLEDimmerFound(BLEAdvertisedDevice& device);
+  void knownBLEDimmerChanged(BLEAdvertisedDevice& device);
   virtual String formHandler_field_perdevice(const char *deviceName) override;
 private:
   void dimmerOnOffChanged();
@@ -399,8 +400,10 @@ void IotsaLedstripControllerMod::setup() {
   _setupDisplay();
   buttons.setup();
 
-  auto callback = std::bind(&IotsaLedstripControllerMod::unknownBLEDimmerFound, this, std::placeholders::_1);
-  setUnknownDeviceFoundCallback(callback);
+  auto unknownCallback = std::bind(&IotsaLedstripControllerMod::unknownBLEDimmerFound, this, std::placeholders::_1);
+  setUnknownDeviceFoundCallback(unknownCallback);
+  auto knownCallback = std::bind(&IotsaLedstripControllerMod::knownBLEDimmerChanged, this, std::placeholders::_1);
+  setKnownDeviceChangedCallback(knownCallback);
   setDuplicateNameFilter(true);
   setServiceFilter(Lissabon::Dimmer::serviceUUID);
   //
@@ -428,6 +431,12 @@ void IotsaLedstripControllerMod::startScanUnknown() {
 void IotsaLedstripControllerMod::unknownBLEDimmerFound(BLEAdvertisedDevice& deviceAdvertisement) {
   LOG_BLE IotsaSerial.printf("LissabonController: unknownDeviceFound: device \"%s\"\n", deviceAdvertisement.getName().c_str());
   unknownDevices.insert(deviceAdvertisement.getName());
+}
+
+void IotsaLedstripControllerMod::knownBLEDimmerChanged(BLEAdvertisedDevice& deviceAdvertisement) {
+  std::string name = deviceAdvertisement.getName();
+  LOG_BLE IotsaSerial.printf("LissabonController: knownDeviceChanged: device \"%s\"\n", name.c_str());
+  dimmerAvailableChanged(true, false);
 }
 
 void IotsaLedstripControllerMod::loop() {
