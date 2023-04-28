@@ -68,6 +68,7 @@ protected:
   void updateScanning();
   void startScanning();
   void stopScanning();
+  bool isScanning();
   void startScanUnknown();
   static void scanComplete(BLEScanResults results);
   static IotsaBLEClientMod *scanningMod;
@@ -76,8 +77,6 @@ protected:
   bool scanForUnknownClients = false;
   uint32_t scanUnknownUntilMillis = 0;
   bool shouldUpdateScan = false;
-  uint32_t dontUpdateScanBefore = 0;
-  bool disconnectClientsForScan = false;
   BLEScan *scanner = NULL;
   BleDeviceFoundCallback unknownDeviceCallback = NULL;
   BleDeviceFoundCallback knownDeviceCallback = NULL;

@@ -16,11 +16,6 @@
 // For debugging: define this to print all client advertisements received
 #undef DEBUG_PRINT_ALL_CLIENTS
 
-//
-// How long we should pause between scans (so connections have time to happen).
-// Picked not be a a multiple of common advertisement intervals.
-//
-#define PAUSE_BETWEEN_SCANS 1953
 
 void IotsaBLEClientMod::configLoad() {
   IotsaConfigFileLoad cf("/config/bleclient.cfg");
@@ -181,8 +176,10 @@ void IotsaBLEClientMod::startScanUnknown() {
 void IotsaBLEClientMod::findUnknownDevices(bool on) {
   scanForUnknownClients = on;
   shouldUpdateScan = true;
-  dontUpdateScanBefore = 0;
-  disconnectClientsForScan = true;
+}
+
+bool IotsaBLEClientMod::isScanning() {
+  return scanner != nullptr;
 }
 
 void IotsaBLEClientMod::updateScanning() {
@@ -200,7 +197,7 @@ void IotsaBLEClientMod::updateScanning() {
   }
   if (shouldScan) {
     // if we should be scanning and we aren't we start scanning
-    if (scanner == NULL) {
+    if (!isScanning()) {
       IFDEBUG {
         IotsaSerial.print("BLE scan for: ");
         if (scanForUnknownClients) { 
@@ -217,12 +214,19 @@ void IotsaBLEClientMod::updateScanning() {
     }
   } else {
     // if we should not be scanning but we are: we stop
-    if (scanner != NULL) stopScanning();
+    if (isScanning()) {
+      stopScanning();
+    }
   }
 }
 
 void IotsaBLEClientMod::startScanning() {
-  IFDEBUG IotsaSerial.println("BLE scan start");
+  if (isScanning()) {
+    IotsaSerial.println("IotsaBLEClientMod.startScanning: already scanning...");
+    return;
+  }
+  IFDEBUG IotsaSerial.println("IotsaBLEClientMod: BLE scan start");
+#if 0
   // First close all connections. Scanning while connected has proved to result in issues.
   for (auto it : devices) {
     if (it.second && it.second->isConnected()) {
@@ -238,6 +242,7 @@ void IotsaBLEClientMod::startScanning() {
       it.second->disconnect();
     }
   }
+#endif
   // Now start the scan
   scanner = BLEDevice::getScan();
   scanningMod = this;
@@ -247,8 +252,10 @@ void IotsaBLEClientMod::startScanning() {
 }
 
 void IotsaBLEClientMod::stopScanning() {
-  if (scanner) {
-    IFDEBUG IotsaSerial.println("BLE scan stop");
+  if (!isScanning()) {
+    IotsaSerial.println("IotsaBLEClientMod.stopScanning: not scanning...");
+  } else {
+    IFDEBUG IotsaSerial.println("IotsaBLEClientMod.stopScanning: BLE scan stop");
     scanner->stop();
     scanner = NULL;
     scanningMod = NULL;
@@ -259,8 +266,6 @@ void IotsaBLEClientMod::stopScanning() {
   }
   // Next time through loop, check whether we should scan again.
   shouldUpdateScan = true;
-  disconnectClientsForScan = false;
-  dontUpdateScanBefore = millis() + PAUSE_BETWEEN_SCANS;
 }
 
 bool IotsaBLEClientMod::canConnect() {
@@ -275,7 +280,7 @@ bool IotsaBLEClientMod::canConnect() {
 IotsaBLEClientMod* IotsaBLEClientMod::scanningMod = NULL;
 
 void IotsaBLEClientMod::scanComplete(BLEScanResults results) {
-    IFDEBUG IotsaSerial.println("BLE scan complete");
+    IFDEBUG IotsaSerial.println("IotsaBLEClientMod: BLE scan complete");
     iotsaConfig.resumeSleep();
     if (scanningMod) scanningMod->stopScanning();
 }
@@ -312,9 +317,8 @@ void IotsaBLEClientMod::loop() {
     findUnknownDevices(false);
     scanUnknownUntilMillis = 0;
   }
-  if (shouldUpdateScan && (dontUpdateScanBefore == 0 || millis() > dontUpdateScanBefore)) {
+  if (shouldUpdateScan) {
     shouldUpdateScan = false;
-    dontUpdateScanBefore = millis() + PAUSE_BETWEEN_SCANS;
     updateScanning();
   }
 }
@@ -335,7 +339,6 @@ void IotsaBLEClientMod::onResult(BLEAdvertisedDevice *advertisedDevice) {
       knownDeviceCallback(*advertisedDevice);
     }
     shouldUpdateScan = true; // We may have found what we were looking for
-    dontUpdateScanBefore = 0;
     return;
   }
   auto it2 = devicesByAddress.find(advertisedDevice->getAddress().toString());
@@ -348,7 +351,6 @@ void IotsaBLEClientMod::onResult(BLEAdvertisedDevice *advertisedDevice) {
       knownDeviceCallback(*advertisedDevice);
     }
     shouldUpdateScan = true; // We may have found what we were looking for
-    dontUpdateScanBefore = 0;
     return;
   }
   // Do we want callbacks for unknown devices?
@@ -382,8 +384,6 @@ IotsaBLEClientConnection* IotsaBLEClientMod::addDevice(std::string id) {
     return dev;
   }
   shouldUpdateScan = true; // We probably want to scan for the new device
-  dontUpdateScanBefore = 0;
-  disconnectClientsForScan = false;
   return it->second;
 }
 
