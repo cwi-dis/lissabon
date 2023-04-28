@@ -376,6 +376,22 @@ bool IotsaLedstripControllerMod::putHandler(const char *path, const JsonVariant&
   bool anyChanged = false;
   anyChanged = IotsaBLEClientMod::putHandler(path, request, reply);
   anyChanged |= dimmers.putHandler(request);
+  // This is a hack. We don't implement DELETE so we add a funny value
+  if (request.containsKey("clearall") && request["clearall"]) {
+    dimmers.clear();
+    anyChanged = true;
+  }
+  // This is another hack.
+  if (request.containsKey("add")) {
+    String newDimmerName = request["add"];
+    if (newDimmerName != "" && dimmers.find(newDimmerName) == nullptr) {
+      dimmers.push_back_new(newDimmerName);
+      dimmers.setup();
+      anyChanged = true;
+    } else {
+      IotsaSerial.println("IotsaLedstripControllerMod::putHandler: Bad add= value ");
+    }
+  }
   if (anyChanged) {
     configSave();
   }
