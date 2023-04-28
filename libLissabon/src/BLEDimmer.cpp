@@ -81,6 +81,14 @@ void BLEDimmer::setup() {
   }
 }
 
+void BLEDimmer::refresh() {
+  if (listenForDeviceChanges) {
+    needSyncFromDevice = listenForDeviceChanges;   
+  } else {
+    _dataValid = true;
+  }
+}
+
 void BLEDimmer::followDimmerChanges(bool follow) { 
   listenForDeviceChanges = follow; 
   if (listenForDeviceChanges) {
@@ -137,7 +145,7 @@ void BLEDimmer::loop() {
   }
   // If we are scanning we don't try to connect
   if (!bleClientMod.canConnect()) {
-    //xxxjack IotsaSerial.println("BLEDimmer: BLE busy, cannot connect");
+    IotsaSerial.println("BLEDimmer: BLE busy, cannot connect");
     if (millis() > noWarningPrintBefore) {
       IotsaSerial.printf("BLEDimmer: BLE busy, cannot connect to %s\n", name.c_str());
       noWarningPrintBefore = millis() + 4000;

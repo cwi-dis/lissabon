@@ -247,6 +247,7 @@ void IotsaBLEClientMod::startScanning() {
   scanner = BLEDevice::getScan();
   scanningMod = this;
   scanner->start(11, &IotsaBLEClientMod::scanComplete, false);
+  scanningChanged();
   // Do not sleep until scan is done
   iotsaConfig.pauseSleep();
 }
@@ -263,6 +264,7 @@ void IotsaBLEClientMod::stopScanning() {
     // react to scan results.
     iotsaConfig.resumeSleep();
     iotsaConfig.postponeSleep(100);
+    scanningChanged();
   }
   // Next time through loop, check whether we should scan again.
   shouldUpdateScan = true;

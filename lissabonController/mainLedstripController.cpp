@@ -82,6 +82,7 @@ protected:
   void unknownBLEDimmerFound(BLEAdvertisedDevice& device);
   void knownBLEDimmerChanged(BLEAdvertisedDevice& device);
   virtual String formHandler_field_perdevice(const char *deviceName) override;
+  virtual void scanningChanged() override;
 private:
   void dimmerOnOffChanged();
   void dimmerValueChanged();
@@ -90,7 +91,6 @@ private:
   Buttons buttons;
   DimmerDynamicCollection::ItemType* getDimmerForCommand(int num);
   void updateDisplay(bool clear);
-  uint32_t scanUnknownUntilMillis = 0;
   typedef std::pair<std::string, BLEAddress> unknownDimmerInfo;
   DimmerDynamicCollection dimmers;
   DimmerDynamicCollection::ItemType* dimmerFactory(int num);
@@ -116,6 +116,9 @@ IotsaLedstripControllerMod::selectDimmer(bool next, bool prev) {
   LOG_UI IotsaSerial.printf("LissabonController: now selectedDimmer=%d\n", selectedDimmerIndex);
   updateDisplay(false);
   iotsaConfig.postponeSleep(4000);
+  if (rv) {
+    dimmers.at(selectedDimmerIndex)->refresh();
+  }
   return rv;
 }
 
@@ -229,7 +232,21 @@ IotsaLedstripControllerMod::getDimmerForCommand(int num) {
 void IotsaLedstripControllerMod::dimmerAvailableChanged(bool available, bool connected) {
   LOG_UI IotsaSerial.println("LissabonController: dimmerAvailableChanged()");
   updateDisplay(false);
-  display->showActivity(connected);
+  const char *status = nullptr;
+  if (connected) {
+    status = "connected";
+  } else {
+    if (isScanning()) status = "scanning";
+  }
+  display->showActivity(status);
+  if (available) {
+    // if this happens to be the current dimmer we want to refresh its status
+    selectDimmer(false, false);
+  }
+}
+
+void IotsaLedstripControllerMod::scanningChanged() {
+  display->showActivity(isScanning()?"scanning":nullptr);
 }
 
 void IotsaLedstripControllerMod::dimmerOnOffChanged() {
@@ -420,13 +437,6 @@ void IotsaLedstripControllerMod::_setupDisplay() {
   updateDisplay(true);
 }
 
-#if 0
-void IotsaLedstripControllerMod::startScanUnknown() {
-  findUnknownDevices(true);
-  scanUnknownUntilMillis = millis() + 20000;
-  iotsaConfig.postponeSleep(21000);
-}
-#endif
 
 void IotsaLedstripControllerMod::unknownBLEDimmerFound(BLEAdvertisedDevice& deviceAdvertisement) {
   LOG_BLE IotsaSerial.printf("LissabonController: unknownDeviceFound: device \"%s\"\n", deviceAdvertisement.getName().c_str());

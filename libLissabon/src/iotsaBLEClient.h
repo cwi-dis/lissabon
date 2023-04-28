@@ -68,6 +68,7 @@ protected:
   void updateScanning();
   void startScanning();
   void stopScanning();
+  virtual void scanningChanged() {}
   bool isScanning();
   void startScanUnknown();
   static void scanComplete(BLEScanResults results);
