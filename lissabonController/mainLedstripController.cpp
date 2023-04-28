@@ -95,6 +95,7 @@ private:
   DimmerDynamicCollection dimmers;
   DimmerDynamicCollection::ItemType* dimmerFactory(int num);
   int selectedDimmerIndex = 0; // currently selected dimmer on display
+  bool selectedDimmerIsAvailable = false;
   Display::DisplayMode selectedMode = Display::DisplayMode::dm_select;
 };
 
@@ -117,7 +118,9 @@ IotsaLedstripControllerMod::selectDimmer(bool next, bool prev) {
   updateDisplay(false);
   iotsaConfig.postponeSleep(4000);
   if (rv) {
-    dimmers.at(selectedDimmerIndex)->refresh();
+    auto d = dimmers.at(selectedDimmerIndex);
+    selectedDimmerIsAvailable = d->available();
+    d->refresh();
   }
   return rv;
 }
@@ -231,6 +234,7 @@ IotsaLedstripControllerMod::getDimmerForCommand(int num) {
 
 void IotsaLedstripControllerMod::dimmerAvailableChanged(bool available, bool connected) {
   LOG_UI IotsaSerial.println("LissabonController: dimmerAvailableChanged()");
+  bool availableChanged = available && !selectedDimmerIsAvailable;
   updateDisplay(false);
   const char *status = nullptr;
   if (connected) {
@@ -239,7 +243,7 @@ void IotsaLedstripControllerMod::dimmerAvailableChanged(bool available, bool con
     if (isScanning()) status = "scanning";
   }
   display->showActivity(status);
-  if (available) {
+  if (availableChanged) {
     // if this happens to be the current dimmer we want to refresh its status
     selectDimmer(false, false);
   }
