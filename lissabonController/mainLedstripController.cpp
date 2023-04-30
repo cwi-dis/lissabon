@@ -97,6 +97,7 @@ private:
   int selectedDimmerIndex = 0; // currently selected dimmer on display
   bool selectedDimmerIsAvailable = false;
   Display::DisplayMode selectedMode = Display::DisplayMode::dm_select;
+  int keepOpenMillis = 3000; // xxxjack should be configurable
 };
 
 bool
@@ -235,14 +236,9 @@ IotsaLedstripControllerMod::getDimmerForCommand(int num) {
 void IotsaLedstripControllerMod::dimmerAvailableChanged(bool available, bool connected) {
   LOG_UI IotsaSerial.println("LissabonController: dimmerAvailableChanged()");
   bool availableChanged = available && !selectedDimmerIsAvailable;
+  display->showConnected(connected);
+  display->showScanning(isScanning());
   updateDisplay(false);
-  const char *status = nullptr;
-  if (connected) {
-    status = "connected";
-  } else {
-    if (isScanning()) status = "scanning";
-  }
-  display->showActivity(status);
   if (availableChanged) {
     // if this happens to be the current dimmer we want to refresh its status
     selectDimmer(false, false);
@@ -250,7 +246,7 @@ void IotsaLedstripControllerMod::dimmerAvailableChanged(bool available, bool con
 }
 
 void IotsaLedstripControllerMod::scanningChanged() {
-  display->showActivity(isScanning()?"scanning":nullptr);
+  display->showScanning(isScanning());
 }
 
 void IotsaLedstripControllerMod::dimmerOnOffChanged() {
@@ -299,7 +295,7 @@ void IotsaLedstripControllerMod::dimmerValueChanged() {
 
 DimmerDynamicCollection::ItemType *
 IotsaLedstripControllerMod::dimmerFactory(int num) {
-  BLEDimmer *newDimmer = new BLEDimmer(num, *this, this);
+  BLEDimmer *newDimmer = new BLEDimmer(num, *this, this, keepOpenMillis);
   newDimmer->followDimmerChanges(true);
   return newDimmer;
 }
