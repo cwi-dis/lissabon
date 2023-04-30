@@ -31,8 +31,10 @@ public:
   virtual void getHandler(JsonObject& reply) override;
   virtual void formHandler_fields(String& message, const String& text, const String& f_name, bool includeConfig) override;
 protected:
-  void syncToDevice(IotsaBLEClientConnection *dimmer);
-  void syncFromDevice(IotsaBLEClientConnection *dimmer);
+  IotsaBLEClientConnection *dimmer = nullptr;
+  bool _ensureConnection();
+  void _syncToDevice();
+  void _syncFromDevice();
   IotsaBLEClientMod& bleClientMod;
   bool listenForDeviceChanges = false;
   bool needSyncToDevice = false;
@@ -42,6 +44,7 @@ protected:
   uint32_t needTransmitTimeoutAtMillis = 0;
   uint32_t disconnectAtMillis = 0;
   uint32_t noWarningPrintBefore = 0;
+  const uint32_t keepOpenMillis = 0;
 };
 };
 #endif // _BLEDIMMER_H_

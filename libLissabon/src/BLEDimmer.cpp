@@ -12,8 +12,7 @@ namespace Lissabon {
 // #define IOTSA_BLEDIMMER_KEEPOPEN_MILLIS 1000
 
 bool BLEDimmer::available() {
-  IotsaBLEClientConnection *dimmer = bleClientMod.getDevice(name);
-  return dimmer != NULL && dimmer->available();
+  return _ensureConnection() && dimmer->available();
 }
 
 void BLEDimmer::updateDimmer() {
@@ -26,6 +25,10 @@ void BLEDimmer::updateDimmer() {
 bool BLEDimmer::setName(String value) {
   if (value == name) return false;
   if (name) bleClientMod.delDevice(name);
+  if (dimmer) {
+    dimmer->clearDevice();
+    dimmer = nullptr;
+  }
   name = value;
   if (value) bleClientMod.addDevice(name);
   return true;
@@ -37,8 +40,8 @@ void BLEDimmer::formHandler_fields(String& message, const String& text, const St
   }
   if (includeConfig) {
     message += "BLE device name: <input name='" + f_name +".name' value='" + name + "'><br>";
-    IotsaBLEClientConnection *dimmer = bleClientMod.getDevice(name);
-    if (dimmer) {
+    _ensureConnection();
+    if (dimmer && dimmer->available()) {
       message += "BLE device address: " + String(dimmer->getAddress().c_str()) + "<br>";
     } else {
       message += "<em>BLE device not available</em><br>";
@@ -54,7 +57,7 @@ bool BLEDimmer::BLEDimmer::configLoad(IotsaConfigFileLoad& cf, const String& nam
 void BLEDimmer::configSave(IotsaConfigFileSave& cf, const String& n_name) {
 //xxxjack  String s_num = String(num);
 //xxxjack  String s_name = "dimmer" + s_num;
-  IotsaBLEClientConnection *dimmer = bleClientMod.getDevice(name);
+  _ensureConnection();
   if (dimmer) {
     String address = String(dimmer->getAddress().c_str());
     if (address != "") cf.put(n_name + ".address", address);
@@ -63,8 +66,7 @@ void BLEDimmer::configSave(IotsaConfigFileSave& cf, const String& n_name) {
 }
 
 void BLEDimmer::getHandler(JsonObject& reply) {
-  IotsaBLEClientConnection *dimmer = bleClientMod.getDevice(name);
-  if (dimmer) {
+  if (_ensureConnection()) {
     std::string address = dimmer->getAddress();
     if (address != "") reply["address"] = String(address.c_str());
   }
@@ -108,23 +110,17 @@ void BLEDimmer::identify() {
 void BLEDimmer::loop() {
   // If we don't have anything to transmit we bail out quickly...
   if (!needSyncToDevice && !needSyncFromDevice) {
-#ifdef IOTSA_BLEDIMMER_KEEPOPEN_MILLIS
 
     // But we first disconnect if we are connected-idle for long enough.
     if (disconnectAtMillis > 0 && millis() > disconnectAtMillis) {
+      if (_ensureConnection()) dimmer->disconnect();
+      callbacks->dimmerAvailableChanged(true, false);
       disconnectAtMillis = 0;
-      IotsaBLEClientConnection *dimmer = bleClientMod.getDevice(name);
-      if (dimmer) {
-        IFDEBUG IotsaSerial.printf("BLEDimmer: delayed disconnect %s\n", dimmer->getName().c_str());
-        dimmer->disconnect();
-      }
     }
-  #endif
     return;
   }
   // We have something to transmit/receive. Check whether our dimmer actually exists.
-  IotsaBLEClientConnection *dimmer = bleClientMod.getDevice(name);
-  if (dimmer == NULL) {
+  if (!_ensureConnection()) {
     IFDEBUG IotsaSerial.printf("BLEDimmer: Skip connection to nonexistent dimmer %d %s\n", num, name.c_str());
     needSyncToDevice = false;
     needSyncFromDevice = false;
@@ -143,46 +139,43 @@ void BLEDimmer::loop() {
     // iotsaBLEClient should be listening for advertisements
     return;
   }
-  // If we are scanning we don't try to connect
-  if (!bleClientMod.canConnect()) {
-    IotsaSerial.println("BLEDimmer: BLE busy, cannot connect");
-    if (millis() > noWarningPrintBefore) {
-      IotsaSerial.printf("BLEDimmer: BLE busy, cannot connect to %s\n", name.c_str());
-      noWarningPrintBefore = millis() + 4000;
+  // Now we can connect, unless we are already connected
+  if (!dimmer->isConnected()) {
+    // If we are scanning we don't try to connect
+    if (!bleClientMod.canConnect()) {
+      IotsaSerial.println("BLEDimmer: BLE busy, cannot connect");
+      if (millis() > noWarningPrintBefore) {
+        IotsaSerial.printf("BLEDimmer: BLE busy, cannot connect to %s\n", name.c_str());
+        noWarningPrintBefore = millis() + 4000;
+      }
+      return;
     }
-    return;
+    noWarningPrintBefore = 0;
+    // If all that is correct, try to connect.
+    callbacks->dimmerAvailableChanged(true, true);
+    if (!dimmer->connect()) {
+      IotsaSerial.printf("BLEDimmer: connect to %s failed\n", dimmer->getName().c_str());
+      bleClientMod.deviceNotConnectable(name);
+      callbacks->dimmerAvailableChanged(false, false);
+    }
+    IFDEBUG IotsaSerial.printf("BLEDimmer: connected to %s\n", dimmer->getName().c_str());
+    return; // Return: next time through the loop we will send/receive data.
   }
-  noWarningPrintBefore = 0;
-  // If all that is correct, try to connect.
-  callbacks->dimmerAvailableChanged(true, true);
-  if (!dimmer->connect()) {
-    IotsaSerial.printf("BLEDimmer: connect to %s failed\n", dimmer->getName().c_str());
-    bleClientMod.deviceNotConnectable(name);
-    callbacks->dimmerAvailableChanged(false, false);
-    return;
-  }
-  IFDEBUG IotsaSerial.printf("BLEDimmer: connected to %s\n", dimmer->getName().c_str());
   
   if (needSyncFromDevice) {
-    syncFromDevice(dimmer);
+    _syncFromDevice();
   }
   if (needSyncToDevice) {
-    syncToDevice(dimmer);
-#ifdef IOTSA_BLEDIMMER_KEEPOPEN_MILLIS
-    disconnectAtMillis = millis() + IOTSA_BLEDIMMER_KEEPOPEN_MILLIS;
-    iotsaConfig.postponeSleep(IOTSA_BLEDIMMER_KEEPOPEN_MILLIS+100);
-    IFDEBUG IotsaSerial.println("BLEDimmer: keepopen");
-    return;
-#endif
+    _syncToDevice();
   }
-
-  IFDEBUG IotsaSerial.printf("BLEDimmer: disconnecting %s\n", dimmer->getName().c_str());
-  dimmer->disconnect();
-  callbacks->dimmerAvailableChanged(true, false);
+  disconnectAtMillis = millis() + keepOpenMillis;
+  iotsaConfig.postponeSleep(keepOpenMillis+100);
+  IFDEBUG IotsaSerial.println("BLEDimmer: keepopen");
 }
 
-void BLEDimmer::syncToDevice(IotsaBLEClientConnection *dimmer) {
+void BLEDimmer::_syncToDevice() {
   bool ok;
+  if (!_ensureConnection()) return;
 #ifdef DIMMER_WITH_LEVEL
   // Connected to dimmer.
   if (level < 0) level = 0;
@@ -222,7 +215,14 @@ void BLEDimmer::syncToDevice(IotsaBLEClientConnection *dimmer) {
   needSyncToDevice = false;
 }
 
-void BLEDimmer::syncFromDevice(IotsaBLEClientConnection *dimmer) {
+bool BLEDimmer::_ensureConnection() {
+  if (dimmer != nullptr) return true;
+  dimmer = bleClientMod.getDevice(name);
+  return dimmer != nullptr;
+}
+
+void BLEDimmer::_syncFromDevice() {
+  if (!_ensureConnection()) return;
   bool ok;
 #ifdef DIMMER_WITH_LEVEL
   // Connected to dimmer.
