@@ -13,9 +13,10 @@ namespace Lissabon {
 
 class BLEDimmer : public AbstractDimmer {
 public:
-  BLEDimmer(int _num, IotsaBLEClientMod &_bleClientMod, DimmerCallbacks *_callbacks)
+  BLEDimmer(int _num, IotsaBLEClientMod &_bleClientMod, DimmerCallbacks *_callbacks, int _keepOpenMillis=0)
   : AbstractDimmer(_num, _callbacks), 
-    bleClientMod(_bleClientMod)
+    bleClientMod(_bleClientMod),
+    keepOpenMillis(_keepOpenMillis)
   {}
   void followDimmerChanges(bool follow);
   void updateDimmer();
@@ -44,7 +45,8 @@ protected:
   uint32_t needTransmitTimeoutAtMillis = 0;
   uint32_t disconnectAtMillis = 0;
   uint32_t noWarningPrintBefore = 0;
-  const uint32_t keepOpenMillis = 0;
+public:
+  uint32_t keepOpenMillis = 0;
 };
 };
 #endif // _BLEDIMMER_H_

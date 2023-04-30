@@ -3,6 +3,8 @@
 #include "iotsaBLEClient.h"
 #include "LissabonBLE.h"
 
+#define BLEDIMMER_DEBUG if(1)
+
 namespace Lissabon {
 
 // How long we keep trying to connect to a dimmer
@@ -16,7 +18,7 @@ bool BLEDimmer::available() {
 }
 
 void BLEDimmer::updateDimmer() {
-  IotsaSerial.printf("%s.updateDimmer() called\n", name.c_str());
+  BLEDIMMER_DEBUG IotsaSerial.printf("%s.updateDimmer() called\n", name.c_str());
   needSyncToDevice = true;
   needTransmitTimeoutAtMillis = millis() + IOTSA_BLEDIMMER_CONNECT_TIMEOUT;
   if (callbacks) callbacks->dimmerValueChanged();
@@ -113,7 +115,10 @@ void BLEDimmer::loop() {
 
     // But we first disconnect if we are connected-idle for long enough.
     if (disconnectAtMillis > 0 && millis() > disconnectAtMillis) {
-      if (_ensureConnection()) dimmer->disconnect();
+      if (_ensureConnection()) {
+        dimmer->disconnect();
+        BLEDIMMER_DEBUG IotsaSerial.printf("BLEDimmer: disconnect from %s\n", name.c_str());
+      }
       callbacks->dimmerAvailableChanged(true, false);
       disconnectAtMillis = 0;
     }
@@ -121,7 +126,7 @@ void BLEDimmer::loop() {
   }
   // We have something to transmit/receive. Check whether our dimmer actually exists.
   if (!_ensureConnection()) {
-    IFDEBUG IotsaSerial.printf("BLEDimmer: Skip connection to nonexistent dimmer %d %s\n", num, name.c_str());
+    IotsaSerial.printf("BLEDimmer: Skip connection to nonexistent dimmer %d %s\n", num, name.c_str());
     needSyncToDevice = false;
     needSyncFromDevice = false;
     return;
@@ -154,11 +159,12 @@ void BLEDimmer::loop() {
     // If all that is correct, try to connect.
     callbacks->dimmerAvailableChanged(true, true);
     if (!dimmer->connect()) {
-      IotsaSerial.printf("BLEDimmer: connect to %s failed\n", dimmer->getName().c_str());
+      BLEDIMMER_DEBUG IotsaSerial.printf("BLEDimmer: connect to %s failed\n", dimmer->getName().c_str());
       bleClientMod.deviceNotConnectable(name);
       callbacks->dimmerAvailableChanged(false, false);
+      return;
     }
-    IFDEBUG IotsaSerial.printf("BLEDimmer: connected to %s\n", dimmer->getName().c_str());
+    BLEDIMMER_DEBUG IotsaSerial.printf("BLEDimmer: connected to %s\n", dimmer->getName().c_str());
     return; // Return: next time through the loop we will send/receive data.
   }
   
@@ -170,7 +176,7 @@ void BLEDimmer::loop() {
   }
   disconnectAtMillis = millis() + keepOpenMillis;
   iotsaConfig.postponeSleep(keepOpenMillis+100);
-  IFDEBUG IotsaSerial.println("BLEDimmer: keepopen");
+  BLEDIMMER_DEBUG IotsaSerial.printf("BLEDimmer: keepopen %d\n", keepOpenMillis);
 }
 
 void BLEDimmer::_syncToDevice() {
