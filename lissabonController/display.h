@@ -17,10 +17,16 @@ public:
   void setLevel(float level, bool on, float wantedLevel = -1);
   void clearTemp();
   void setTemp(float temperature);
+  void showScanning(bool _isScanning);
+  void showConnected(bool _isConnected);
   void showActivity(const char *activity);
 private:
+  void _updateActivity(const char *activity);
   int selectedStripOnDisplay = -1;
   DisplayMode selectedModeOnDisplay = dm_sleep;
+  bool isScanning = false;
+  bool isConnected = false;
+  bool isActivity = false;
 };
 
 #endif // DISPLAY_H

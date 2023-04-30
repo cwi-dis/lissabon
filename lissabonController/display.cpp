@@ -178,7 +178,29 @@ void Display::setTemp(float color) {
 #endif
 }
 
+void Display::showConnected(bool _isConnected) {
+  if (_isConnected == isConnected) return;
+  if (isScanning && !isConnected) return;
+  isScanning = false;
+  isConnected = _isConnected;
+  _updateActivity(isConnected ? "connected" : "");
+}
+
+void Display::showScanning(bool _isScanning) {
+  if (_isScanning == isScanning) return;
+  if (isConnected) return;
+  isScanning = _isScanning;
+  _updateActivity(isScanning ? "scanning" : "");
+}
+
 void Display::showActivity(const char *activity) {
+  if (activity == nullptr || activity[0] == 0) return;
+  isConnected = false;
+  isScanning = false;
+  _updateActivity(activity);
+}
+
+void Display::_updateActivity(const char *activity) {
   oled->fillRect(ACTIVITY_X, ACTIVITY_Y, ACTIVITY_WIDTH, ACTIVITY_HEIGHT, BLACK);
   oled->setCursor(ACTIVITY_X, ACTIVITY_Y);
   if (activity && activity[0]) oled->print(activity);
