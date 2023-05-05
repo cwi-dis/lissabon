@@ -129,7 +129,12 @@ IotsaLedstripControllerMod::selectDimmer(bool next, bool prev) {
 float IotsaLedstripControllerMod::getTemperature() {
 #ifdef DIMMER_WITH_TEMPERATURE
   auto d = getDimmerForCommand(selectedDimmerIndex);
-  if (d) return d->temperature;
+  if (d) {
+    float rv = (d->temperature - DIMMER_MIN_TEMPERATURE) / (DIMMER_MAX_TEMPERATURE - DIMMER_MIN_TEMPERATURE);
+    if (rv < 0) rv = 0;
+    if (rv > 1) rv = 1;
+    return rv;
+  }
 #endif
   return 0;
 }
@@ -140,7 +145,10 @@ void IotsaLedstripControllerMod::setTemperature(float temperature) {
   if (d == nullptr) {
     return;
   }
-  d->temperature = temperature;
+  float tempKelvin = DIMMER_MIN_TEMPERATURE + temperature * (DIMMER_MAX_TEMPERATURE-DIMMER_MIN_TEMPERATURE);
+  if (tempKelvin < DIMMER_MIN_TEMPERATURE) tempKelvin = DIMMER_MIN_TEMPERATURE;
+  if (tempKelvin > DIMMER_MAX_TEMPERATURE) tempKelvin = DIMMER_MAX_TEMPERATURE;
+  d->temperature = tempKelvin;
   d->updateDimmer();
   updateDisplay(false);
   LOG_UI IotsaSerial.printf("LissabonController: updated dimmer %d temperature %f\n", selectedDimmerIndex, temperature);
@@ -197,11 +205,11 @@ IotsaLedstripControllerMod::updateDisplay(bool clear) {
     auto d = dimmers.at(selectedDimmerIndex);
     if (d && d->available() && d->dataValid()) {
       display->setLevel(d->level, d->isOn);
+      display->setTemp(d->temperature);
     } else {
       display->clearLevel();
+      display->clearTemp();
     }
-    // temperature not implemented yet
-    display->clearTemp();
   }
   display->show();
 }

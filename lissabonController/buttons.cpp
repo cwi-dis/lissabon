@@ -21,10 +21,6 @@
 // So, connect E and C to GND, D to GPIO0, A to GPI14, B to GPIO2
 RotaryEncoder encoder(14, 2);
 #define ENCODER_STEPS 20
-#ifdef DIMMER_WITH_TEMPERATURE
-#define COLOR_TEMP_MIN 2200
-#define COLOR_TEMP_MAX 6500
-#endif
 Button button(0, true, true, true);
 #define SHORT_PRESS_DURATION 500
 Button rockerUp(12, true, false, true);
@@ -102,7 +98,7 @@ Buttons::uiButtonPressed() {
     float t_value = controller->getTemperature();
     if (t_value < 0) t_value = 0;
     if (t_value > 1) t_value = 1;
-    encoder.value = (int)(f_value * ENCODER_STEPS);
+    encoder.value = (int)(t_value * ENCODER_STEPS);
 #endif // DIMMER_WITH_TEMPERATURE
   } else
   {
@@ -136,9 +132,8 @@ Buttons::uiEncoderChanged() {
       f_value = 1.0;
       encoder.value = ENCODER_STEPS;
     }
-    float t_value = COLOR_TEMP_MIN + f_value * (COLOR_TEMP_MAX - COLOR_TEMP_MIN);
-    LOG_UI IotsaSerial.printf("LissabonController.Buttons: now temperature=%f (int %d)\n", t_value, encoder.value);
-    controller->setTemperature(t_value);
+    LOG_UI IotsaSerial.printf("LissabonController.Buttons: now temperature=%f (int %d)\n", f_value, encoder.value);
+    controller->setTemperature(f_value);
   } else 
 #endif
   {
