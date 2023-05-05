@@ -142,8 +142,12 @@ void LedstripDimmer::getHandler(JsonObject& reply) {
   reply["whiteBrightness"] = rgbwSpace.WBrightness;
   reply["focalPoint"] = focalPoint;
   reply["focalSpread"] = focalSpread;
-  reply["maxLevelCorrectColor"] = maxLevelCorrectColor();
-  reply["maxLevelCorrectColorTemperature"] = temperature;
+  reply["ccMaxLevel"] = maxLevelCorrectColor();
+  reply["ccTemperature"] = temperature;
+  reply["ccLevel_r"] = correctRgbwColor.R;
+  reply["ccLevel_g"] = correctRgbwColor.G;
+  reply["ccLevel_b"] = correctRgbwColor.B;
+  reply["ccLevel_w"] = correctRgbwColor.W;
   reply["inCalibrationMode"] = (int)inCalibrationMode;
   AbstractDimmer::getHandler(reply);
 }
