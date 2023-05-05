@@ -36,7 +36,7 @@ protected:
   IotsaPixelsourceHandler *stripHandler;
 
   void updateColorspace(float whiteTemperature, float whiteBrightness);
-  void calcLevel();
+  void clampLevel();
   void calcPixelLevels(float wantedLevel);
   float maxLevelCorrectColor();
   String colorDump();

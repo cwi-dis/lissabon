@@ -24,7 +24,7 @@ void LedstripDimmer::setup() {
 
 void LedstripDimmer::updateDimmer() {
   DEBUG_LEDSTRIP IotsaSerial.println("LedstripDimmer.updateDimmer()");
-  calcLevel();
+  clampLevel();
 #ifndef LEDSTRIP_CALCULATE_LEVELS_EVERY_LOOP
   // xxxjack calling calcPixelLevels here (in stead of in loop) means the curve
   // remains the same during fades. Calling it in loop() would fix that.
@@ -34,12 +34,14 @@ void LedstripDimmer::updateDimmer() {
   AbstractDimmer::updateDimmer();
 }
 
-void LedstripDimmer::calcLevel() {
+void LedstripDimmer::clampLevel() {
+#if 0
   float maxOutputLevel = maxLevelCorrectColor();
   if (level > maxOutputLevel) {
     IotsaSerial.printf("LodstripDimmer.calcLevel: level clamped to %f\n", maxOutputLevel);
     level = maxOutputLevel;
   }
+#endif
 }
 
 void LedstripDimmer::calcPixelLevels(float wantedLevel) {
