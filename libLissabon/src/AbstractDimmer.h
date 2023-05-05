@@ -11,6 +11,9 @@ using namespace ArduinoJson;
 #define DIMMER_WITH_LEVEL
 #endif
 
+#define DIMMER_MIN_TEMPERATURE 1500.0
+#define DIMMER_MAX_TEMPERATURE 6500.0
+
 namespace Lissabon {
 
 class DimmerCallbacks {

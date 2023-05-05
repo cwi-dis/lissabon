@@ -239,7 +239,7 @@ void BLEDimmer::_syncFromDevice() {
     IFDEBUG IotsaSerial.printf("%s.syncFromDevice: Received brightness %f (%d)\n", name.c_str(), level, levelValue);
     _dataValid = true;
   } else {
-    IFDEBUG IotsaSerial.println("BLEDimmer: get(brightness) failed");
+    IFDEBUG IotsaSerial.printf("%s.syncFromDevice: get(brightness) failed\n", name.c_str());
     _dataValid = false;
   }
 #endif
@@ -250,7 +250,7 @@ void BLEDimmer::_syncFromDevice() {
     temperature = (float)temperatureValue;
     IFDEBUG IotsaSerial.printf("%s.syncFromDevice: Received temperature %f (%d)\n", name.c_str(), temperature, temperatureValue);
   } else {
-    IFDEBUG IotsaSerial.println("BLEDimmer: get(temperature) failed");
+    IFDEBUG IotsaSerial.printf("%s.syncFromDevice: get(temperature) failed\n", name.c_str());
   }
 #endif // DIMMER_WITH_TEMPERATURE
   uint8_t isOnValue;
@@ -259,7 +259,7 @@ void BLEDimmer::_syncFromDevice() {
     IFDEBUG IotsaSerial.printf("%s.syncFromDevice: received isOn %d\n", name.c_str(), isOnValue);
     isOn = isOnValue;
   } else {
-    IFDEBUG IotsaSerial.println("BLEDimmer: set(isOn) failed");
+    IFDEBUG IotsaSerial.printf("%s.syncFromDevice: get(isOn) failed\n", name.c_str());
   }
   needSyncFromDevice = false;
   if (callbacks) callbacks->dimmerValueChanged();

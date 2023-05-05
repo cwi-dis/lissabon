@@ -61,14 +61,14 @@ void
 DimmerUI::setTemperatureUpDownButtons(UpDownButtons& encoder) {
   encoder.setCallback(std::bind(&DimmerUI::levelChanged, this));
   // Bind up/down buttons to variable illum, ranging from minLevel to 1.0 in 25 steps
-  encoder.bindVar(dimmer.temperature, 2200.0, 6500.0, 100);
+  encoder.bindVar(dimmer.temperature, DIMMER_MIN_TEMPERATURE, DIMMER_MAX_TEMPERATURE, 100);
   encoder.setStateCallback(std::bind(&DimmerUI::touchedOnOff, this));
 }
 
 void
 DimmerUI::setTemperatureRotaryEncoder(RotaryEncoder& encoder) {
   encoder.setCallback(std::bind(&DimmerUI::levelChanged, this));
-  encoder.bindVar(dimmer.temperature, 2200.0, 6500.0, 100);
+  encoder.bindVar(dimmer.temperature, DIMMER_MIN_TEMPERATURE, DIMMER_MAX_TEMPERATURE, 100);
 }
 #endif // DIMMER_WITH_TEMPERATURE
 }

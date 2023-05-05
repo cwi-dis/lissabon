@@ -24,7 +24,15 @@ void DimmerBLEServer::setup() {
     Lissabon::Dimmer::brightnessUUID2904unit,
     Lissabon::Dimmer::brightnessUUID2901
     );
-
+#ifdef DIMMER_WITH_TEMPERATURE
+  bleApi.addCharacteristic(
+    Lissabon::Dimmer::temperatureUUIDstring, 
+    BLE_READ|BLE_WRITE, 
+    Lissabon::Dimmer::temperatureUUID2904format,
+    Lissabon::Dimmer::temperatureUUID2904unit,
+    Lissabon::Dimmer::temperatureUUID2901
+    );
+#endif
   bleApi.addCharacteristic(
     Lissabon::Dimmer::identifyUUIDstring, 
     BLE_WRITE, 
