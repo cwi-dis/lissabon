@@ -77,7 +77,8 @@ protected:
   int scan_window = 151;
   bool scanForUnknownClients = false;
   uint32_t scanUnknownUntilMillis = 0;
-  bool shouldUpdateScan = false;
+  uint32_t shouldUpdateScanAtMillis = 0;
+  const int noScanMillis = 4000;
   BLEScan *scanner = NULL;
   BleDeviceFoundCallback unknownDeviceCallback = NULL;
   BleDeviceFoundCallback knownDeviceCallback = NULL;

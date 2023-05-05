@@ -175,7 +175,7 @@ void IotsaBLEClientMod::startScanUnknown() {
 
 void IotsaBLEClientMod::findUnknownDevices(bool on) {
   scanForUnknownClients = on;
-  shouldUpdateScan = true;
+  shouldUpdateScanAtMillis = millis();
 }
 
 bool IotsaBLEClientMod::isScanning() {
@@ -267,7 +267,7 @@ void IotsaBLEClientMod::stopScanning() {
     scanningChanged();
   }
   // Next time through loop, check whether we should scan again.
-  shouldUpdateScan = true;
+  shouldUpdateScanAtMillis = millis()+noScanMillis;
 }
 
 bool IotsaBLEClientMod::canConnect() {
@@ -316,11 +316,11 @@ void IotsaBLEClientMod::setManufacturerFilter(uint16_t manufacturerID) {
 
 void IotsaBLEClientMod::loop() {
   if (scanUnknownUntilMillis != 0 && millis() > scanUnknownUntilMillis) {
-    findUnknownDevices(false);
     scanUnknownUntilMillis = 0;
+    findUnknownDevices(false);
   }
-  if (shouldUpdateScan) {
-    shouldUpdateScan = false;
+  if (shouldUpdateScanAtMillis != 0 && millis() > shouldUpdateScanAtMillis) {
+    shouldUpdateScanAtMillis = 0;
     updateScanning();
   }
 }
@@ -340,7 +340,7 @@ void IotsaBLEClientMod::onResult(BLEAdvertisedDevice *advertisedDevice) {
       IFDEBUG IotsaSerial.printf("BLEClientMod: advertisement update byname for %s\n", deviceName.c_str());
       knownDeviceCallback(*advertisedDevice);
     }
-    shouldUpdateScan = true; // We may have found what we were looking for
+    shouldUpdateScanAtMillis = millis(); // We may have found what we were looking for
     return;
   }
   auto it2 = devicesByAddress.find(advertisedDevice->getAddress().toString());
@@ -352,7 +352,7 @@ void IotsaBLEClientMod::onResult(BLEAdvertisedDevice *advertisedDevice) {
       IFDEBUG IotsaSerial.printf("BLEClientMod: advertisement update byaddress for %s\n", deviceName.c_str());
       knownDeviceCallback(*advertisedDevice);
     }
-    shouldUpdateScan = true; // We may have found what we were looking for
+    shouldUpdateScanAtMillis = millis(); // We may have found what we were looking for
     return;
   }
   // Do we want callbacks for unknown devices?
@@ -385,7 +385,7 @@ IotsaBLEClientConnection* IotsaBLEClientMod::addDevice(std::string id) {
 #endif
     return dev;
   }
-  shouldUpdateScan = true; // We probably want to scan for the new device
+  shouldUpdateScanAtMillis = millis(); // We probably want to scan for the new device
   return it->second;
 }
 
@@ -402,11 +402,11 @@ void IotsaBLEClientMod::deviceNotConnectable(std::string id) {
   dev = addDevice(id);
   if (dev == NULL) return;
   dev->clearDevice();
-  shouldUpdateScan = true; // We may want to start scanning again
+  shouldUpdateScanAtMillis = millis(); // We may want to start scanning again
 }
 
 void IotsaBLEClientMod::delDevice(std::string id) {
-  shouldUpdateScan = true;  // We may be able to stop scanning
+  shouldUpdateScanAtMillis = millis();  // We may be able to stop scanning
   int nDeleted = devices.erase(id);
 #if 0
   // xxxjack bad idea to save config stright away

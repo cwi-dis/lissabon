@@ -81,10 +81,14 @@ void Buttons::_tap() {
 
 bool
 Buttons::uiRockerPressed() {
-  LOG_UI IotsaSerial.printf("LissabonController.Buttons.uiRockerPressed: up: state=%d repeatCount=%d duration=%d\n", rockerUp.pressed, rockerUp.repeatCount, rockerUp.duration);
-  LOG_UI IotsaSerial.printf("LissabonController.Buttons.uiRockerPressed: down: state=%d repeatCount=%d duration=%d\n", rockerDown.pressed, rockerDown.repeatCount, rockerDown.duration);
-  // The encoder controls the selected dimmer
-  controller->selectDimmer(rockerUp.pressed, rockerDown.pressed);
+  // The rocker switch controls the selected dimmer
+  bool next = rockerUp.pressed && rockerUp.repeatCount == 0;
+  bool prev = rockerDown.pressed && rockerDown.repeatCount == 0;
+  LOG_UI IotsaSerial.printf("LissabonController.Buttons.uiRockerPressed: up: state=%d repeatCount=%d duration=%d next=%d\n", rockerUp.pressed, rockerUp.repeatCount, rockerUp.duration, next);
+  LOG_UI IotsaSerial.printf("LissabonController.Buttons.uiRockerPressed: down: state=%d repeatCount=%d duration=%d prev=%d\n", rockerDown.pressed, rockerDown.repeatCount, rockerDown.duration, prev);
+  if (next || prev) {
+    controller->selectDimmer(next, prev);
+  }
   return true;
 }
 
@@ -106,7 +110,7 @@ Buttons::uiButtonPressed() {
     float f_value = controller->getLevel();
     encoder.value = (int)(f_value * ENCODER_STEPS);
   }
-  if (button.duration < SHORT_PRESS_DURATION) {
+  if (!button.pressed && button.repeatCount == 0 && button.duration < SHORT_PRESS_DURATION) {
     // Short press: turn current dimmer on or off
     LOG_UI IotsaSerial.println("LissabonCOntroller.Buttons.uiButtonPressed: dimmer on/off");
     controller->toggle();
