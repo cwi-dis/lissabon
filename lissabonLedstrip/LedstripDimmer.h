@@ -26,6 +26,7 @@ public:
   virtual void formHandler_TD(String& message, bool includeConfig);
 
   void setHandler(uint8_t *_buffer, size_t _count, int bpp, IotsaPixelsourceHandler *handler);
+  virtual float applyGamma(float level) override { return level; };
 protected:
   IotsaPixelstripMod& mod;
   int count;  // Number of LEDs

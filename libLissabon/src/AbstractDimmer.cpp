@@ -67,10 +67,18 @@ void AbstractDimmer::calcCurLevel() {
   if (curLevel > 1) curLevel = 1;
 
 #ifdef DIMMER_WITH_GAMMA
-  if (gamma && gamma != 1.0) curLevel = powf(curLevel, gamma);
+  curLevel = applyGamma(curLevel);
 #endif // DIMMER_WITH_GAMMA
 #endif // DIMMER_WITH_LEVEL
 }
+
+#ifdef DIMMER_WITH_GAMMA
+
+float AbstractDimmer::applyGamma(float level) {
+  if (gamma && gamma != 1.0) level = powf(level, gamma);
+  return level;
+}
+#endif
 
 void AbstractDimmer::identify() {}
 

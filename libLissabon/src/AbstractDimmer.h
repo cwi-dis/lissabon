@@ -62,6 +62,8 @@ public:
 #endif
 #ifdef DIMMER_WITH_GAMMA
   float gamma = 1;
+  // Virtual, because some implementation may apply gamma differently.
+  virtual float applyGamma(float level);
 #endif // DIMMER_WITH_GAMMA
 #ifdef DIMMER_WITH_ANIMATION
   float animationPrevLevel = 0;  // actual light level at millisAnimtationStart

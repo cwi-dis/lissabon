@@ -86,7 +86,8 @@ void LedstripDimmer::calcPixelLevels(float wantedLevel) {
 }
 
 void LedstripDimmer::updateColorspace(float whiteTemperature, float whiteBrightness) {
-  bool doGamma = false; // gamma > 1.1;
+  // Gamma value is ignored: the Colorspace converter uses a fixed gamma value (2.2, I think)
+  bool doGamma = gamma > 1.1;
   rgbwSpace = Colorspace(whiteTemperature, whiteBrightness, true, doGamma);
 }
 
