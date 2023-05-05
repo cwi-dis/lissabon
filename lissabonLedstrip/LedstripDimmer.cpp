@@ -142,13 +142,19 @@ void LedstripDimmer::getHandler(JsonObject& reply) {
   reply["whiteBrightness"] = rgbwSpace.WBrightness;
   reply["focalPoint"] = focalPoint;
   reply["focalSpread"] = focalSpread;
-  reply["ccMaxLevel"] = maxLevelCorrectColor();
-  reply["ccTemperature"] = temperature;
-  reply["ccLevel_r"] = correctRgbwColor.R;
-  reply["ccLevel_g"] = correctRgbwColor.G;
-  reply["ccLevel_b"] = correctRgbwColor.B;
-  reply["ccLevel_w"] = correctRgbwColor.W;
-  reply["inCalibrationMode"] = (int)inCalibrationMode;
+  if (inCalibrationMode) {
+    JsonArray _calibrationData = reply.createNestedArray("calibrationData");
+    for(int i=0; i <8; i++) {
+      _calibrationData.add<float>(calibrationData[i]);
+    }
+  } else {
+    reply["ccMaxLevel"] = maxLevelCorrectColor();
+    reply["ccTemperature"] = temperature;
+    reply["ccLevel_r"] = correctRgbwColor.R;
+    reply["ccLevel_g"] = correctRgbwColor.G;
+    reply["ccLevel_b"] = correctRgbwColor.B;
+    reply["ccLevel_w"] = correctRgbwColor.W;
+  }
   AbstractDimmer::getHandler(reply);
 }
 
@@ -160,7 +166,6 @@ bool LedstripDimmer::putHandler(const JsonVariant& request) {
     float whiteBrightness = request["whiteBrightness"]|rgbwSpace.WBrightness;
     focalPoint = request["focalPoint"] | focalPoint;
     focalSpread = request["focalSpread"] | focalSpread;
-    inCalibrationMode = request["inCalibrationMode"] | 0;
     if (request.containsKey("calibrationData")) {
       JsonArray _calibrationData = request["calibrationData"];
       int size = _calibrationData.size();
@@ -169,10 +174,18 @@ bool LedstripDimmer::putHandler(const JsonVariant& request) {
           calibrationData[i] = _calibrationData[i % size];
         }
         animationStartMillis = animationEndMillis = millis();
-        IFDEBUG IotsaSerial.println("Got calibrationData");
+        IFDEBUG IotsaSerial.println("Got calibrationData, in calibration mode");
+      } else if (size == 0) {
+        inCalibrationMode = false;
+        IFDEBUG IotsaSerial.println("Got empty calibrationData, left calibrationMode");
       } else {
         IFDEBUG IotsaSerial.println("Bad calibrationData");
       }
+    } else {
+      if (inCalibrationMode) {
+        IFDEBUG IotsaSerial.println("No calibrationData, left calibration mode");
+      }
+      inCalibrationMode = false;
     }
     updateColorspace(whiteTemperature, whiteBrightness);
   }
