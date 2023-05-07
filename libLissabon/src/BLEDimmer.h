@@ -20,7 +20,8 @@ public:
   {}
   void followDimmerChanges(bool follow);
   void updateDimmer();
-  bool available();
+  bool available() override;
+  bool isConnected();
   void refresh();
   bool dataValid() override { return _dataValid; }
   bool setName(String value);

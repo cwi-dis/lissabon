@@ -9,7 +9,7 @@ public:
   void flash();
   void show();
   void clearStrips();
-  void addStrip(int index, String name, bool available);
+  void addStrip(int index, String name, bool available, bool connected);
   void selectStrip(int index);
   void selectMode(DisplayMode mode);
   

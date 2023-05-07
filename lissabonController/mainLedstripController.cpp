@@ -194,10 +194,13 @@ IotsaLedstripControllerMod::updateDisplay(bool clear) {
   if (true || clear) display->clearStrips();
   display->selectMode(selectedMode);
   int index = 0;
-  for (auto& elem : dimmers) {
+  for (auto& _elem : dimmers) {
+    // Living dangerously: we don't have rtti so we can't use dynamic cast.
+    // We know that is safe because we supplied the factory function.
+    BLEDimmer* elem = reinterpret_cast<BLEDimmer *>(_elem);
     String name = elem->getUserVisibleName();
-    LOG_BLE IotsaSerial.printf("  device %s, available=%d\n", name.c_str(), elem->available());
-    display->addStrip(index, name, elem->available());
+    LOG_BLE IotsaSerial.printf("  device %s, available=%d connected=%d\n", name.c_str(), elem->available(), elem->isConnected());
+    display->addStrip(index, name, elem->available(), elem->isConnected());
     index++;
   }
   display->selectStrip(selectedDimmerIndex);

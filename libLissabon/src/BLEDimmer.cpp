@@ -17,6 +17,10 @@ bool BLEDimmer::available() {
   return _ensureConnection() && dimmer->available();
 }
 
+bool BLEDimmer::isConnected() {
+  return _ensureConnection() && dimmer->isConnected();
+}
+
 void BLEDimmer::updateDimmer() {
   BLEDIMMER_DEBUG IotsaSerial.printf("%s.updateDimmer() called\n", name.c_str());
   needSyncToDevice = true;

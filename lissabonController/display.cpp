@@ -16,6 +16,12 @@ static Adafruit_SSD1306 *oled;
 #define STRIPS_Y 2
 #define STRIPS_HEIGHT 12
 #define STRIPS_WIDTH 62
+#define ICON_HEIGHT on_height
+#define ICON_WIDTH on_width
+#define LABEL_WIDTH (STRIPS_WIDTH-ICON_WIDTH-2)
+#define LABEL_X (ICON_WIDTH+STRIPS_X)
+#define ICON_X 0
+#define ICON_Y (-2)
 #define N_STRIPS 7
 
 #define SEPARATOR_Y (STRIPS_Y+STRIPS_HEIGHT*N_STRIPS+2)
@@ -76,26 +82,35 @@ void Display::flash() {
 void Display::clearStrips() {
   // xxxjack clear strip area
   // xxxjack show all in 0
-  oled->fillRect(STRIPS_X-2, STRIPS_Y-2, STRIPS_WIDTH+4, STRIPS_HEIGHT*N_STRIPS+4, BLACK);
+  oled->fillRect(0, 0, DISPLAY_WIDTH, STRIPS_HEIGHT*N_STRIPS+4, BLACK);
   //addStrip(0, "ALL", true);
   selectedStripOnDisplay = -1;
   selectedModeOnDisplay = dm_sleep;
 }
 
-void Display::addStrip(int index, String name, bool available) {
+void Display::addStrip(int index, String name, bool available, bool connected) {
   // xxxjack show name in index
-  int x = STRIPS_X;
+  int x = LABEL_X;
   int y = STRIPS_Y + index*STRIPS_HEIGHT;
+  oled->fillRect(0, y, DISPLAY_WIDTH, STRIPS_HEIGHT+2, BLACK);
   oled->setCursor(x, y);
   oled->print(name.c_str());
-  if (!available) {
+  if (available) {
+    // If the strip is available we show a connected/not connected indicator
+    if (connected) {
+      oled->drawXBitmap(ICON_X, y+ICON_Y, on_bits, on_width, on_height, WHITE);
+    } else {
+      oled->drawXBitmap(ICON_X, y+ICON_Y, off_bits, off_width, off_height, WHITE);
+    }
+  } else {
+#if 0
+    // If the strip is not available we leave the connected indicator blank.
+    oled->drawRect(ICON_X, y, ICON_WIDTH, ICON_HEIGHT, BLACK);
+    // If the strip is not available we also grey out the name
     //IotsaSerial.printf("xxxjack %d unavailable\n", index);
     int16_t x1, y1;
     uint16_t w, h;
     oled->getTextBounds(name, x, y, &x1, &y1, &w, &h);
-#if 0
-    oled->writeFastHLine(x1, y1+h/2, w, WHITE);
-#else
     for (int iy=y1; iy < y1+h; iy++) {
       int oddY = iy & 1;
       for(int ix=x1+oddY; ix < x1+w; ix+=2) {
@@ -109,17 +124,17 @@ void Display::addStrip(int index, String name, bool available) {
 void Display::selectStrip(int index) {
   // xxxjack clear ring around selected
   if (selectedStripOnDisplay >= 0) {
-    int x = STRIPS_X-2;
+    int x = LABEL_X-2;
     int y = STRIPS_Y + selectedStripOnDisplay*STRIPS_HEIGHT - 2;
-    oled->drawRoundRect(x, y, STRIPS_WIDTH+2, STRIPS_HEIGHT, 4, BLACK);
+    oled->drawRoundRect(x, y, LABEL_WIDTH+4, STRIPS_HEIGHT, 3, BLACK);
   }
 
   selectedStripOnDisplay = index;
   if (selectedStripOnDisplay >= 0) {
     // xxxjack draw ring around selected
-    int x = STRIPS_X-2;
+    int x = LABEL_X-2;
     int y = STRIPS_Y + selectedStripOnDisplay*STRIPS_HEIGHT - 2;
-    oled->drawRoundRect(x, y, STRIPS_WIDTH+2, STRIPS_HEIGHT, 4, WHITE);
+    oled->drawRoundRect(x, y, LABEL_WIDTH+4, STRIPS_HEIGHT, 3, WHITE);
   }
 }
 
