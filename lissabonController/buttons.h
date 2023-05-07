@@ -14,6 +14,7 @@ public:
   virtual float getLevel() = 0;
   virtual void setLevel(float level) = 0;
   virtual void toggle() = 0;
+  virtual void showMessage(const char * message) = 0;
 };
 
 class Buttons {

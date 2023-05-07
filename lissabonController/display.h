@@ -16,14 +16,11 @@ public:
   void clearTemp();
   void setTemp(float temperature);
   void showScanning(bool _isScanning);
-  void showConnected(bool _isConnected);
   void showActivity(const char *activity);
 private:
   void _updateActivity(const char *activity);
   int selectedStripOnDisplay = -1;
   bool isScanning = false;
-  bool isConnected = false;
-  bool isActivity = false;
-};
+ };
 
 #endif // DISPLAY_H

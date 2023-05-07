@@ -83,6 +83,7 @@ protected:
   void knownBLEDimmerChanged(BLEAdvertisedDevice& device);
   virtual String formHandler_field_perdevice(const char *deviceName) override;
   virtual void scanningChanged() override;
+  virtual void showMessage(const char *message) override;
 private:
   void dimmerOnOffChanged();
   void dimmerValueChanged();
@@ -245,13 +246,16 @@ IotsaLedstripControllerMod::getDimmerForCommand(int num) {
 void IotsaLedstripControllerMod::dimmerAvailableChanged(bool available, bool connected) {
   LOG_UI IotsaSerial.println("LissabonController: dimmerAvailableChanged()");
   bool availableChanged = available && !selectedDimmerIsAvailable;
-  display->showConnected(connected);
   display->showScanning(isScanning());
   updateDisplay(false);
   if (availableChanged) {
     // if this happens to be the current dimmer we want to refresh its status
     selectDimmer(false, false);
   }
+}
+
+void IotsaLedstripControllerMod::showMessage(const char *message) {
+  display->showActivity(message);
 }
 
 void IotsaLedstripControllerMod::scanningChanged() {
