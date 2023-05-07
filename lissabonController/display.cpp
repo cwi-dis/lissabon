@@ -85,7 +85,6 @@ void Display::clearStrips() {
   oled->fillRect(0, 0, DISPLAY_WIDTH, STRIPS_HEIGHT*N_STRIPS+4, BLACK);
   //addStrip(0, "ALL", true);
   selectedStripOnDisplay = -1;
-  selectedModeOnDisplay = dm_sleep;
 }
 
 void Display::addStrip(int index, String name, bool available, bool connected) {
@@ -136,27 +135,6 @@ void Display::selectStrip(int index) {
     int y = STRIPS_Y + selectedStripOnDisplay*STRIPS_HEIGHT - 2;
     oled->drawRoundRect(x, y, LABEL_WIDTH+4, STRIPS_HEIGHT, 3, WHITE);
   }
-}
-
-void Display::selectMode(DisplayMode mode) {
-  selectedModeOnDisplay = mode;
-#if 0
-  // For now, disable drawing line beside selected item
-  oled->drawFastVLine(0, 0, DISPLAY_HEIGHT, BLACK);
-  switch(selectedModeOnDisplay) {
-  case dm_select:
-    oled->drawFastVLine(0, STRIPS_Y, SEPARATOR_Y, WHITE);
-    break;
-  case dm_level:
-    oled->drawFastVLine(0, LEVEL_Y, LEVEL_HEIGHT, WHITE);
-    break;
-  case dm_temp:
-    oled->drawFastVLine(0, TEMP_Y, TEMP_HEIGHT, WHITE);
-    break;
-  default:
-    break;
-  }
-#endif
 }
 
 void Display::clearLevel() {

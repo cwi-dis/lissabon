@@ -3,7 +3,6 @@
 
 class Display {
 public:
-  enum DisplayMode { dm_sleep=0, dm_select, dm_level, dm_temp, dm_MAX=dm_temp };
   
   Display();
   void flash();
@@ -11,7 +10,6 @@ public:
   void clearStrips();
   void addStrip(int index, String name, bool available, bool connected);
   void selectStrip(int index);
-  void selectMode(DisplayMode mode);
   
   void clearLevel();
   void setLevel(float level, bool on, float wantedLevel = -1);
@@ -23,7 +21,6 @@ public:
 private:
   void _updateActivity(const char *activity);
   int selectedStripOnDisplay = -1;
-  DisplayMode selectedModeOnDisplay = dm_sleep;
   bool isScanning = false;
   bool isConnected = false;
   bool isActivity = false;

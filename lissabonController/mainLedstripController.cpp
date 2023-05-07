@@ -96,7 +96,6 @@ private:
   DimmerDynamicCollection::ItemType* dimmerFactory(int num);
   int selectedDimmerIndex = 0; // currently selected dimmer on display
   bool selectedDimmerIsAvailable = false;
-  Display::DisplayMode selectedMode = Display::DisplayMode::dm_select;
   int keepOpenMillis = 3000; // xxxjack should be configurable
 };
 
@@ -192,7 +191,6 @@ IotsaLedstripControllerMod::updateDisplay(bool clear) {
   LOG_BLE IotsaSerial.printf("LissabonController: %d strips:\n", dimmers.size());
 
   if (true || clear) display->clearStrips();
-  display->selectMode(selectedMode);
   int index = 0;
   for (auto& _elem : dimmers) {
     // Living dangerously: we don't have rtti so we can't use dynamic cast.
