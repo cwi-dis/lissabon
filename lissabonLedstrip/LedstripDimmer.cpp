@@ -96,7 +96,7 @@ void LedstripDimmer::updateColorspace(float whiteTemperature, float whiteBrightn
 float LedstripDimmer::maxLevelCorrectColor() {
     // Check the maximum brightness we can correctly render and remember that
   TempFColor maxTFColor(temperature, 1.0);
-  correctRgbwColor = rgbwSpace.toRgbw(maxTFColor);
+  RgbwFColor correctRgbwColor = rgbwSpace.toRgbw(maxTFColor);
   float maxLevel = correctRgbwColor.CalculateTrueBrightness(rgbwSpace.WBrightness);
   DEBUG_LEDSTRIP IotsaSerial.printf("LedstripDimmer.maxLevelCorrectColor: wTemp=%f wBright=%f wtdTemp=%f R=%f G=%f B=%f W=%f maxCorrect=%f\n", rgbwSpace.WTemperature, rgbwSpace.WTemperature, temperature, correctRgbwColor.R, correctRgbwColor.G, correctRgbwColor.B, correctRgbwColor.W, maxLevel);
   return maxLevel;
@@ -150,6 +150,8 @@ void LedstripDimmer::getHandler(JsonObject& reply) {
   } else {
     reply["ccMaxLevel"] = maxLevelCorrectColor();
     reply["ccTemperature"] = temperature;
+    TempFColor maxTFColor(temperature, level);
+    RgbwFColor correctRgbwColor = rgbwSpace.toRgbw(maxTFColor);
     reply["ccLevel_r"] = correctRgbwColor.R;
     reply["ccLevel_g"] = correctRgbwColor.G;
     reply["ccLevel_b"] = correctRgbwColor.B;
@@ -294,6 +296,7 @@ void LedstripDimmer::setHandler(uint8_t *_buffer, size_t _count, int _bpp, Iotsa
 }
 
 void LedstripDimmer::loop() {
+  unsigned long loopStart = micros();
   // If we are not completely setup we return.
   if (pixelBuffer == NULL || count == 0 || stripHandler == NULL) return;
   // Quick return if we have nothing to do
@@ -332,7 +335,8 @@ void LedstripDimmer::loop() {
   for (int i=0; i<count; i++) {
     float thisLevel = curLevel*pixelLevels[i];
     if (thisLevel > 1) thisLevel = 1;
-    RgbwFColor thisPixelFColor = correctRgbwColor.Dim(thisLevel);
+    TempFColor thisTFColor(temperature, thisLevel);
+    RgbwFColor thisPixelFColor = rgbwSpace.toRgbw(thisTFColor);
     RgbwColor thisPixelColor = thisPixelFColor;
     DEBUG_LEDSTRIP IotsaSerial.printf("LedstripDimmer.loop: pixel %d: level=%f r=%d g=%d b=%d w=%d\n", i, thisLevel, thisPixelColor.R, thisPixelColor.G, thisPixelColor.B, thisPixelColor.W);
     *p++ = thisPixelColor.R;
@@ -341,6 +345,7 @@ void LedstripDimmer::loop() {
     if (bpp == 4) *p++ = thisPixelColor.W;
   }
   stripHandler->pixelSourceCallback();
+  IotsaSerial.printf("LedstripDimmer.loop: %lu us\n", micros()-loopStart);
 }
 
 }

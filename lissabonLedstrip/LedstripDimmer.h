@@ -41,7 +41,6 @@ protected:
   float maxLevelCorrectColor();
   String colorDump();
   Colorspace rgbwSpace;
-  RgbwFColor correctRgbwColor;
   float calibrationData[8]; // for calibration: 2 sets of RGBW values, for alternating pixels.
   bool inCalibrationMode = false; // Use calibrationData in stead of correctRgbwColor and
   
