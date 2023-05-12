@@ -65,10 +65,13 @@ bool IotsaBLEClientConnection::connect() {
   }
   if (pClient->isConnected()) return true;
 #ifdef IOTSA_WITHOUT_NIMBLE
-  return pClient->connect(address, addressType);
+  bool rv = pClient->connect(address, addressType);
 #else
-  return pClient->connect(address, false); // Keep previously learned services
+  bool rv = pClient->connect(address, false); // Keep previously learned services
 #endif
+  // xxxjack should we clearDevice() if connection failed?
+  if (!rv) clearDevice();
+  return rv;
 }
 
 void IotsaBLEClientConnection::disconnect() {

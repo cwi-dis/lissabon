@@ -22,6 +22,10 @@ bool BLEDimmer::isConnected() {
 }
 
 void BLEDimmer::updateDimmer() {
+  if (!available()) {
+    IotsaSerial.printf("%s.updateDimmer() called but not available\n", name.c_str());
+    return;
+  }
   BLEDIMMER_DEBUG IotsaSerial.printf("%s.updateDimmer() called\n", name.c_str());
   needSyncToDevice = true;
   needTransmitTimeoutAtMillis = millis() + IOTSA_BLEDIMMER_CONNECT_TIMEOUT;
@@ -81,9 +85,11 @@ void BLEDimmer::getHandler(JsonObject& reply) {
 
 void BLEDimmer::setup() {
   if (listenForDeviceChanges) {
-    needSyncFromDevice = listenForDeviceChanges;
-    _dataValid = false;
-    needTransmitTimeoutAtMillis = millis() + IOTSA_BLEDIMMER_CONNECT_TIMEOUT;
+    if (available()) {
+      needSyncFromDevice = listenForDeviceChanges;
+      _dataValid = false;
+      needTransmitTimeoutAtMillis = millis() + IOTSA_BLEDIMMER_CONNECT_TIMEOUT;
+    }
   } else {
     _dataValid = true;
   }
@@ -100,9 +106,11 @@ void BLEDimmer::refresh() {
 void BLEDimmer::followDimmerChanges(bool follow) { 
   listenForDeviceChanges = follow; 
   if (listenForDeviceChanges) {
-    needSyncFromDevice = listenForDeviceChanges;
-    _dataValid = false;
-    needTransmitTimeoutAtMillis = millis() + IOTSA_BLEDIMMER_CONNECT_TIMEOUT;
+    if (available()) {
+      needSyncFromDevice = listenForDeviceChanges;
+      _dataValid = false;
+      needTransmitTimeoutAtMillis = millis() + IOTSA_BLEDIMMER_CONNECT_TIMEOUT;
+    }
   } else {
     _dataValid = true;
   }
@@ -123,7 +131,7 @@ void BLEDimmer::loop() {
         dimmer->disconnect();
         BLEDIMMER_DEBUG IotsaSerial.printf("BLEDimmer: disconnect from %s\n", name.c_str());
       }
-      callbacks->dimmerAvailableChanged(true, false);
+      callbacks->dimmerAvailableChanged();
       disconnectAtMillis = 0;
     }
     return;
@@ -142,7 +150,6 @@ void BLEDimmer::loop() {
       IotsaSerial.printf("BLEDimmer: Giving up on connecting to %s\n", name.c_str());
       needSyncToDevice = false;
       needSyncFromDevice = false;
-      callbacks->dimmerAvailableChanged(false, false);
       return;
     }
     // iotsaBLEClient should be listening for advertisements
@@ -161,11 +168,11 @@ void BLEDimmer::loop() {
     }
     noWarningPrintBefore = 0;
     // If all that is correct, try to connect.
-    callbacks->dimmerAvailableChanged(true, true);
+    callbacks->dimmerAvailableChanged();
     if (!dimmer->connect()) {
       BLEDIMMER_DEBUG IotsaSerial.printf("BLEDimmer: connect to %s failed\n", dimmer->getName().c_str());
       bleClientMod.deviceNotConnectable(name);
-      callbacks->dimmerAvailableChanged(false, false);
+      callbacks->dimmerAvailableChanged();
       return;
     }
     BLEDIMMER_DEBUG IotsaSerial.printf("BLEDimmer: connected to %s\n", dimmer->getName().c_str());

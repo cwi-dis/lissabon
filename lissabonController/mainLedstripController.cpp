@@ -87,7 +87,7 @@ protected:
 private:
   void dimmerOnOffChanged();
   void dimmerValueChanged();
-  void dimmerAvailableChanged(bool available, bool connected);
+  void dimmerAvailableChanged();
   void handler();
   Buttons buttons;
   DimmerDynamicCollection::ItemType* getDimmerForCommand(int num);
@@ -243,9 +243,9 @@ IotsaLedstripControllerMod::getDimmerForCommand(int num) {
 }
 
 
-void IotsaLedstripControllerMod::dimmerAvailableChanged(bool available, bool connected) {
+void IotsaLedstripControllerMod::dimmerAvailableChanged() {
   LOG_UI IotsaSerial.println("LissabonController: dimmerAvailableChanged()");
-  bool availableChanged = available && !selectedDimmerIsAvailable;
+  bool availableChanged = true;
   display->showScanning(isScanning());
   updateDisplay(false);
   if (availableChanged) {
@@ -475,7 +475,7 @@ void IotsaLedstripControllerMod::unknownBLEDimmerFound(BLEAdvertisedDevice& devi
 void IotsaLedstripControllerMod::knownBLEDimmerChanged(BLEAdvertisedDevice& deviceAdvertisement) {
   std::string name = deviceAdvertisement.getName();
   LOG_BLE IotsaSerial.printf("LissabonController: knownDeviceChanged: device \"%s\"\n", name.c_str());
-  dimmerAvailableChanged(true, false);
+  dimmerAvailableChanged();
 }
 
 void IotsaLedstripControllerMod::loop() {
