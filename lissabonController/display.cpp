@@ -167,7 +167,10 @@ void Display::setTemp(float color) {
 #ifdef DIMMER_WITH_TEMPERATURE
   clearTemp();
   oled->drawRect(TEMP_X, TEMP_Y, TEMP_WIDTH, TEMP_HEIGHT, WHITE);
-  oled->drawFastVLine(TEMP_X+int(color*TEMP_WIDTH), TEMP_Y, TEMP_HEIGHT, WHITE);
+  int tempPos = int(color*TEMP_WIDTH);
+  if (tempPos <= 0) tempPos = 1;
+  if (tempPos >= TEMP_WIDTH-1) tempPos = TEMP_WIDTH-2;
+  oled->drawFastVLine(TEMP_X+tempPos, TEMP_Y, TEMP_HEIGHT, WHITE);
 #endif
 }
 

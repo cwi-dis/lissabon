@@ -207,7 +207,7 @@ IotsaLedstripControllerMod::updateDisplay(bool clear) {
     auto d = dimmers.at(selectedDimmerIndex);
     if (d && d->available() && d->dataValid()) {
       display->setLevel(d->level, d->isOn);
-      display->setTemp(d->temperature);
+      display->setTemp(getTemperature());
     } else {
       display->clearLevel();
       display->clearTemp();
