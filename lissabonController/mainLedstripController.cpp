@@ -120,6 +120,7 @@ IotsaLedstripControllerMod::selectDimmer(bool next, bool prev) {
   }
   LOG_UI IotsaSerial.printf("LissabonController: now selectedDimmer=%d\n", selectedDimmerIndex);
   updateDisplay(false);
+  buttons.refreshEncoder();
   iotsaConfig.postponeSleep(4000);
   if (selectedDimmerIndex < dimmers.size()) {
     auto d = dimmers.at(selectedDimmerIndex);
@@ -127,6 +128,7 @@ IotsaLedstripControllerMod::selectDimmer(bool next, bool prev) {
     bool mustUpdate = availableNow && !selectedDimmerIsAvailable;
     selectedDimmerIsAvailable = availableNow;
     if (mustUpdate) {
+      LOG_UI IotsaSerial.printf("LissabonController: refresh selectedDimmer=%d\n", selectedDimmerIndex);
       d->refresh();
     }
   }

@@ -94,20 +94,8 @@ bool
 Buttons::uiButtonPressed() {
   LOG_UI IotsaSerial.printf("LissabonController.Buttons.uiButtonPressed: state=%d repeatCount=%d duration=%d\n", button.pressed, button.repeatCount, button.duration);
   _tap();
-  if (button.pressed) {
-    // If we do temperature: pressing the button means theencoder will control temperature
-#ifdef DIMMER_WITH_TEMPERATURE
-    float t_value = controller->getTemperature();
-    if (t_value < 0) t_value = 0;
-    if (t_value > 1) t_value = 1;
-    encoder.value = (int)(t_value * ENCODER_STEPS);
-#endif // DIMMER_WITH_TEMPERATURE
-  } else
-  {
-    // if the button was released the encoder controls level
-    float f_value = controller->getLevel();
-    encoder.value = (int)(f_value * ENCODER_STEPS);
-  }
+  refreshEncoder();
+
   if (!button.pressed && button.repeatCount == 0 && button.duration < SHORT_PRESS_DURATION) {
     // Short press: turn current dimmer on or off
     LOG_UI IotsaSerial.println("LissabonCOntroller.Buttons.uiButtonPressed: dimmer on/off");
@@ -155,4 +143,22 @@ Buttons::uiEncoderChanged() {
     controller->setLevel(f_value);
   }
   return true;
+}
+
+void
+Buttons::refreshEncoder() {
+  if (button.pressed) {
+    // If we do temperature: pressing the button means the encoder will control temperature
+#ifdef DIMMER_WITH_TEMPERATURE
+    float t_value = controller->getTemperature();
+    if (t_value < 0) t_value = 0;
+    if (t_value > 1) t_value = 1;
+    encoder.value = (int)(t_value * ENCODER_STEPS);
+#endif // DIMMER_WITH_TEMPERATURE
+  } else
+  {
+    // if the button was released the encoder controls level
+    float f_value = controller->getLevel();
+    encoder.value = (int)(f_value * ENCODER_STEPS);
+  }
 }

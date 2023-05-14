@@ -18,7 +18,7 @@ bool BLEDimmer::available() {
 }
 
 bool BLEDimmer::isConnected() {
-  return _ensureConnection() && dimmer->isConnected();
+  return _ensureConnection() && dimmer->isConnected() && !_isDisconnecting;
 }
 
 void BLEDimmer::updateDimmer() {
@@ -128,6 +128,8 @@ void BLEDimmer::loop() {
     // But we first disconnect if we are connected-idle for long enough.
     if (disconnectAtMillis > 0 && millis() > disconnectAtMillis) {
       if (_ensureConnection()) {
+        _isDisconnecting = true;
+        _isConnecting = false;
         dimmer->disconnect();
         BLEDIMMER_DEBUG IotsaSerial.printf("BLEDimmer: disconnect from %s\n", name.c_str());
       }
@@ -169,6 +171,8 @@ void BLEDimmer::loop() {
     noWarningPrintBefore = 0;
     // If all that is correct, try to connect.
     callbacks->dimmerAvailableChanged();
+    _isDisconnecting = false;
+    _isConnecting = true;
     if (!dimmer->connect()) {
       BLEDIMMER_DEBUG IotsaSerial.printf("BLEDimmer: connect to %s failed\n", dimmer->getName().c_str());
       bleClientMod.deviceNotConnectable(name);

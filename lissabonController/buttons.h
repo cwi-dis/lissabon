@@ -26,6 +26,7 @@ public:
   bool uiRockerPressed();
   bool uiButtonPressed();
   bool uiEncoderChanged();
+  void refreshEncoder();
 private:
   ButtonsCallbacks* controller;
   void _tap();

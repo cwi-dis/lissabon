@@ -43,6 +43,8 @@ protected:
   bool needSyncFromDevice = false;
   bool _dataValid = false;
   bool needIdentify = false;
+  bool _isConnecting = false;
+  bool _isDisconnecting = false;
   uint32_t needTransmitTimeoutAtMillis = 0;
   uint32_t disconnectAtMillis = 0;
   uint32_t noWarningPrintBefore = 0;
