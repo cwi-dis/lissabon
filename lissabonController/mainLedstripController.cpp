@@ -68,7 +68,7 @@ public:
   void configLoad();
   void configSave();
   void loop();
-  bool selectDimmer(bool next, bool prev) override;
+  void selectDimmer(bool next, bool prev) override;
   float getTemperature() override;
   void setTemperature(float temperature) override;
   float getLevel() override;
@@ -100,30 +100,36 @@ private:
   int keepOpenMillis = 3000; // xxxjack should be configurable
 };
 
-bool
+void
 IotsaLedstripControllerMod::selectDimmer(bool next, bool prev) {
-  bool rv = true;
-  if (next) selectedDimmerIndex++;
-  if (prev) selectedDimmerIndex--;
+  if (next) {
+    selectedDimmerIndex++;
+    selectedDimmerIsAvailable = false;
+  }
+  if (prev) {
+    selectedDimmerIndex--;
+    selectedDimmerIsAvailable = false;
+  }
   if (selectedDimmerIndex < 0) {
     display->flash();
     selectedDimmerIndex = 0;
-    rv = false;
   }
   if (selectedDimmerIndex >= dimmers.size()) {
     display->flash();
     selectedDimmerIndex = dimmers.size()-1;
-    rv = false;
   }
   LOG_UI IotsaSerial.printf("LissabonController: now selectedDimmer=%d\n", selectedDimmerIndex);
   updateDisplay(false);
   iotsaConfig.postponeSleep(4000);
-  if (rv) {
+  if (selectedDimmerIndex < dimmers.size()) {
     auto d = dimmers.at(selectedDimmerIndex);
-    selectedDimmerIsAvailable = d->available();
-    d->refresh();
+    bool availableNow = d->available();
+    bool mustUpdate = availableNow && !selectedDimmerIsAvailable;
+    selectedDimmerIsAvailable = availableNow;
+    if (mustUpdate) {
+      d->refresh();
+    }
   }
-  return rv;
 }
 
 float IotsaLedstripControllerMod::getTemperature() {

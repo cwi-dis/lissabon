@@ -8,7 +8,7 @@ int getInputCount();
 
 class ButtonsCallbacks {
 public:
-  virtual bool selectDimmer(bool next, bool prev) = 0;
+  virtual void selectDimmer(bool next, bool prev) = 0;
   virtual float getTemperature() = 0;
   virtual void setTemperature(float temperature) = 0;
   virtual float getLevel() = 0;
