@@ -96,8 +96,10 @@ private:
   DimmerDynamicCollection dimmers;
   DimmerDynamicCollection::ItemType* dimmerFactory(int num);
   int selectedDimmerIndex = 0; // currently selected dimmer on display
+  int savedSelectedDimmerIndex = 0;
   bool selectedDimmerIsAvailable = false;
   int keepOpenMillis = 3000; // xxxjack should be configurable
+  bool saveNeeded = false;
 };
 
 void
@@ -183,6 +185,7 @@ void IotsaLedstripControllerMod::setLevel(float level) {
   d->updateDimmer();
   updateDisplay(false);
   LOG_UI IotsaSerial.printf("LissabonController: updated dimmer %d level %f\n", selectedDimmerIndex, level);
+  if (selectedDimmerIndex != savedSelectedDimmerIndex) saveNeeded = true;
   iotsaConfig.postponeSleep(4000);
 }
 
@@ -192,6 +195,7 @@ void IotsaLedstripControllerMod::toggle() {
     d->isOn = !d->isOn;
     d->updateDimmer();
     updateDisplay(false);
+    if (selectedDimmerIndex != savedSelectedDimmerIndex) saveNeeded = true;
   }
 }
 
@@ -305,13 +309,8 @@ void IotsaLedstripControllerMod::dimmerOnOffChanged() {
 
 
 void IotsaLedstripControllerMod::dimmerValueChanged() {
-#if 1
   LOG_UI IotsaSerial.println("LissabonController: dimmerValueChanged()");
   updateDisplay(false);
-#else
-  saveAtMillis = millis() + 1000;
-  ledOn();
-#endif
 }
 
 DimmerDynamicCollection::ItemType *
@@ -426,12 +425,16 @@ void IotsaLedstripControllerMod::serverSetup() {
 
 void IotsaLedstripControllerMod::configLoad() {
   IotsaConfigFileLoad cf("/config/blecontroller.cfg");
+  cf.get("selectedDimmerIndex", selectedDimmerIndex, selectedDimmerIndex);
+  savedSelectedDimmerIndex = selectedDimmerIndex;
   dimmers.configLoad(cf, "");
 }
 
 void IotsaLedstripControllerMod::configSave() {
   IotsaConfigFileSave cf("/config/blecontroller.cfg");
   IotsaSerial.println("LissabonController: save blecontroller config");
+  cf.put("selectedDimmerIndex", selectedDimmerIndex);
+  savedSelectedDimmerIndex = selectedDimmerIndex;
   dimmers.configSave(cf, "");
 }
 
@@ -487,25 +490,45 @@ void IotsaLedstripControllerMod::knownBLEDimmerChanged(BLEAdvertisedDevice& devi
 }
 
 void IotsaLedstripControllerMod::loop() {
-   //
+  //
   // Let our baseclass do its loop-y things
   //
   IotsaBLEClientMod::loop();
-#if 0
-  //
-  // See whether we have a value to save (because the user has been turning the dimmer)
-  //
-  if (saveAtMillis > 0 && millis() > saveAtMillis) {
-    saveAtMillis = 0;
-    configSave();
-    ledOff();
-  }
-#endif
+
   //
   // Let the dimmers do any processing they need to do
   //
   for (auto d : dimmers) {
     d->loop();
+  }
+  //
+  // If we are idle we may want to do a save, or load any available dimmer values.
+  //
+  bool isIdle = true;
+  BLEDimmer *needsRefresh = nullptr;
+  for (auto& d : dimmers) {
+    // Living dangerously: we don't have rtti so we can't use dynamic cast.
+    // We know that is safe because we supplied the factory function.
+    BLEDimmer* d_ble = reinterpret_cast<BLEDimmer*>(d);
+    if (d_ble->available()) {
+      if ((d_ble->isConnected() || d_ble->isConnecting())) {
+        isIdle = false;
+      }
+      if (!d_ble->dataValid()) {
+        needsRefresh = d_ble;
+      }
+    }
+  }
+  if (isIdle) {
+    if (saveNeeded) {
+      IotsaSerial.println("LissabonController: save requested");
+      saveNeeded = false;
+      configSave();
+    }
+    if (needsRefresh != nullptr) {
+      IotsaSerial.println("LissabonController: refresh idle dimmer");
+      needsRefresh->refresh();
+    }
   }
 }
 
