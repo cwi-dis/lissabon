@@ -70,7 +70,7 @@ void IotsaBLEClientMod::setup() {
 void IotsaBLEClientMod::setupScanner() {
   // The scanner is a singleton. We initialize it once.
   scanner = BLEDevice::getScan();
-  scanner->setAdvertisedDeviceCallbacks(this, true);
+  scanner->setAdvertisedDeviceCallbacks(this, false);
   scanner->setActiveScan(true);
   scanner->setInterval(scan_interval);
   scanner->setWindow(scan_window);
@@ -331,9 +331,14 @@ void IotsaBLEClientMod::onResult(BLEAdvertisedDevice *advertisedDevice) {
 #endif
   // Is this an advertisement for a device we know, either by name or by address?
   std::string deviceName = advertisedDevice->getName();
+  if (deviceName == "") return;
   auto it = devices.find(deviceName);
   if (it != devices.end()) {
     auto dev = it->second;
+    if (dev == nullptr) {
+      IotsaSerial.printf("BLEClientMod: device byName \"%s\" is NULL\n", deviceName.c_str());
+      return;
+    }
     bool changed = dev->receivedAdvertisement(*advertisedDevice);
     if (changed) {
       devicesByAddress[advertisedDevice->getAddress().toString()] = dev;
@@ -343,9 +348,14 @@ void IotsaBLEClientMod::onResult(BLEAdvertisedDevice *advertisedDevice) {
     shouldUpdateScanAtMillis = millis(); // We may have found what we were looking for
     return;
   }
-  auto it2 = devicesByAddress.find(advertisedDevice->getAddress().toString());
+  std::string addr = advertisedDevice->getAddress().toString();
+  auto it2 = devicesByAddress.find(addr);
   if (it2 != devicesByAddress.end()) {
     auto dev = it->second;
+    if (dev == nullptr) {
+      IotsaSerial.printf("BLEClientMod: device byAddress \"%s\" is NULL\n", addr.c_str());
+      return;
+    }
     bool changed = dev->receivedAdvertisement(*advertisedDevice);
     if (changed) {
       devicesByAddress[advertisedDevice->getAddress().toString()] = dev;
