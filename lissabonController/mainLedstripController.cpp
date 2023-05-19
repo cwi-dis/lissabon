@@ -151,6 +151,7 @@ void IotsaLedstripControllerMod::setTemperature(float temperature) {
 #ifdef DIMMER_WITH_TEMPERATURE
   auto d = getDimmerForCommand(selectedDimmerIndex);
   if (d == nullptr) {
+    display->flash();
     return;
   }
   float tempKelvin = DIMMER_MIN_TEMPERATURE + temperature * (DIMMER_MAX_TEMPERATURE-DIMMER_MIN_TEMPERATURE);
@@ -175,8 +176,7 @@ float IotsaLedstripControllerMod::getLevel() {
 void IotsaLedstripControllerMod::setLevel(float level) {
   auto d = getDimmerForCommand(selectedDimmerIndex);
   if (d == nullptr) {
-    return;
-    d->level = level;
+    display->flash();
     return;
   }
   d->level = level;
@@ -228,23 +228,19 @@ DimmerDynamicCollection::ItemType*
 IotsaLedstripControllerMod::getDimmerForCommand(int num) {
   if (num < 0) {
     IotsaSerial.println("LissabonController: No dimmer selected");
-    display->flash();
     return nullptr;
   }
   auto d = dimmers.at(num);  
   if (d == nullptr) {
     IotsaSerial.printf("LissabonController: Dimmer %d does not exist\n", num);
-    display->flash();
     return nullptr;
   }
   if (!d->available()) {
     IotsaSerial.printf("LissabonController: Dimmer %d unavailable\n", num);
-    display->flash();
     return nullptr;
   }
   if (!d->dataValid()) {
     IotsaSerial.printf("LissabonController: Dimmer %d current status unknown\n", num);
-    display->flash();
     return nullptr;
   }
   return d;
