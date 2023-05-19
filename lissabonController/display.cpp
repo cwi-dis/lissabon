@@ -41,6 +41,7 @@ static Adafruit_SSD1306 *oled;
 
 #include "icons/on.h"
 #include "icons/off.h"
+#include "icons/dot.h"
 #include "icons/sun.h"
 #include "icons/lightbulb.h"
 
@@ -87,36 +88,22 @@ void Display::clearStrips() {
   selectedStripOnDisplay = -1;
 }
 
-void Display::addStrip(int index, String name, bool available, bool connected) {
+void Display::addStrip(int index, String name, StripStatus status) {
   // xxxjack show name in index
   int x = LABEL_X;
   int y = STRIPS_Y + index*STRIPS_HEIGHT;
   oled->fillRect(0, y, DISPLAY_WIDTH, STRIPS_HEIGHT+2, BLACK);
   oled->setCursor(x, y);
   oled->print(name.c_str());
-  if (available) {
-    // If the strip is available we show a connected/not connected indicator
-    if (connected) {
-      oled->drawXBitmap(ICON_X, y+ICON_Y, on_bits, on_width, on_height, WHITE);
-    } else {
-      oled->drawXBitmap(ICON_X, y+ICON_Y, off_bits, off_width, off_height, WHITE);
-    }
+  // If the strip is available we show a connected/not connected indicator
+  if (status == StripStatus::connected) {
+    oled->drawXBitmap(ICON_X, y+ICON_Y, on_bits, on_width, on_height, WHITE);
+  } else if (status == StripStatus::connecting) {
+    oled->drawXBitmap(ICON_X, y+ICON_Y, off_bits, off_width, off_height, WHITE);
+  } else if (status == StripStatus::available) {
+    oled->drawXBitmap(ICON_X, y+ICON_Y, dot_bits, dot_width, dot_height, WHITE);
   } else {
-#if 0
-    // If the strip is not available we leave the connected indicator blank.
-    oled->drawRect(ICON_X, y, ICON_WIDTH, ICON_HEIGHT, BLACK);
-    // If the strip is not available we also grey out the name
-    //IotsaSerial.printf("xxxjack %d unavailable\n", index);
-    int16_t x1, y1;
-    uint16_t w, h;
-    oled->getTextBounds(name, x, y, &x1, &y1, &w, &h);
-    for (int iy=y1; iy < y1+h; iy++) {
-      int oddY = iy & 1;
-      for(int ix=x1+oddY; ix < x1+w; ix+=2) {
-        oled->drawPixel(ix, iy, BLACK);
-      }
-    }
-#endif
+    // draw nothing
   }
 }
 

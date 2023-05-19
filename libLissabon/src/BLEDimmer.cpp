@@ -173,13 +173,17 @@ void BLEDimmer::loop() {
     callbacks->dimmerAvailableChanged();
     _isDisconnecting = false;
     _isConnecting = true;
+    callbacks->dimmerAvailableChanged();
+    BLEDIMMER_DEBUG IotsaSerial.printf("BLEDimmer: conecting to %s\n", dimmer->getName().c_str());
     if (!dimmer->connect()) {
       BLEDIMMER_DEBUG IotsaSerial.printf("BLEDimmer: connect to %s failed\n", dimmer->getName().c_str());
+      _isConnecting = false;
       bleClientMod.deviceNotConnectable(name);
       callbacks->dimmerAvailableChanged();
       return;
     }
     BLEDIMMER_DEBUG IotsaSerial.printf("BLEDimmer: connected to %s\n", dimmer->getName().c_str());
+    callbacks->dimmerAvailableChanged();
     return; // Return: next time through the loop we will send/receive data.
   }
   

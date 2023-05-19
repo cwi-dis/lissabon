@@ -1,6 +1,13 @@
 #ifndef DISPLAY_H
 #define DISPLAY_H
 
+enum StripStatus {
+  unavailable,
+  available,
+  connecting,
+  connected
+};
+
 class Display {
 public:
   
@@ -8,7 +15,7 @@ public:
   void flash();
   void show();
   void clearStrips();
-  void addStrip(int index, String name, bool available, bool connected);
+  void addStrip(int index, String name, StripStatus status);
   void selectStrip(int index);
   
   void clearLevel();

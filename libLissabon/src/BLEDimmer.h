@@ -22,6 +22,7 @@ public:
   void updateDimmer();
   bool available() override;
   bool isConnected();
+  bool isConnecting() { return _isConnecting; }
   void refresh();
   bool dataValid() override { return _dataValid; }
   bool setName(String value);
