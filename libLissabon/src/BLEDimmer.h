@@ -9,20 +9,19 @@
 #include "AbstractDimmer.h"
 #include "LissabonBLE.h"
 
+#define IOTSA_WITH_BLE_TASKS
+
 namespace Lissabon {
 
 class BLEDimmer : public AbstractDimmer {
 public:
-  BLEDimmer(int _num, IotsaBLEClientMod &_bleClientMod, DimmerCallbacks *_callbacks, int _keepOpenMillis=0)
-  : AbstractDimmer(_num, _callbacks), 
-    bleClientMod(_bleClientMod),
-    keepOpenMillis(_keepOpenMillis)
-  {}
+  BLEDimmer(int _num, IotsaBLEClientMod &_bleClientMod, DimmerCallbacks *_callbacks, int _keepOpenMillis=0);
+  ~BLEDimmer();
   void followDimmerChanges(bool follow);
   void updateDimmer();
   bool available() override;
   bool isConnected();
-  bool isConnecting() { return _isConnecting; }
+  bool isConnecting() { return _isConnecting || needSyncFromDevice || needSyncToDevice; }
   void refresh();
   bool dataValid() override { return _dataValid; }
   bool setName(String value);
@@ -34,10 +33,17 @@ public:
   virtual void getHandler(JsonObject& reply) override;
   virtual void formHandler_fields(String& message, const String& text, const String& f_name, bool includeConfig) override;
 protected:
+#ifdef IOTSA_WITH_BLE_TASKS
+  static void _connectionTask(void *arg);
+  void connectionTask();
+  TaskHandle_t connectionTaskHandle;
+  bool _availableChanged;
+  bool _dataValidChanged;
+#endif
   IotsaBLEClientConnection *dimmer = nullptr;
   bool _ensureConnection();
   void _syncToDevice();
-  void _syncFromDevice();
+  bool _syncFromDevice();
   IotsaBLEClientMod& bleClientMod;
   bool listenForDeviceChanges = false;
   bool needSyncToDevice = false;

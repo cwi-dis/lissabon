@@ -1,5 +1,7 @@
 #include "iotsaBLEClientConnection.h"
+
 #ifdef IOTSA_WITH_BLE
+
 IotsaBLEClientConnection::IotsaBLEClientConnection(std::string& _name, std::string _address)
 : name(_name),
   address(_address), // Public is default for address type for nimble

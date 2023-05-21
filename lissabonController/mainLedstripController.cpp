@@ -526,7 +526,7 @@ void IotsaLedstripControllerMod::loop() {
       configSave();
     }
     if (needsRefresh != nullptr) {
-      IotsaSerial.println("LissabonController: refresh idle dimmer");
+      IotsaSerial.printf("LissabonController: refresh idle dimmer %d\n", needsRefresh->num);
       needsRefresh->refresh();
     }
   }

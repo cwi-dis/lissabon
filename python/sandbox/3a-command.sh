@@ -1,0 +1,1 @@
+python -m lissabonCalibrate --w_brightness 1.8 --native --w_temperature 3600 --measurement lux --ledstrip striprechts.local --sensor colorsensor.local --maxlevel correct --csv sandbox/3a-striprechts-lux-native.csv --plotfile sandbox/3a-striprechts-lux-native.pdf --temperature 3600
