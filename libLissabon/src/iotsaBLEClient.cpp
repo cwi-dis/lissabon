@@ -179,7 +179,7 @@ void IotsaBLEClientMod::findUnknownDevices(bool on) {
 }
 
 bool IotsaBLEClientMod::isScanning() {
-  return scanner != nullptr;
+  return scanner != nullptr && scanner->isScanning();
 }
 
 void IotsaBLEClientMod::updateScanning() {
@@ -246,14 +246,14 @@ void IotsaBLEClientMod::startScanning() {
   // Now start the scan
   scanner = BLEDevice::getScan();
   scanningMod = this;
-  scanner->start(11, &IotsaBLEClientMod::scanComplete, false);
+  scanner->start(11, nullptr, false);
   scanningChanged();
   // Do not sleep until scan is done
   iotsaConfig.pauseSleep();
 }
 
 void IotsaBLEClientMod::stopScanning() {
-  if (!isScanning()) {
+  if (false && !isScanning()) {
     IotsaSerial.println("IotsaBLEClientMod.stopScanning: not scanning...");
   } else {
     IFDEBUG IotsaSerial.println("IotsaBLEClientMod.stopScanning: BLE scan stop");
@@ -315,11 +315,14 @@ void IotsaBLEClientMod::setManufacturerFilter(uint16_t manufacturerID) {
 }
 
 void IotsaBLEClientMod::loop() {
+  if (scanner != nullptr && !scanner->isScanning()) {
+    stopScanning();
+  }
   if (scanUnknownUntilMillis != 0 && millis() > scanUnknownUntilMillis) {
     scanUnknownUntilMillis = 0;
     findUnknownDevices(false);
   }
-  if (shouldUpdateScanAtMillis != 0 && millis() > shouldUpdateScanAtMillis) {
+  if (shouldUpdateScanAtMillis != 0 && millis() >= shouldUpdateScanAtMillis) {
     shouldUpdateScanAtMillis = 0;
     updateScanning();
   }

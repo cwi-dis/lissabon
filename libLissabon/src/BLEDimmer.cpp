@@ -208,6 +208,8 @@ void BLEDimmer::connectionTask() {
       if (!dimmer->connect()) {
         BLEDIMMER_DEBUG IotsaSerial.printf("BLEDimmer: connect to %s failed\n", dimmer->getName().c_str());
         _isConnecting = false;
+        needSyncFromDevice = false;
+        needSyncToDevice = false;
         bleClientMod.deviceNotConnectable(name); // xxxjack good idea?
         _availableChanged = true;
         continue;

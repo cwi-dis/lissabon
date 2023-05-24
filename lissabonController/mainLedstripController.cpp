@@ -245,6 +245,7 @@ IotsaLedstripControllerMod::getDimmerForCommand(int num) {
   }
   if (!d->available()) {
     IotsaSerial.printf("LissabonController: Dimmer %d unavailable\n", num);
+    updateScanning();
     return nullptr;
   }
   if (!d->dataValid()) {
