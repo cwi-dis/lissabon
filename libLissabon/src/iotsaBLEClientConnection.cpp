@@ -64,6 +64,7 @@ bool IotsaBLEClientConnection::connect() {
   if (!addressValid) return false;
   if (pClient == nullptr) {
     pClient = BLEDevice::createClient(address);
+    pClient->setConnectTimeout(connectionTimeoutSeconds);
   }
   if (pClient->isConnected()) return true;
 #ifdef IOTSA_WITHOUT_NIMBLE
@@ -71,7 +72,6 @@ bool IotsaBLEClientConnection::connect() {
 #else
   bool rv = pClient->connect(address, false); // Keep previously learned services
 #endif
-  // xxxjack should we clearDevice() if connection failed?
   if (!rv) clearDevice();
   return rv;
 }

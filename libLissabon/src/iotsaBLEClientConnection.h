@@ -47,5 +47,6 @@ protected:
 #endif
   bool addressValid;
   BLEClient* pClient;
+  const uint8_t connectionTimeoutSeconds = 6; // xxxjack should be configurable
 };
 #endif

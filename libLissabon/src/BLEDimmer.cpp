@@ -8,7 +8,7 @@
 namespace Lissabon {
 
 // How long we keep trying to connect to a dimmer
-#define IOTSA_BLEDIMMER_CONNECT_TIMEOUT 10000
+const int IOTSA_BLEDIMMER_CONNECT_TIMEOUT = 10000;
 
 // How long we keep open a ble connection (in case we have a quick new command)
 // #define IOTSA_BLEDIMMER_KEEPOPEN_MILLIS 1000
@@ -224,9 +224,10 @@ void BLEDimmer::connectionTask() {
     if (needSyncToDevice) {
       _syncToDevice();
     }
-    disconnectAtMillis = millis() + keepOpenMillis;
-    iotsaConfig.postponeSleep(keepOpenMillis+100);
-    BLEDIMMER_DEBUG IotsaSerial.printf("BLEDimmer: keepopen %d\n", keepOpenMillis);
+    int keepOpen = min(keepOpenMillis, bleClientMod.maxConnectionKeepOpen());
+    disconnectAtMillis = millis() + keepOpen;
+    iotsaConfig.postponeSleep(keepOpen+1000);
+    BLEDIMMER_DEBUG IotsaSerial.printf("BLEDimmer: keepopen %d\n", keepOpen);
   }
 }
 #endif
@@ -315,9 +316,10 @@ void BLEDimmer::loop() {
   if (needSyncToDevice) {
     _syncToDevice();
   }
-  disconnectAtMillis = millis() + keepOpenMillis;
-  iotsaConfig.postponeSleep(keepOpenMillis+100);
-  BLEDIMMER_DEBUG IotsaSerial.printf("BLEDimmer: keepopen %d\n", keepOpenMillis);
+  int keepOpen = min(keepOpenMillis, bleClientMod.maxConnectionKeepOpen());
+  disconnectAtMillis = millis() + keepOpen;
+  iotsaConfig.postponeSleep(keepOpen+1000);
+  BLEDIMMER_DEBUG IotsaSerial.printf("BLEDimmer: keepopen %d\n", keepOpen);
 #endif
 }
 

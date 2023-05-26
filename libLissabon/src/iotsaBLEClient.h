@@ -43,6 +43,7 @@ public:
   void deviceNotConnectable(std::string id);
   void deviceNotConnectable(String id) { deviceNotConnectable(std::string(id.c_str())); }
   bool canConnect();
+  unsigned int maxConnectionKeepOpen();
   //
   // Interfaces to control which BLE devices are visible to this
   // class (and any subclass)

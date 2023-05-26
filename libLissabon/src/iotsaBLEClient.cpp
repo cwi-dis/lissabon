@@ -16,6 +16,8 @@
 // For debugging: define this to print all client advertisements received
 #undef DEBUG_PRINT_ALL_CLIENTS
 
+const int SCAN_START_RETRY_MS = 1000; // How long to wait before retrying start scan
+const int SCAN_UNKNOWN_DURATION_MS = 20000; // How long to scan for unknown clients
 
 void IotsaBLEClientMod::configLoad() {
   IotsaConfigFileLoad cf("/config/bleclient.cfg");
@@ -169,8 +171,8 @@ bool IotsaBLEClientMod::putHandler(const char *path, const JsonVariant& request,
 
 void IotsaBLEClientMod::startScanUnknown() {
   findUnknownDevices(true);
-  scanUnknownUntilMillis = millis() + 20000;
-  iotsaConfig.postponeSleep(21000);
+  scanUnknownUntilMillis = millis() + SCAN_UNKNOWN_DURATION_MS;
+  iotsaConfig.postponeSleep(SCAN_UNKNOWN_DURATION_MS+1000);
 }
 
 void IotsaBLEClientMod::findUnknownDevices(bool on) {
@@ -180,6 +182,16 @@ void IotsaBLEClientMod::findUnknownDevices(bool on) {
 
 bool IotsaBLEClientMod::isScanning() {
   return scanner != nullptr && scanner->isScanning();
+}
+
+unsigned int IotsaBLEClientMod::maxConnectionKeepOpen() {
+  int rv = 30000; // Random large value
+  if (shouldUpdateScanAtMillis != 0) {
+    int rv2 = shouldUpdateScanAtMillis - millis();
+    if (rv2 < 0) rv2 = 0;
+    rv = rv2;
+  }
+  return rv;
 }
 
 void IotsaBLEClientMod::updateScanning() {
@@ -246,7 +258,12 @@ void IotsaBLEClientMod::startScanning() {
   // Now start the scan
   scanner = BLEDevice::getScan();
   scanningMod = this;
-  scanner->start(11, nullptr, false);
+  if (!scanner->start(11, nullptr, false)) {
+    scanner = nullptr;
+    IFDEBUG IotsaSerial.println("BLEClient: cannot start scan, retry in 1s");
+    shouldUpdateScanAtMillis = millis() + SCAN_START_RETRY_MS;
+    return;
+  }
   scanningChanged();
   // Do not sleep until scan is done
   iotsaConfig.pauseSleep();
