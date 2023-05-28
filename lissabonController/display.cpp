@@ -80,6 +80,10 @@ void Display::flash() {
   oled->display();
 }
 
+void Display::dim(bool _dim) {
+  oled->dim(_dim);
+}
+
 void Display::clearStrips() {
   // xxxjack clear strip area
   // xxxjack show all in 0

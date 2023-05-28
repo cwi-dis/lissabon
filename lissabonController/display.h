@@ -12,6 +12,7 @@ class Display {
 public:
   
   Display();
+  void dim(bool _dim);
   void flash();
   void show();
   void clearStrips();

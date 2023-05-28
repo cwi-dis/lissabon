@@ -39,7 +39,7 @@ IotsaBLEServerMod bleserverMod(application);
 #endif
 
 #include "iotsaBattery.h"
-#define PIN_DISABLESLEEP 0
+// #define PIN_DISABLESLEEP 0
 #define PIN_VBAT 37
 #define VBAT_100_PERCENT (12.0/11.0) // 100K and 1M resistors divide by 11, not 10...
 IotsaBatteryMod batteryMod(application);
@@ -74,6 +74,7 @@ public:
   float getLevel() override;
   void setLevel(float level) override;
   void toggle() override;
+  void sleepWakeupNotification(bool sleep) override;
 
 protected:
   void _setupDisplay();
@@ -489,6 +490,13 @@ void IotsaLedstripControllerMod::knownBLEDimmerChanged(BLEAdvertisedDevice& devi
   LOG_BLE IotsaSerial.printf("LissabonController: knownDeviceChanged: device \"%s\"\n", name.c_str());
   dimmerAvailableChanged();
 }
+
+void IotsaLedstripControllerMod::sleepWakeupNotification(bool sleep) 
+{
+  IotsaSerial.printf("LissabonController: sleep %d\n", (int)sleep);
+  display->dim(sleep);
+}
+
 
 void IotsaLedstripControllerMod::loop() {
   //

@@ -265,8 +265,10 @@ void IotsaBLEClientMod::startScanning() {
     return;
   }
   scanningChanged();
+#if 0
   // Do not sleep until scan is done
   iotsaConfig.pauseSleep();
+#endif
 }
 
 void IotsaBLEClientMod::stopScanning() {
@@ -279,8 +281,10 @@ void IotsaBLEClientMod::stopScanning() {
     scanningMod = NULL;
     // We can sleep again, but give a bit of time to cient-connection objects to
     // react to scan results.
+  #if 0
     iotsaConfig.resumeSleep();
     iotsaConfig.postponeSleep(100);
+  #endif
     scanningChanged();
   }
   // Next time through loop, check whether we should scan again.

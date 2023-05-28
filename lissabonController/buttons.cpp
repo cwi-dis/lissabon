@@ -23,8 +23,8 @@ RotaryEncoder encoder(14, 2);
 #define ENCODER_STEPS 20
 Button button(0, true, true, true);
 #define SHORT_PRESS_DURATION 500
-Button rockerUp(12, true, false, true);
-Button rockerDown(13, true, false, true);
+Button rockerUp(12, true, false, false);
+Button rockerDown(13, true, false, false);
 
 Input* inputs[] = {
   &button,
@@ -44,6 +44,12 @@ void Buttons::setup() {
   rockerDown.setCallback(std::bind(&Buttons::uiRockerPressed, this));
   rockerUp.setRepeat(500,200);
   rockerDown.setRepeat(500,200);
+  // We set wakeup on button 0 (the main button) here because the Button support
+  // doesn't quite cut it
+#if 0
+  gpio_wakeup_enable((gpio_num_t)0, GPIO_INTR_HIGH_LEVEL);
+  esp_sleep_enable_gpio_wakeup();
+#endif
 }
 
 void Buttons::_tap() {
