@@ -27,10 +27,12 @@ public:
   bool uiButtonPressed();
   bool uiEncoderChanged();
   void refreshEncoder();
+  void justAwake() { justWokeFromSleep = true; }
 private:
   ButtonsCallbacks* controller;
   void _tap();
   uint32_t lastButtonChangeMillis = 0;
   int buttonChangeCount = 0;
+  bool justWokeFromSleep = false;
 };
 #endif // BUTTONS_H

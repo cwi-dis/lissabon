@@ -495,6 +495,9 @@ void IotsaLedstripControllerMod::sleepWakeupNotification(bool sleep)
 {
   IotsaSerial.printf("LissabonController: sleep %d\n", (int)sleep);
   display->dim(sleep);
+  if (!sleep) {
+    buttons.justAwake();
+  }
 }
 
 

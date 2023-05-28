@@ -99,6 +99,11 @@ Buttons::uiRockerPressed() {
 bool
 Buttons::uiButtonPressed() {
   LOG_UI IotsaSerial.printf("LissabonController.Buttons.uiButtonPressed: state=%d repeatCount=%d duration=%d\n", button.pressed, button.repeatCount, button.duration);
+  if (justWokeFromSleep) {
+    LOG_UI IotsaSerial.println("LissabonController.Buttons.uiButtonPressed: ignoring: wake up press/release");
+    if (!button.pressed) justWokeFromSleep = false;
+    return true;
+  }
   _tap();
   refreshEncoder();
 
