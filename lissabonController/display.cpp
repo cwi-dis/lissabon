@@ -58,6 +58,7 @@ Display::Display()
   oled->setTextSize(1);
   oled->setTextColor(WHITE);
   oled->setTextWrap(false);
+  oled->dim(false);
 
   oled->drawFastHLine(0, SEPARATOR_Y, SEPARATOR_WIDTH, WHITE);
 
