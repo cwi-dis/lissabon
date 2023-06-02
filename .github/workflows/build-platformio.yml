@@ -100,9 +100,13 @@ jobs:
         rm -rf ~/.platformio/lib/iotsa
         rm -rf ~/.platformio/lib/libLissabon
 
+    - name: Copy build output
+      run: |
+        cp ${{ matrix.application }}/.pio/build/${{ matrix.variant }}/firmware.bin ${{ matrix.application }}-iotsa${{ env.iotsa_ref }}-${{ matrix.variant }}.bin
+        
     - name: Upload artifact
       uses: actions/upload-artifact@v2
       with:
         name: ${{ matrix.application }}-iotsa${{ env.iotsa_ref }}-${{ matrix.variant }}.bin
-        path: ${{ matrix.application }}/.pio/build/${{ matrix.variant }}/firmware.bin        
+        path: ${{ matrix.application }}-iotsa${{ env.iotsa_ref }}-${{ matrix.variant }}.bin
  
