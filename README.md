@@ -20,6 +20,10 @@ The intended application area is an off-grid premise (holiday home, caravan, boa
 
 The low-power requirement holds for dayly use, it is okay if the components use more power when installing new fixtures or reconfiguring the system.
 
+## Power consumption
+
+Preliminary analysis of the power consumption is availble in [doc/ble-power.md](doc/ble-power.md).
+
 ## Design choices
 
 Lissabon is built on top of the [iotsa](https://github.com/cwi-dis/iotsa) Internet-of-Things framework, using the ESP32 system on a chip, which has WiFi, Bluetooth LE and low power support built in.
