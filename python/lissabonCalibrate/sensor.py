@@ -4,8 +4,8 @@ import sys
 from .common import Common
 
 class Sensor(Common):
-    def __init__(self, hostname):
-        Common.__init__(self, hostname)
+    def __init__(self, hostname, protocol=None):
+        Common.__init__(self, hostname, protocol=protocol)
 
     def post_open(self):
         self.service = self.device.rgbw

@@ -168,13 +168,11 @@ class Calibrator:
             ('blue', 0, 0, 0.5, 0)
         ]
         values = []
-        for r, g, b, w in wtd_values:
-            result = dict(r=r, g=g, b=b, w=w)
+        for label, r, g, b, w in wtd_values:
+            result = dict(label=label, req_r=r, req_g=g, req_b=b, req_w=w)
             self.ledstrip.setColor(r, g, b, w)
             sResult = self.sensor.get()
-            result['rgb_white'] = sResult['w']
             result['lux'] = sResult['lux']
-            result['rgb_cct'] = sResult['cct']
             result['rgb_r'] = sResult['r']
             result['rgb_g'] = sResult['g']
             result['rgb_b'] = sResult['b']

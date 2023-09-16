@@ -47,6 +47,7 @@ def main():
     parser.add_argument('--measurement', '-m', action='store', choices=['leds', 'lux', 'cct'], help='Type of mesurement to do')
     parser.add_argument('--ledstrip', '-l', action='store', metavar='IP', help='Ledstrip hostname')
     parser.add_argument('--sensor', '-s', action='store', metavar='IP', help='Ledstrip sensor')
+    parser.add_argument('--protocol', action='store', metavar="PROTO", help="Protocol to use (http, https, coap, hps, default=automatic)")
     parser.add_argument('--interval', action='store', type=int, default=320, metavar='DUR', help='Sensor integration duration (ms, between 40 and 1280, default 320)')
     parser.add_argument('--steps', action='store', type=int, default=16, metavar='N', help='Use N steps for calibration (default 16)')
     parser.add_argument('--gamma', action='store', default=1, type=float, metavar='GAMMA', help='Gamma value for LED output (default 1.0)')
@@ -79,12 +80,12 @@ def main():
     if args.input:
         keys, values, parameters = read_csv(open(args.input))
     else:
-        sObj = Sensor(args.sensor)
+        sObj = Sensor(args.sensor, protocol=args.protocol)
         if not sObj.open(): return -1
         if args.interval:
             sObj.setInterval(args.interval)
 
-        lObj = Ledstrip(args.ledstrip)
+        lObj = Ledstrip(args.ledstrip, protocol=args.protocol)
         if not lObj.open(): return -1
     
 

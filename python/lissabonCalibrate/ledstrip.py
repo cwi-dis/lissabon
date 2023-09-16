@@ -2,8 +2,8 @@ from .common import Common
 import requests
 
 class Ledstrip(Common):
-    def __init__(self, hostname : str):
-        Common.__init__(self, hostname)
+    def __init__(self, hostname : str, protocol=None):
+        Common.__init__(self, hostname, protocol=protocol)
         self.has_pps = True
     
     def post_open(self) -> bool:
