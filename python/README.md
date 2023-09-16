@@ -1,0 +1,3 @@
+# lissabonCalibrate
+
+Calibrate lissabon ledstrips.

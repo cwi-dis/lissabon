@@ -159,6 +159,31 @@ class Calibrator:
             whiteBrightness=self.args.w_brightness
         )
 
+    def run_leds(self):
+        keys = ['label', 'req_r', 'req_g', 'req_b', 'req_w', 'rgb_r', 'rgb_g', 'rgb_b', 'lux']
+        wtd_values = [
+            ('white', 0, 0, 0, 0.5),
+            ('red', 0.5, 0, 0, 0),
+            ('green', 0, 0.5, 0, 0),
+            ('blue', 0, 0, 0.5, 0)
+        ]
+        values = []
+        for r, g, b, w in wtd_values:
+            result = dict(r=r, g=g, b=b, w=w)
+            self.ledstrip.setColor(r, g, b, w)
+            sResult = self.sensor.get()
+            result['rgb_white'] = sResult['w']
+            result['lux'] = sResult['lux']
+            result['rgb_cct'] = sResult['cct']
+            result['rgb_r'] = sResult['r']
+            result['rgb_g'] = sResult['g']
+            result['rgb_b'] = sResult['b']
+            values.append(result)
+        parameters = dict(
+            measurement='leds',
+            )
+        return keys, values, parameters
+    
     def run_lux(self):
         args = self.args
         nsteps = args.steps

@@ -44,7 +44,7 @@ def read_csv(fp):
         
 def main():
     parser = argparse.ArgumentParser(description="Calibrate lissabonLedstrip using iotsaRGBWSensor")
-    parser.add_argument('--measurement', '-m', action='store', choices=['lux', 'cct'], help='Type of mesurement to do')
+    parser.add_argument('--measurement', '-m', action='store', choices=['leds', 'lux', 'cct'], help='Type of mesurement to do')
     parser.add_argument('--ledstrip', '-l', action='store', metavar='IP', help='Ledstrip hostname')
     parser.add_argument('--sensor', '-s', action='store', metavar='IP', help='Ledstrip sensor')
     parser.add_argument('--interval', action='store', type=int, default=320, metavar='DUR', help='Sensor integration duration (ms, between 40 and 1280, default 320)')
@@ -95,6 +95,8 @@ def main():
             keys, values, parameters = calibrator.run_lux()
         elif args.measurement == 'cct':
             keys, values, parameters = calibrator.run_cct()
+        elif args.measurement == 'leds':
+            keys, values, parameters = calibrator.run_leds()
         else:
             assert False, f'Unknown measurement type {args.measurement}'
     
@@ -123,6 +125,8 @@ def main():
                 )
             #plot_colors(values, parameters, ['50'])
             #plot_colors(values, parameters, ['100'])
+        elif parameters['measurement'] == 'leds':
+            print('Not yet implemented')
         else:
             assert False, f'Unknown measurement type {parameters["measurement"]}'
 
