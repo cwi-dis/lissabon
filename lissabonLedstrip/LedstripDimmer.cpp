@@ -142,6 +142,7 @@ void LedstripDimmer::getHandler(JsonObject& reply) {
   reply["whiteBrightness"] = rgbwSpace.WBrightness;
   reply["focalPoint"] = focalPoint;
   reply["focalSpread"] = focalSpread;
+  reply["inCalibrationMode"] = inCalibrationMode;
   if (inCalibrationMode) {
     JsonArray _calibrationData = reply.createNestedArray("calibrationData");
     for(int i=0; i <8; i++) {
@@ -168,6 +169,7 @@ bool LedstripDimmer::putHandler(const JsonVariant& request) {
     float whiteBrightness = request["whiteBrightness"]|rgbwSpace.WBrightness;
     focalPoint = request["focalPoint"] | focalPoint;
     focalSpread = request["focalSpread"] | focalSpread;
+
     if (request.containsKey("calibrationData")) {
       JsonArray _calibrationData = request["calibrationData"];
       int size = _calibrationData.size();
@@ -176,8 +178,10 @@ bool LedstripDimmer::putHandler(const JsonVariant& request) {
           calibrationData[i] = _calibrationData[i % size];
         }
         animationStartMillis = animationEndMillis = millis();
+        inCalibrationMode = true;
         IFDEBUG IotsaSerial.println("Got calibrationData, in calibration mode");
       } else if (size == 0) {
+        animationStartMillis = animationEndMillis = millis();
         inCalibrationMode = false;
         IFDEBUG IotsaSerial.println("Got empty calibrationData, left calibrationMode");
       } else {
@@ -187,7 +191,8 @@ bool LedstripDimmer::putHandler(const JsonVariant& request) {
       if (inCalibrationMode) {
         IFDEBUG IotsaSerial.println("No calibrationData, left calibration mode");
       }
-      inCalibrationMode = false;
+        animationStartMillis = animationEndMillis = millis();
+        inCalibrationMode = false;
     }
     updateColorspace(whiteTemperature, whiteBrightness);
   }
@@ -305,6 +310,10 @@ void LedstripDimmer::loop() {
   // If we are in calibration mode we simply set the pixels and be done
   //
   if (inCalibrationMode) {
+    IotsaSerial.printf("Loop: calibration r1 %f g2 %f b1 %f w1 %f, r1 %f g2 %f b1 %f w1 %f\n", 
+      calibrationData[0], calibrationData[1], calibrationData[2], calibrationData[3],
+      calibrationData[4], calibrationData[5], calibrationData[6], calibrationData[7]
+    );
     uint8_t *p = pixelBuffer;
     for (int i=0; i<count; i++) {
       RgbwFColor thisPixelFColor;
@@ -320,6 +329,7 @@ void LedstripDimmer::loop() {
       if (bpp == 4) *p++ = thisPixelColor.W;
     }
     stripHandler->pixelSourceCallback();
+    animationStartMillis = animationEndMillis = 0;
     return;
   }
   //
