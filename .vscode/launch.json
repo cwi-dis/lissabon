@@ -1,0 +1,39 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "type": "platformio-debug",
+            "request": "launch",
+            "name": "PIO Debug",
+            "executable": "/Users/jack/src/dis-git/lissabon/.pio/build/example-lissabonExample/firmware.elf",
+            "toolchainBinDir": "/Users/jack/.platformio/packages/toolchain-xtensa32/bin",
+            "preLaunchTask": {
+                "type": "PlatformIO",
+                "task": "Pre-Debug"
+            },
+            "internalConsoleOptions": "openOnSessionStart"
+        },
+        {
+            "type": "platformio-debug",
+            "request": "launch",
+            "name": "PIO Debug (skip Pre-Debug)",
+            "executable": "/Users/jack/src/dis-git/lissabon/.pio/build/example-lissabonExample/firmware.elf",
+            "toolchainBinDir": "/Users/jack/.platformio/packages/toolchain-xtensa32/bin",
+            "internalConsoleOptions": "openOnSessionStart"
+        },
+        {
+            "name": "Python: Module lissabonCalibrate",
+            "type": "python",
+            "request": "launch",
+            "module": "lissabonCalibrate",
+            "justMyCode": false,
+            "args": [
+                "--protocol", "hps",
+                "--measurement", "leds",
+                "--ledstrip", "striplinks",
+                "--sensor", "colorsensor",
+                "--csv", "test.csv"
+            ]
+        },
+    ]
+}
