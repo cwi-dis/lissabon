@@ -165,8 +165,21 @@ class Calibrator:
             ('white', 0, 0, 0, 0.5),
             ('red', 0.5, 0, 0, 0),
             ('green', 0, 0.5, 0, 0),
-            ('blue', 0, 0, 0.5, 0)
+            ('blue', 0, 0, 0.5, 0),
+            ('rgb', 0.5, 0.5, 0.5, 0),
         ]
+        for i in range(11):
+            wtd_values.append(
+                ('triangle', 1-(0.1*i), 0.1*i, 0, 0) # Red to green
+            )
+        for i in range(11):
+            wtd_values.append(
+                ('triangle', 0, 1-(0.1*i), 0.1*i, 0)
+            )
+        for i in range(11):
+            wtd_values.append(
+                ('triangle', 0.1*i, 0, 1-(0.1*i), 0)
+            )
         values = []
         for label, r, g, b, w in wtd_values:
             result = dict(label=label, req_r=r, req_g=g, req_b=b, req_w=w)
