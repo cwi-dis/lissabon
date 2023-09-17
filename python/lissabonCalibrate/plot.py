@@ -4,6 +4,8 @@ from typing import List, Optional
 import colour
 import colour.plotting
 
+from .colorplot import ColorPlot
+
 def plot_lines(values : List[dict], parameters : dict, xlabel : str, ylabels : List[str], y2labels : Optional[List[str]]=None, variableName : str='LUX', filename : Optional[str]=None):
     x_values = list(map(lambda v : v[xlabel], values))
     y_values = {}
@@ -139,3 +141,26 @@ def plot_colors(values, parameters, ylabels, filename : Optional[str]=None):
         matplotlib.pyplot.savefig(filename)
     else:
         matplotlib.pyplot.show()
+
+def plot_colors_new_filter(label, values):
+    selected = filter(lambda item : item['label'] == label, values)
+    mapped = map(lambda item : (item['rgb_r'], item['rgb_g'], item['rgb_b']), selected)
+    return list(mapped)
+
+def plot_colors_new(values, filename : Optional[str]=None):
+    p = ColorPlot()
+    white = plot_colors_new_filter('white', values)
+    p.add('white led', '$W$', 'black', 0, white)
+    red = plot_colors_new_filter('red', values)
+    p.add('red led', '$R$', 'black', 0, red)
+    green = plot_colors_new_filter('green', values)
+    p.add('green led', '$G$', 'black', 0, green)
+    blue = plot_colors_new_filter('blue', values)
+    p.add('blue led', '$B$', 'black', 0, blue)
+    rgb = plot_colors_new_filter('rgb', values)
+    p.add('RGB leds', '+', 'black', 0, rgb)
+
+    triangle = plot_colors_new_filter('triangle', values)
+    p.add('range', '', 'white', 1, triangle)
+    p.show()
+    

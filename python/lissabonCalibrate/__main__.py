@@ -7,7 +7,7 @@ from .sensor import Sensor
 from .ledstrip import Ledstrip
 from .colorconvert import convert_K_to_RGB
 from .calibrator import Calibrator
-from .plot import plot_lines, plot_colors
+from .plot import plot_lines, plot_colors, plot_colors_new
 
 def write_csv(fp, keys, values, parameters):
     ofp = csv.DictWriter(fp, keys + ['parameter', 'value'], quoting=csv.QUOTE_NONNUMERIC)
@@ -127,7 +127,7 @@ def main():
             #plot_colors(values, parameters, ['50'])
             #plot_colors(values, parameters, ['100'])
         elif parameters['measurement'] == 'leds':
-            print('Not yet implemented')
+            plot_colors_new(values)
         else:
             assert False, f'Unknown measurement type {parameters["measurement"]}'
 
