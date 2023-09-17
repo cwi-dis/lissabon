@@ -26,13 +26,11 @@
             "type": "python",
             "request": "launch",
             "module": "lissabonCalibrate",
-            "justMyCode": false,
+            "justMyCode": true,
             "args": [
-                "--protocol", "hps",
+                "--input", "./python/sandbox/leds-striplinks.csv",
                 "--measurement", "leds",
-                "--ledstrip", "striplinks",
-                "--sensor", "colorsensor",
-                "--csv", "test.csv"
+                "--plot"
             ]
         },
     ]
