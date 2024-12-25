@@ -346,13 +346,11 @@ bool AbstractDimmer::putHandler(const JsonVariant& request) {
     identify();
     anyChanged = true;
   }
-  if (reqObj.containsKey("isOn")) {
-    isOn = reqObj["isOn"];
+  if (getFromRequest<bool>(reqObj, "isOn", isOn)) {
     dimmerChanged = true;
   }
 #ifdef DIMMER_WITH_LEVEL
-  if (reqObj.containsKey("level")) {
-    level = reqObj["level"];
+  if (getFromRequest<float>(reqObj, "level", level)) {
     dimmerChanged = true;
   }
 #endif // DIMMER_WITH_LEVEL
@@ -361,8 +359,7 @@ bool AbstractDimmer::putHandler(const JsonVariant& request) {
 #ifdef DIMMER_WITH_ANIMATION
 #endif // DIMMER_WITH_GAMMA
 #ifdef DIMMER_WITH_TEMPERATURE
-  if (reqObj.containsKey("temperature")) {
-    temperature = reqObj["temperature"];
+  if (getFromRequest<float>(reqObj, "temperature", temperature)) {  
     dimmerChanged = true;
   }
 #endif // DIMMER_WITH_TEMPERATURE
@@ -376,32 +373,29 @@ bool AbstractDimmer::putHandler(const JsonVariant& request) {
     // xxxjack the following should only be changed when in configuration mode
     bool configChanged = false;
     // xxxjack check permission
-    if (reqObj.containsKey("name")) {
-      String value = reqObj["name"].as<String>();
-      if (setName(name)) configChanged = true;
+    String value;
+    if (getFromRequest<const char*>(reqObj, "name", value)) {
+      if (setName(value)) configChanged = true;
     }
 #ifdef DIMMER_WITH_LEVEL
-    if (reqObj.containsKey("minLevel")) {
-      minLevel = reqObj["minLevel"];
+    if (getFromRequest<float>(reqObj, "minLevel", minLevel)) {
       configChanged = true;
     }
 #endif // DIMMER_WITH_LEVEL
 #ifdef DIMMER_WITH_GAMMA
-    if (reqObj.containsKey("gamma")) {
-      gamma = reqObj["gamma"];
+    if (getFromRequest<float>(reqObj, "gamma", gamma)) {
       configChanged = true;
     }
 #endif // DIMMER_WITH_GAMMA
 #ifdef DIMMER_WITH_ANIMATION
-    if (reqObj.containsKey("animation")) {
-      animationDurationMillis = reqObj["animation"];
+    if (getFromRequest<int>(reqObj, "animation", animationDurationMillis)) {
       configChanged = true;
     }
 #endif // DIMMER_WITH_GAMMA
 #ifdef DIMMER_WITH_TEMPERATURE
 #endif // DIMMER_WITH_TEMPERATURE
 #ifdef DIMMER_WITH_PWMFREQUENCY
-    if (reqObj.containsKey("pwmFrequency")) {
+    if (getFromRequest<int>(reqObj, "pwmFrequency", pwmFrequency)) {
       pwmFrequency = reqObj["pwmFrequency"];
       configChanged = true;
     }

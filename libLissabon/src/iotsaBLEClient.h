@@ -6,11 +6,12 @@
 #include "iotsaBLEClientConnection.h"
 
 #include <set>
+#include <map>
 
-typedef std::function<void(BLEAdvertisedDevice&)> BleDeviceFoundCallback;
+typedef std::function<void(const BLEAdvertisedDevice&)> BleDeviceFoundCallback;
 typedef const char *UUIDString;
 
-class IotsaBLEClientMod : public IotsaApiMod, public BLEAdvertisedDeviceCallbacks {
+class IotsaBLEClientMod : public IotsaApiMod, public NimBLEScanCallbacks {
 public:
   //xxxjack IotsaBLEClientMod(IotsaApplication& app) : IotsaApiMod(app) {}
   using IotsaApiMod::IotsaApiMod;
@@ -64,7 +65,7 @@ protected:
 protected:
   void configLoad();
   void configSave();
-  void onResult(BLEAdvertisedDevice *advertisedDevice);
+  void onResult(const BLEAdvertisedDevice *advertisedDevice);
   void setupScanner();
   void updateScanning();
   void startScanning();

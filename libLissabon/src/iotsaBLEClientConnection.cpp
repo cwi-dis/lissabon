@@ -4,7 +4,7 @@
 
 IotsaBLEClientConnection::IotsaBLEClientConnection(std::string& _name, std::string _address)
 : name(_name),
-  address(_address), // Public is default for address type for nimble
+  address(_address, 0), // Public is default for address type for nimble
 #ifdef IOTSA_WITHOUT_NIMBLE
   addressType(BLE_ADDR_TYPE_PUBLIC),
 #endif
@@ -33,7 +33,7 @@ std::string IotsaBLEClientConnection::getAddress() {
   return address.toString();
 }
 
-bool IotsaBLEClientConnection::receivedAdvertisement(BLEAdvertisedDevice& _device) {
+bool IotsaBLEClientConnection::receivedAdvertisement(const BLEAdvertisedDevice& _device) {
   // Check whether the address is the same, then we don't have to add anything.
   if (addressValid 
 #ifdef IOTSA_WITHOUT_NIMBLE
@@ -201,7 +201,7 @@ bool IotsaBLEClientConnection::getAsNotification(BLEUUID& serviceUUID, BLEUUID& 
   if (characteristic == NULL) return false;
   if (!characteristic->canNotify()) return false;
   _staticCallback = callback;
-  characteristic->registerForNotify(_staticCallbackCaller);
+  characteristic->subscribe(true, _staticCallbackCaller);
   return false;
 }
 #endif // IOTSA_WITH_BLE

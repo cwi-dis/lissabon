@@ -49,7 +49,7 @@ void DimmerCollection::loop() {
 void DimmerCollection::getHandler(JsonObject& reply) {
   for (auto d : dimmers) {
     String ident = "dimmer" + String(d->num);
-    JsonObject dimmerReply = reply.createNestedObject(ident);
+    JsonObject dimmerReply = reply[ident].as<JsonObject>();
     d->getHandler(dimmerReply);
   }
 }

@@ -80,8 +80,8 @@ protected:
   void _setupDisplay();
   bool getHandler(const char *path, JsonObject& reply);
   bool putHandler(const char *path, const JsonVariant& request, JsonObject& reply);
-  void unknownBLEDimmerFound(BLEAdvertisedDevice& device);
-  void knownBLEDimmerChanged(BLEAdvertisedDevice& device);
+  void unknownBLEDimmerFound(const BLEAdvertisedDevice& device);
+  void knownBLEDimmerChanged(const BLEAdvertisedDevice& device);
   virtual String formHandler_field_perdevice(const char *deviceName) override;
   virtual void scanningChanged() override;
   virtual void showMessage(const char *message) override;
@@ -395,14 +395,15 @@ bool IotsaLedstripControllerMod::putHandler(const char *path, const JsonVariant&
   anyChanged = IotsaBLEClientMod::putHandler(path, request, reply);
   anyChanged |= dimmers.putHandler(request);
   // This is a hack. We don't implement DELETE so we add a funny value
-  if (request.containsKey("clearall") && request["clearall"]) {
+  bool clearall;
+  if (getFromRequest<bool>(request, "clearall", clearall) && clearall) {
     dimmers.clear();
     anyChanged = true;
   }
   // This is another hack.
-  if (request.containsKey("add")) {
-    String newDimmerName = request["add"];
-    if (newDimmerName != "" && dimmers.find(newDimmerName) == nullptr) {
+  String newDimmerName;
+  if (getFromRequest<String>(request, "add", newDimmerName)) {
+    if (dimmers.find(newDimmerName) == nullptr) {
       dimmers.push_back_new(newDimmerName);
       dimmers.setup();
       anyChanged = true;
@@ -480,12 +481,12 @@ void IotsaLedstripControllerMod::_setupDisplay() {
 }
 
 
-void IotsaLedstripControllerMod::unknownBLEDimmerFound(BLEAdvertisedDevice& deviceAdvertisement) {
+void IotsaLedstripControllerMod::unknownBLEDimmerFound(const BLEAdvertisedDevice& deviceAdvertisement) {
   LOG_BLE IotsaSerial.printf("LissabonController: unknownDeviceFound: device \"%s\"\n", deviceAdvertisement.getName().c_str());
   unknownDevices.insert(deviceAdvertisement.getName());
 }
 
-void IotsaLedstripControllerMod::knownBLEDimmerChanged(BLEAdvertisedDevice& deviceAdvertisement) {
+void IotsaLedstripControllerMod::knownBLEDimmerChanged(const BLEAdvertisedDevice& deviceAdvertisement) {
   std::string name = deviceAdvertisement.getName();
   LOG_BLE IotsaSerial.printf("LissabonController: knownDeviceChanged: device \"%s\"\n", name.c_str());
   dimmerAvailableChanged();

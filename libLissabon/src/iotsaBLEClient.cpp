@@ -72,7 +72,7 @@ void IotsaBLEClientMod::setup() {
 void IotsaBLEClientMod::setupScanner() {
   // The scanner is a singleton. We initialize it once.
   scanner = BLEDevice::getScan();
-  scanner->setAdvertisedDeviceCallbacks(this, false);
+  scanner->setScanCallbacks(this, false);
   scanner->setActiveScan(true);
   scanner->setInterval(scan_interval);
   scanner->setWindow(scan_window);
@@ -136,7 +136,7 @@ bool IotsaBLEClientMod::getHandler(const char *path, JsonObject& reply) {
   reply["scan_interval"] = scan_interval;
   reply["scan_window"] = scan_window;
   if (unknownDevices.size()) {
-    JsonArray unknownReply = reply.createNestedArray("unassigned");
+    JsonArray unknownReply = reply["unassigned"].as<JsonArray>();
     for (auto it : unknownDevices) {
       unknownReply.add((char *)it.c_str());
     }
@@ -148,11 +148,11 @@ bool IotsaBLEClientMod::putHandler(const char *path, const JsonVariant& request,
   bool anyChanged = false;
   bool _startScanUnknown = false;
   JsonObject reqObj = request.as<JsonObject>();
-  if (reqObj.containsKey("scan_interval")) {
+  if (getFromRequest<int>(reqObj, "scan_interval", scan_interval)) {
     scan_interval = reqObj["scan_interval"];
     anyChanged = true;
   }
-  if (reqObj.containsKey("scan_window")) {
+  if (getFromRequest<int>(reqObj, "scan_window", scan_window)) {
     scan_window = reqObj["scan_window"];
     anyChanged = true;
   }
@@ -258,7 +258,7 @@ void IotsaBLEClientMod::startScanning() {
   // Now start the scan
   scanner = BLEDevice::getScan();
   scanningMod = this;
-  if (!scanner->start(11, nullptr, false)) {
+  if (!scanner->start(11000)) {
     scanner = nullptr;
     IFDEBUG IotsaSerial.println("BLEClient: cannot start scan, retry in 1s");
     shouldUpdateScanAtMillis = millis() + SCAN_START_RETRY_MS;
@@ -349,7 +349,7 @@ void IotsaBLEClientMod::loop() {
   }
 }
 
-void IotsaBLEClientMod::onResult(BLEAdvertisedDevice *advertisedDevice) {
+void IotsaBLEClientMod::onResult(const BLEAdvertisedDevice *advertisedDevice) {
 #ifdef DEBUG_PRINT_ALL_CLIENTS
   IotsaSerial.printf("BLEClientMod::onResult(%s)\n", advertisedDevice->toString().c_str());
 #endif

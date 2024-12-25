@@ -38,7 +38,7 @@ IotsaBLEClientMod bleClientMod(application);
 
 using namespace Lissabon;
 
-class IotsaBLEDimmerMod : public IotsaApiMod, public DimmerCallbacks {
+class IotsaBLEDimmerMod : public IotsaRestApiMod, public DimmerCallbacks {
 public:
   IotsaBLEDimmerMod(IotsaApplication &_app, IotsaAuthenticationProvider *_auth=NULL)
   : IotsaRestApiMod(_app, _auth),
@@ -63,7 +63,7 @@ protected:
 private:
   void dimmerOnOffChanged() override;
   void dimmerValueChanged() override;
-  void dimmerAvailableChanged(bool available, bool connected) override {};
+  void dimmerAvailableChanged() override {};
   void handler();
   BLEDimmer dimmer1;
 #ifdef WITH_BLESERVER
@@ -109,7 +109,7 @@ String IotsaBLEDimmerMod::info() {
 
 bool IotsaBLEDimmerMod::getHandler(const char *path, JsonObject& reply) {
   // xxxjack need to distinguish between config and operational parameters
-  JsonObject dimmer1Reply = reply.createNestedObject("dimmer1");
+  JsonObject dimmer1Reply = reply["dimmer1"].as<JsonObject>();
   dimmer1.getHandler(dimmer1Reply);
   return true;
 }

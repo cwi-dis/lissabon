@@ -89,7 +89,7 @@ public:
 protected:
   bool getHandler(const char *path, JsonObject& reply) override;
   bool putHandler(const char *path, const JsonVariant& request, JsonObject& reply) override;
-  void unknownBLEDimmerFound(BLEAdvertisedDevice& deviceAdvertisement);
+  void unknownBLEDimmerFound(const BLEAdvertisedDevice& deviceAdvertisement);
 private:
   void dimmerOnOffChanged() override;
   void dimmerValueChanged() override;
@@ -266,7 +266,7 @@ void LissabonRemoteMod::setup() {
 }
 
 // xxxjack move to IotsaBLEClientMod?
-void LissabonRemoteMod::unknownBLEDimmerFound(BLEAdvertisedDevice& deviceAdvertisement) {
+void LissabonRemoteMod::unknownBLEDimmerFound(const BLEAdvertisedDevice& deviceAdvertisement) {
   IFDEBUG IotsaSerial.printf("unknownBLEDimmerFound: iotsaLedstrip/iotsaDimmer \"%s\"\n", deviceAdvertisement.getName().c_str());
   unknownDevices.insert(deviceAdvertisement.getName());
 }

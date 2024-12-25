@@ -14,7 +14,7 @@ class IotsaBLEClientConnection {
 public:
   IotsaBLEClientConnection(std::string& _name, std::string _address="");
   ~IotsaBLEClientConnection();
-  bool receivedAdvertisement(BLEAdvertisedDevice& _device);
+  bool receivedAdvertisement(const BLEAdvertisedDevice& _device);
   void clearDevice();
   bool available();
   bool connect();
