@@ -49,6 +49,8 @@ IotsaBatteryMod batteryMod(application);
 // #define WITH_TOUCHPADS
 // Define WITH_ROTARY to enable user interface consisting of a rotary encoder (up/down) and a button (on/off)
 // #define WITH_ROTARY
+
+// Variant: two touchpads
 #ifdef WITH_TOUCHPADS
 #define WITH_UI
 // Two touchpad pins: off/decrement (long press), on/increment (long press)
@@ -60,9 +62,11 @@ Input* inputs[] = {
   &encoder
 };
 #endif // WITH_TOUCHPADS
+
+// Variant: two buttons
 #ifdef WITH_BUTTONS
 #define WITH_UI
-// Two touchpad pins: off/decrement (long press), on/increment (long press)
+// Two buttons: off/decrement (long press), on/increment (long press)
 Button buttondown(16, true, true, true);
 Button buttonup(17, true, true, true);
 UpDownButtons encoder(buttondown, buttonup, true);
@@ -71,6 +75,20 @@ Input* inputs[] = {
   &encoder
 };
 #endif // WITH_BUTTONS
+
+// Variant: single button dimmer
+#ifdef WITH_1BUTTON
+#define WITH_UI
+// One buttons: short press: toggle on/off, long press: cycle value between min and max.
+Button button(16, true, true, true);
+CyclingButton encoder(button);
+
+Input* inputs[] = {
+  &encoder
+};
+#endif // WITH_BUTTONS
+
+// Variant: with rotary encoder that can be pressed as a button (for on/off)
 #ifdef WITH_ROTARY
 #define WITH_UI
 // A rotary encoder for increment/decrement and a button for on/off.
