@@ -72,7 +72,7 @@ A more elaborate remote control with a display. Incomplete.
 Lissabon Dimmer, plug-in variant with rotary control:
 ![Plugin Dimmer](images/plugindimmer.jpg)
 
-Lissabon Dimmer, for use in inaccessible locations:
+Lissabon Dimmer without controls, for use in inaccessible locations:
 ![Hidden Dimmer](images/hiddendimmer.jpg)
 
 Ledstrip dimmer, with brightness and color temperature touchpads:
@@ -85,3 +85,16 @@ Wireless remote control, inside and outside with holder:
 Controller: to be supplied
 
 In situ pictures: to be supplied
+
+## ESP32 pinouts
+
+I have been using three different boards in the various projects here. Naming of the ESP32 boards is sometimes confusing, so here are pictures of the board and their pinouts:
+
+Lolin32 image and pinout:
+![Lolin32 image and pinout](images/lolin32-pinout.jpg)
+
+Esp32dev image and pinout:
+![esp32dev image and pinout](images/esp32dev-pinout.jpg)
+
+Pico32 image and pinout:
+![pico32 image and pinout](images/pico32-pinout.png)
