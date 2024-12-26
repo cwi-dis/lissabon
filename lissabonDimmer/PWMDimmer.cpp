@@ -3,7 +3,7 @@
 namespace Lissabon {
 
 PWMDimmer::PWMDimmer(int _num, int _pin, int _channel, DimmerCallbacks *_callbacks)
-: AbstractDimmer(num, _callbacks),
+: AbstractDimmer(_num, _callbacks),
   pin(_pin),
   channel(_channel)
 {

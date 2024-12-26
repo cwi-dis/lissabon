@@ -44,6 +44,14 @@ IotsaBatteryMod batteryMod(application);
 #define PIN_PWM_DIMMER 2
 #define CHANNEL_PWM_DIMMER 0
 
+// For a two-channel dimmer, define WITH_DOUBLE_DIMMER and set the second pin and channel.
+// The second channel cannot be controlled over BLE, except that turning off the 
+// first channel will also turn off the second channel.
+#ifdef WITH_DOUBLE_DIMMER
+#define PIN_PWM_DIMMER_2 4
+#define CHANNEL_PWM_DIMMER_2 1
+#endif
+
 #include "iotsaInput.h"
 // Define WITH_TOUCHPADS to enable user interface consisting of two touchpads (off/down and on/up)
 // #define WITH_TOUCHPADS
@@ -77,14 +85,20 @@ Input* inputs[] = {
 #endif // WITH_BUTTONS
 
 // Variant: single button dimmer
-#ifdef WITH_1BUTTON
+#if defined(WITH_1BUTTON)
 #define WITH_UI
 // One buttons: short press: toggle on/off, long press: cycle value between min and max.
 Button button(16, true, true, true);
 CyclingButton encoder(button);
-
+#ifdef WITH_DOUBLE_DIMMER
+Button button2(17, true, true, true);
+CyclingButton encoder2(button2);
+#endif
 Input* inputs[] = {
   &encoder
+#ifdef WITH_DOUBLE_DIMMER
+  , &encoder2
+#endif
 };
 #endif // WITH_BUTTONS
 
@@ -119,9 +133,15 @@ public:
   LissabonDimmerMod(IotsaApplication& _app, IotsaAuthenticationProvider *_auth=NULL)
   : IotsaApiMod(_app, _auth),
     dimmer(1, PIN_PWM_DIMMER, CHANNEL_PWM_DIMMER, this),
-  #ifdef WITH_UI
+#ifdef WITH_UI
     dimmerUI(dimmer),
-  #endif
+#endif
+#ifdef WITH_DOUBLE_DIMMER
+    dimmer2(2, PIN_PWM_DIMMER_2, CHANNEL_PWM_DIMMER_2, this),
+#ifdef WITH_UI
+    dimmerUI2(dimmer2),
+#endif
+#endif
     dimmerBLEServer(dimmer)
   {
   }
@@ -142,8 +162,14 @@ protected:
 
 private:
   PWMDimmer dimmer;
+#ifdef WITH_DOUBLE_DIMMER
+  PWMDimmer dimmer2;
+#endif
 #ifdef WITH_UI
   DimmerUI dimmerUI;
+#ifdef WITH_DOUBLE_DIMMER
+  DimmerUI dimmerUI2;
+#endif
 #endif
   DimmerBLEServer dimmerBLEServer;
   uint32_t saveAtMillis = 0;
@@ -180,7 +206,9 @@ void
 LissabonDimmerMod::handler() {
   bool anyChanged = false;
   anyChanged |= dimmer.formHandler_args(server, "dimmer", true);
-
+#ifdef WITH_DOUBLE_DIMMER
+  anyChanged |= dimmer2.formHandler_args(server, "dimmer2", true);
+#endif
   if (anyChanged) {
     configSave();
     dimmer.updateDimmer();
@@ -190,12 +218,23 @@ LissabonDimmerMod::handler() {
   message += "<h2>Settings</h2><form method='post'>";
   dimmer.formHandler_fields(message, "dimmer", "dimmer", false);
   message += "<input type='submit' name='set' value='Set Dimmer'></form>";
+#ifdef WITH_DOUBLE_DIMMER
+  message += "<form method='post'>";
+  dimmer2.formHandler_fields(message, "dimmer2", "dimmer2", false);
+  message += "<input type='submit' name='set' value='Set Dimmer'></form>";
+#endif
   message += "<h2>Configuration</h2><form method='post'>";
   dimmer.formHandler_fields(message, "dimmer", "dimmer", true);
   message += "<input type='submit' name='set' value='Update Configuration'></form>";
+#ifdef WITH_DOUBLE_DIMMER
+  message += "<form method='post'>";
+  dimmer2.formHandler_fields(message, "dimmer2", "dimmer2", true);
+  message += "<input type='submit' name='set' value='Update Configuration'></form>";
+#endif
   message += "</body></html>";
   server->send(200, "text/html", message);
 }
+
 
 String LissabonDimmerMod::info() {
   // Return some information about this module, for the main page of the web server.
@@ -246,11 +285,17 @@ void LissabonDimmerMod::serverSetup() {
 void LissabonDimmerMod::configLoad() {
   IotsaConfigFileLoad cf("/config/pwmdimmer.cfg");
   dimmer.configLoad(cf, "dimmer");
+#ifdef WITH_DOUBLE_DIMMER
+  dimmer2.configLoad(cf, "dimmer2");
+#endif
 }
 
 void LissabonDimmerMod::configSave() {
   IotsaConfigFileSave cf("/config/pwmdimmer.cfg");
   dimmer.configSave(cf, "dimmer");
+#ifdef WITH_DOUBLE_DIMMER
+  dimmer2.configSave(cf, "dimmer2");
+#endif
 
 }
 
@@ -275,6 +320,9 @@ void LissabonDimmerMod::setup() {
 #elif defined(WITH_1BUTTON)
   iotsaConfig.allowRCMDescription("press button 4 times");
   dimmerUI.setCyclingButton(encoder);
+#ifdef WITH_DOUBLE_DIMMER
+  dimmerUI2.setCyclingButton(encoder2);
+#endif
 #elif defined(WITH_ROTARY)
   iotsaConfig.allowRCMDescription("press button 4 times");
   dimmerUI.setRotaryEncoder(button, encoder);
