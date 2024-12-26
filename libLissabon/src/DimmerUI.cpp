@@ -51,6 +51,18 @@ DimmerUI::setRotaryEncoder(Button& button, RotaryEncoder& encoder) {
 }
 
 void
+DimmerUI::setCyclingButton(CyclingButton& encoder) {
+  encoder.setCallback(std::bind(&DimmerUI::levelChanged, this));
+  encoder.setStateCallback(std::bind(&DimmerUI::touchedOnOff, this));
+  encoder.bindStateVar(dimmer.isOn);
+
+#ifdef DIMMER_WITH_LEVEL
+  encoder.bindVar(dimmer.level, dimmer.minLevel, 1.0, 0.04);
+  // encoder.setAcceleration(500);
+#endif
+}
+
+void
 DimmerUI::setOnOffButton(Button& button) {
   button.setCallback(std::bind(&DimmerUI::touchedOnOff, this));
   button.bindVar(dimmer.isOn, true);

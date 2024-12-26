@@ -266,17 +266,20 @@ void LissabonDimmerMod::setup() {
   batteryMod.setPinDisableSleep(PIN_DISABLESLEEP);
 #endif
   configLoad();
-#ifdef WITH_TOUCHPADS
+#if defined(WITH_TOUCHPADS)
   iotsaConfig.allowRCMDescription("tap any touchpad 4 times");
   dimmerUI.setUpDownButtons(encoder);
-#endif
-#ifdef WITH_BUTTONS
+#elif defined(WITH_BUTTONS)
   iotsaConfig.allowRCMDescription("press button 4 times");
   dimmerUI.setUpDownButtons(encoder);
-#endif
-#ifdef WITH_ROTARY
+#elif defined(WITH_1BUTTON)
+  iotsaConfig.allowRCMDescription("press button 4 times");
+  dimmerUI.setCyclingButton(encoder);
+#elif defined(WITH_ROTARY)
   iotsaConfig.allowRCMDescription("press button 4 times");
   dimmerUI.setRotaryEncoder(button, encoder);
+#else
+#error "No UI defined"
 #endif
   dimmer.setup();
   dimmerBLEServer.setup();
