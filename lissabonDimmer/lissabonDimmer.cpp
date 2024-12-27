@@ -42,14 +42,14 @@ IotsaBatteryMod batteryMod(application);
 
 // Pin to which MOSFET is attached. Channel is only relevant for esp32.
 #define PIN_PWM_DIMMER 2
-#define CHANNEL_PWM_DIMMER 0
+#define CHANNEL_PWM_DIMMER 1
 
 // For a two-channel dimmer, define WITH_DOUBLE_DIMMER and set the second pin and channel.
 // The second channel cannot be controlled over BLE, except that turning off the 
 // first channel will also turn off the second channel.
 #ifdef WITH_DOUBLE_DIMMER
 #define PIN_PWM_DIMMER_2 4
-#define CHANNEL_PWM_DIMMER_2 1
+#define CHANNEL_PWM_DIMMER_2 2
 #endif
 
 #include "iotsaInput.h"
@@ -344,6 +344,9 @@ void LissabonDimmerMod::loop() {
     configSave();
   }
   dimmer.loop();
+#ifdef WITH_DOUBLE_DIMMER
+  dimmer2.loop();
+#endif
 }
 
 void LissabonDimmerMod::dimmerValueChanged() {

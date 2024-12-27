@@ -13,8 +13,13 @@ PWMDimmer::PWMDimmer(int _num, int _pin, int _channel, DimmerCallbacks *_callbac
 
 void PWMDimmer::setup() {
 #ifdef ESP32
+#ifndef newer
+  pinMode(pin, OUTPUT);
   ledcSetup(channel, pwmFrequency, 8);
   ledcAttachPin(pin, channel);
+#else
+  ledcAttachChannel(pin, pwmFrequency, 8);
+#endif
 #else
   pinMode(pin, OUTPUT);
 #endif
@@ -26,6 +31,7 @@ bool PWMDimmer::available() {
 
 
 void PWMDimmer::identify() {
+  IotsaSerial.printf("xxxjack identify dimmer%d channel %d pin %d\n", num, channel, pin);
 #ifdef ESP32
   ledcWrite(channel, 128);
   delay(100);
