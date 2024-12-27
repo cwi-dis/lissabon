@@ -67,6 +67,11 @@ bool DimmerBLEServer::blePutHandler(UUIDstring charUUID) {
     int value = bleApi.getAsInt(Lissabon::Dimmer::isOnUUIDstring);
     dimmer.isOn = (bool)value;
     IFDEBUG IotsaSerial.printf("xxxjack ble: wrote isOn %s value %d\n", Lissabon::Dimmer::isOnUUIDstring, dimmer.isOn);
+    if (!value && auxDimmer != nullptr) {
+      auxDimmer->isOn = false;
+      auxDimmer->updateDimmer();
+      IFDEBUG IotsaSerial.printf("xxxjack ble: also turned off auxdimmer\n");
+    } 
     anyChanged = true;
   }
   if (charUUID == Lissabon::Dimmer::identifyUUIDstring) {

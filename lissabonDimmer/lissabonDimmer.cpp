@@ -326,12 +326,15 @@ void LissabonDimmerMod::setup() {
 #elif defined(WITH_ROTARY)
   iotsaConfig.allowRCMDescription("press button 4 times");
   dimmerUI.setRotaryEncoder(button, encoder);
-#else
-#error "No UI defined"
 #endif
   dimmer.setup();
   dimmerBLEServer.setup();
   dimmer.updateDimmer();
+#ifdef WITH_DOUBLE_DIMMER
+  dimmer2.setup();
+  dimmerBLEServer.setAuxDimmer(&dimmer2);
+  dimmer2.updateDimmer();
+#endif
 }
 
 void LissabonDimmerMod::loop() {

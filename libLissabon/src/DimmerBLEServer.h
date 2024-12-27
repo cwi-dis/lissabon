@@ -10,10 +10,12 @@ namespace Lissabon {
 
 class DimmerBLEServer : public IotsaBLEApiProvider {
 public:
-  DimmerBLEServer(AbstractDimmer& _dimmer) : dimmer(_dimmer) {};
+  DimmerBLEServer(AbstractDimmer& _dimmer) : dimmer(_dimmer), auxDimmer(nullptr) {};
   void setup();
+  void setAuxDimmer(AbstractDimmer* _auxDimmer) { auxDimmer = _auxDimmer; }
 protected:
   AbstractDimmer& dimmer;
+  AbstractDimmer* auxDimmer;
   IotsaBleApiService bleApi;
   bool blePutHandler(UUIDstring charUUID);
   bool bleGetHandler(UUIDstring charUUID);
