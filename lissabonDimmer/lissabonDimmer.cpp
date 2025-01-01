@@ -40,81 +40,9 @@ IotsaBLEServerMod bleserverMod(application);
 //#define VBAT_100_PERCENT (12.0/11.0) // 100K and 1M resistors divide by 11, not 10...
 IotsaBatteryMod batteryMod(application);
 
-// Pin to which MOSFET is attached. Channel is only relevant for esp32.
-#define PIN_PWM_DIMMER 2
-#define CHANNEL_PWM_DIMMER 1
-
-// For a two-channel dimmer, define WITH_DOUBLE_DIMMER and set the second pin and channel.
-// The second channel cannot be controlled over BLE, except that turning off the 
-// first channel will also turn off the second channel.
-#ifdef WITH_DOUBLE_DIMMER
-#define PIN_PWM_DIMMER_2 4
-#define CHANNEL_PWM_DIMMER_2 2
-#endif
-
 #include "iotsaInput.h"
-// Define WITH_TOUCHPADS to enable user interface consisting of two touchpads (off/down and on/up)
-// #define WITH_TOUCHPADS
-// Define WITH_ROTARY to enable user interface consisting of a rotary encoder (up/down) and a button (on/off)
-// #define WITH_ROTARY
 
-// Variant: two touchpads
-#ifdef WITH_TOUCHPADS
-#define WITH_UI
-// Two touchpad pins: off/decrement (long press), on/increment (long press)
-Touchpad touchdown(2, true, true, true);
-Touchpad touchup(13, true, true, true);
-UpDownButtons encoder(touchdown, touchup, true);
-
-Input* inputs[] = {
-  &encoder
-};
-#endif // WITH_TOUCHPADS
-
-// Variant: two buttons
-#ifdef WITH_BUTTONS
-#define WITH_UI
-// Two buttons: off/decrement (long press), on/increment (long press)
-Button buttondown(16, true, true, true);
-Button buttonup(17, true, true, true);
-UpDownButtons encoder(buttondown, buttonup, true);
-
-Input* inputs[] = {
-  &encoder
-};
-#endif // WITH_BUTTONS
-
-// Variant: single button dimmer
-#if defined(WITH_1BUTTON)
-#define WITH_UI
-// One buttons: short press: toggle on/off, long press: cycle value between min and max.
-Button button(16, true, true, true);
-CyclingButton encoder(button);
-#ifdef WITH_DOUBLE_DIMMER
-Button button2(17, true, true, true);
-CyclingButton encoder2(button2);
-#endif
-Input* inputs[] = {
-  &encoder
-#ifdef WITH_DOUBLE_DIMMER
-  , &encoder2
-#endif
-};
-#endif // WITH_BUTTONS
-
-// Variant: with rotary encoder that can be pressed as a button (for on/off)
-#ifdef WITH_ROTARY
-#define WITH_UI
-// A rotary encoder for increment/decrement and a button for on/off.
-Button button(4, true, false, true);
-RotaryEncoder encoder(16, 17);
-
-Input* inputs[] = {
-  &button,
-  &encoder
-};
-#endif // WITH_ROTARY
-
+#include VARIANT
 
 #ifdef WITH_UI
 IotsaInputMod inputMod(application, inputs, sizeof(inputs)/sizeof(inputs[0]));
