@@ -17,7 +17,7 @@
 Button button(15, true, true, true);
 CyclingButton encoder(button);
 
-Button button2(4, true, true, true);
+Button button2(4, true, true, false);
 CyclingButton encoder2(button2);
 
 Input* inputs[] = {
