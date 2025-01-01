@@ -57,7 +57,7 @@ DimmerUI::setCyclingButton(CyclingButton& encoder) {
   encoder.bindStateVar(dimmer.isOn);
 
 #ifdef DIMMER_WITH_LEVEL
-  encoder.bindVar(dimmer.level, dimmer.minLevel, 1.0, 0.04);
+  encoder.bindVar(dimmer.level, dimmer.minLevel, 1.0, 0.02);
   // encoder.setAcceleration(500);
 #endif
 }
