@@ -144,7 +144,7 @@ void LedstripDimmer::getHandler(JsonObject& reply) {
   reply["focalSpread"] = focalSpread;
   reply["inCalibrationMode"] = inCalibrationMode;
   if (inCalibrationMode) {
-    JsonArray _calibrationData = reply.createNestedArray("calibrationData");
+    JsonArray _calibrationData = reply["calibrationData"].to<JsonArray>();
     for(int i=0; i <8; i++) {
       _calibrationData.add<float>(calibrationData[i]);
     }
@@ -169,8 +169,7 @@ bool LedstripDimmer::putHandler(const JsonVariant& request) {
     float whiteBrightness = request["whiteBrightness"]|rgbwSpace.WBrightness;
     focalPoint = request["focalPoint"] | focalPoint;
     focalSpread = request["focalSpread"] | focalSpread;
-
-    if (request.containsKey("calibrationData")) {
+    if (request["calibrationData"].is<JsonArray>()) {
       JsonArray _calibrationData = request["calibrationData"];
       int size = _calibrationData.size();
       if (_calibrationData && (size == 4 || size == 8)) {

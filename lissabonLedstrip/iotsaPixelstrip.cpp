@@ -163,18 +163,13 @@ bool IotsaPixelstripMod::putHandler(const char *path, const JsonVariant& request
     JsonObject reqObj = request.as<JsonObject>();
   if (strcmp(path, "/api/pixelstrip") == 0) {
     bool anyChanged = false;
-    if (reqObj.containsKey("pin")) {
-      pin = reqObj["pin"];
-      anyChanged = true;
+    if (getFromRequest<int>(reqObj, "pin", pin)) anyChanged = true;
+    if (getFromRequest<int>(reqObj, "count", count)) anyChanged = true;
+    if (count < 2) {
+      IotsaSerial.println("count set to 2 to workaround bug");
+      count = 2;
     }
-    if (reqObj.containsKey("count")) {
-      count = reqObj["count"];
-      if (count < 2) {
-        IotsaSerial.println("count set to 2 to workaround bug");
-        count = 2;
-      }
-      anyChanged = true;
-    }
+    checkUnhandled(reqObj);
     if (anyChanged) {
       configSave();
       setupStrip();
@@ -182,13 +177,12 @@ bool IotsaPixelstripMod::putHandler(const char *path, const JsonVariant& request
     return anyChanged;
   } else if (strcmp(path, "/api/pixels") == 0) {
     if (pixelBuffer == NULL) return false;
-    if (reqObj.containsKey("clear") && reqObj["clear"]) {
+    bool clear;
+    if (getFromRequest<bool>(reqObj, "clear", clear) && clear) {
       memset(pixelBuffer, 0, count*IOTSA_NPB_BPP);
     }
     int start = 0;
-    if (reqObj.containsKey("start")) {
-      start = reqObj["start"];
-    }
+    (void)getFromRequest<int>(reqObj, "start", start);
     JsonArray data = reqObj["data"];
     for(JsonArray::iterator it=data.begin(); it!=data.end(); ++it) {
       if (start >= count*IOTSA_NPB_BPP) return false;
