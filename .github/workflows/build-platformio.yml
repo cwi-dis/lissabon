@@ -14,7 +14,7 @@ on:
       iotsa_ref:
         description: 'iotsa branch, ref or sha'
         required: true
-        detault: develop
+        default: develop
   
 env:
   iotsa_ref: develop
@@ -36,6 +36,8 @@ jobs:
             variant: lissabon-plugin-dimmer
           - application: lissabonDimmer
             variant: lissabon-buttons-dimmer
+          - application: lissabonDimmer
+            variant: lissabon-double-dimmer
             
           - application: lissabonRemote
             variant: lissabon-kitchen-remote
