@@ -16,6 +16,9 @@ protected:
   int pin;
   int channel;
 
+#ifdef DIMMER_WITHOUT_LEVEL
+  void switchLevel(bool on);
+#endif
 };
 };
 #endif // _PWMDIMMER_H_
