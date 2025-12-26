@@ -109,7 +109,9 @@ String AbstractDimmer::info() {
 bool AbstractDimmer::formHandler_args(IotsaWebServer *server, const String& f_name, bool includeConfig) {
   bool anyChanged = false;
   String n_isOn = f_name + ".isOn";
+#ifdef DIMMER_WITH_LEVEL
   String n_level = f_name + ".level";
+#endif
   String n_identify = f_name + ".identify";
   if (server->hasArg(n_identify) && server->arg(n_identify).toInt()) {
     identify();
@@ -381,6 +383,9 @@ bool AbstractDimmer::putHandler(const JsonVariant& request) {
     if (getFromRequest<float>(reqObj, "minLevel", minLevel)) {
       configChanged = true;
     }
+    // Ensure level is a reasonable value
+    if (level < minLevel) level = minLevel;
+    if (level > 1) level = 1;
 #endif // DIMMER_WITH_LEVEL
 #ifdef DIMMER_WITH_GAMMA
     if (getFromRequest<float>(reqObj, "gamma", gamma)) {
@@ -400,9 +405,6 @@ bool AbstractDimmer::putHandler(const JsonVariant& request) {
       configChanged = true;
     }
 #endif // DIMMER_WITH_PWMFREQUENCY
-    // Ensure level is a reasonable value
-    if (level < minLevel) level = minLevel;
-    if (level > 1) level = 1;
     // xxxjack if configChanged we should save
     anyChanged |= configChanged;
 
