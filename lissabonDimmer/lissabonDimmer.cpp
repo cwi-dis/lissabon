@@ -213,6 +213,12 @@ void LissabonDimmerMod::serverSetup() {
 void LissabonDimmerMod::configLoad() {
   IotsaConfigFileLoad cf("/config/pwmdimmer.cfg");
   dimmer.configLoad(cf, "dimmer");
+#ifdef TOGGLE_ONOFF_ON_REBOOT
+  // Save the toggled on/off state
+  dimmer.isOn = !dimmer.isOn;
+  IFDEBUG IotsaSerial.printf("Saving toggled isOn state: %d\n", dimmer.isOn);
+  configSave();
+#endif
 #ifdef WITH_DOUBLE_DIMMER
   dimmer2.configLoad(cf, "dimmer2");
 #endif
@@ -280,6 +286,7 @@ void LissabonDimmerMod::loop() {
 void LissabonDimmerMod::dimmerValueChanged() {
   iotsaConfig.postponeSleep(2000);
   saveAtMillis = millis() + 1000;
+  configSave();
 }
 // Instantiate the Led module, and install it in the framework
 LissabonDimmerMod dimmerMod(application);
