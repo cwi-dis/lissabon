@@ -224,7 +224,7 @@ void BLEDimmer::connectionTask() {
     if (needSyncToDevice) {
       _syncToDevice();
     }
-    int keepOpen = min(keepOpenMillis, bleClientMod.maxConnectionKeepOpen());
+    uint32_t keepOpen = min(keepOpenMillis, (uint32_t)bleClientMod.maxConnectionKeepOpen());
     disconnectAtMillis = millis() + keepOpen;
     iotsaConfig.postponeSleep(keepOpen+1000);
     BLEDIMMER_DEBUG IotsaSerial.printf("BLEDimmer: keepopen %d\n", keepOpen);

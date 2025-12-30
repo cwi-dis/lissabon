@@ -42,6 +42,6 @@ bool DimmerDynamicCollection::configLoad(IotsaConfigFileLoad& cf, const String& 
 void DimmerDynamicCollection::configSave(IotsaConfigFileSave& cf, const String& f_name) {
   String ident = "n_dimmer";
   if (f_name != "") ident = f_name + "." + ident;
-  cf.put(f_name, dimmers.size());
+  cf.put(f_name, (int)dimmers.size());
   DimmerCollection::configSave(cf, f_name);
 }
