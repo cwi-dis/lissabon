@@ -114,6 +114,29 @@ GitHub Actions (`.github/workflows/`) builds a matrix of appliance × variant. *
 - `lissabon-220-switch`
 - `lissabon-1button-dimmer`
 
+## Deployed devices (Tuinpark Lissabon)
+
+Full inventory and config backups in `../lissabon-config/`. Summary:
+
+| Device | Type | Board | Pixels/notes |
+|---|---|---|---|
+| stripdeur | 5V GRBW ledstrip | pico32 | 48 px |
+| stripkeuken | 5V GRBW ledstrip | pico32 | 71 px |
+| striplinks | 5V GRBW ledstrip | pico32 | 48 px |
+| striprechts | 5V GRBW ledstrip | pico32 | 45 px |
+| stripbank | 12V RGBW ledstrip | pico32 | 60 px; reversed connector to prevent 5V/12V mix-up |
+| keuken | buttons dimmer | esp32 | 20 kHz PWM |
+| tafel | buttons dimmer | esp32 | |
+| spot | plugin dimmer | esp32 | |
+| bank | plugin dimmer | esp32 | |
+| control | BLE controller | lolin32 | Controls the 4 strips; uses deep sleep |
+
+`control` has bank/keuken/spot/tafel as `unassigned`; `stripkeuken` is not yet configured in it.
+
+All devices: light sleep 1200 s / 80 ms wake, WiFi disabled on boot.
+
+**Exception:** `control` uses deep sleep (not light sleep).
+
 ## Design notes
 
 - BLE is the primary runtime protocol (NimBLE via `h2zero/NimBLE-Arduino`). WiFi is only enabled on explicit request (for configuration).

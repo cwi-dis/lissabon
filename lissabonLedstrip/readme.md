@@ -32,6 +32,15 @@ The `extras` folder has Fritzing files for a 4-touchpad (dimmer/off, brighter/on
 
 There is also a Fusion 3D project for a 3D-printable case.
 
+### 5V vs 12V strips
+
+The firmware variant (`lissabon-5v-ledstrip` vs `lissabon-12v-ledstrip`) determines the NeoPixel colour order:
+
+- **5V strips** (e.g. cheap Chinese RGBW strips): `NeoGrbwFeature` — build with `lissabon-5v-ledstrip`
+- **12V strips** (e.g. ENTTEC RGBW strips): `NeoRgbwFeature` — build with `lissabon-12v-ledstrip`
+
+**Safety: reversed connector for 12V.** To prevent accidentally plugging a 5V strip into a 12V controller (which would destroy it), the 12V hardware uses a reversed connector polarity — male on the controller side, female on the strip side (or vice versa). Make sure any replacement 12V strip uses the same reversed connector.
+
 ## usage
 
 The program is setup to be built for esp32. It will be built with the _IotsaBLEServer_ module so it can be controlled over Bluetooth LE as well as WiFi. It is also built with _IotsaBattery_ so it can operate in low-power mode.
