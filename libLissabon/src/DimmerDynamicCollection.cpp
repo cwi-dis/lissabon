@@ -31,7 +31,7 @@ bool DimmerDynamicCollection::configLoad(IotsaConfigFileLoad& cf, const String& 
   String ident = "n_dimmer";
   if (f_name != "") ident = f_name + "." + ident;
   int n_dimmer;
-  cf.get(f_name, n_dimmer, 0);
+  cf.get(ident, n_dimmer, 0);
   for(int i=dimmers.size(); i<n_dimmer; i++) {
     ItemType *item = factory(i);
     push_back(item);
@@ -42,6 +42,6 @@ bool DimmerDynamicCollection::configLoad(IotsaConfigFileLoad& cf, const String& 
 void DimmerDynamicCollection::configSave(IotsaConfigFileSave& cf, const String& f_name) {
   String ident = "n_dimmer";
   if (f_name != "") ident = f_name + "." + ident;
-  cf.put(f_name, (int)dimmers.size());
+  cf.put(ident, (int)dimmers.size());
   DimmerCollection::configSave(cf, f_name);
 }
