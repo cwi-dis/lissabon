@@ -13,8 +13,12 @@ Off-grid lighting control framework built on [iotsa](../iotsa). Controls 12V LED
 - `DimmerBLEServer` — BLE server side (used by dimmers/ledstrips to advertise themselves)
 - `DimmerUI` — maps input events (buttons, touchpads, rotary encoder) to dimmer actions
 - `DimmerCollection`, `DimmerDynamicCollection` — managing sets of remote dimmers
-- `iotsaBLEClient`, `iotsaBLEClientConnection` — BLE client infrastructure
 - `LissabonBLE` — BLE service/characteristic UUIDs shared across all appliances
+
+Generic BLE client infrastructure (`IotsaBLEClientMod`, `IotsaBLEClientConnection` —
+scan orchestration, device registry, connection handling) moved to iotsa core in
+cwi-dis/iotsa#138; see `iotsa/CLAUDE.md` and `iotsa/docs/module-interface-status.md`.
+`BLEDimmer` here is the lissabon-specific adapter built on top of it.
 
 `libLissabon/platformio.ini` also builds two test/example programs via PlatformIO `src_filter`. Their source lives in top-level directories:
 
