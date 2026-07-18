@@ -53,6 +53,14 @@ protected:
   bool _isConnecting = false;
   bool _isDisconnecting = false;
   uint32_t needTransmitTimeoutAtMillis = 0;
+  // How long to keep a pending updateDimmer()/followDimmerChanges() sync
+  // request alive while the device's address is still unknown (i.e. it
+  // hasn't yet been found by a discovery scan) before giving up on it.
+  // Deliberately not configurable yet -- see cwi-dis/iotsa#144, which
+  // proposes moving this (and the rest of connectionTask()'s generic
+  // connection-lifecycle orchestration) into iotsa core, where it would
+  // apply to any IotsaBLEClientConnection consumer, not just dimmers.
+  const uint32_t discoveryTimeoutMillis = 10000;
   uint32_t disconnectAtMillis = 0;
   uint32_t noWarningPrintBefore = 0;
 public:

@@ -7,9 +7,6 @@
 
 namespace Lissabon {
 
-// How long we keep trying to connect to a dimmer
-const int IOTSA_BLEDIMMER_CONNECT_TIMEOUT = 10000;
-
 // How long we keep open a ble connection (in case we have a quick new command)
 // #define IOTSA_BLEDIMMER_KEEPOPEN_MILLIS 1000
 
@@ -48,7 +45,7 @@ void BLEDimmer::updateDimmer() {
   }
   BLEDIMMER_DEBUG IotsaSerial.printf("%s.updateDimmer() called\n", name.c_str());
   needSyncToDevice = true;
-  needTransmitTimeoutAtMillis = millis() + IOTSA_BLEDIMMER_CONNECT_TIMEOUT;
+  needTransmitTimeoutAtMillis = millis() + discoveryTimeoutMillis;
   if (callbacks) callbacks->dimmerValueChanged();
 }
 
@@ -113,7 +110,7 @@ void BLEDimmer::setup() {
     if (available()) {
       needSyncFromDevice = listenForDeviceChanges;
       _dataValid = false;
-      needTransmitTimeoutAtMillis = millis() + IOTSA_BLEDIMMER_CONNECT_TIMEOUT;
+      needTransmitTimeoutAtMillis = millis() + discoveryTimeoutMillis;
     }
   } else {
     _dataValid = true;
@@ -134,7 +131,7 @@ void BLEDimmer::followDimmerChanges(bool follow) {
     if (available()) {
       needSyncFromDevice = listenForDeviceChanges;
       _dataValid = false;
-      needTransmitTimeoutAtMillis = millis() + IOTSA_BLEDIMMER_CONNECT_TIMEOUT;
+      needTransmitTimeoutAtMillis = millis() + discoveryTimeoutMillis;
     }
   } else {
     _dataValid = true;
