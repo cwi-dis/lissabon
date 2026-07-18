@@ -79,9 +79,14 @@ void BLEDimmer::formHandler_fields(String& message, const String& text, const St
   }
 }
 
-bool BLEDimmer::BLEDimmer::configLoad(IotsaConfigFileLoad& cf, const String& name) {
-  // xxxjack to be done...
-  return AbstractDimmer::configLoad(cf, name);
+bool BLEDimmer::BLEDimmer::configLoad(IotsaConfigFileLoad& cf, const String& n_name) {
+  bool rv = AbstractDimmer::configLoad(cf, n_name);
+  String address;
+  cf.get(n_name + ".address", address, "");
+  if (address != "") {
+    bleClientMod.noteKnownAddress(name, address);
+  }
+  return rv;
 }
 
 void BLEDimmer::configSave(IotsaConfigFileSave& cf, const String& n_name) {
