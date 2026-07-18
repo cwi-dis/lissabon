@@ -137,7 +137,8 @@ Full inventory and config backups in `../lissabon-config/`. Summary:
 
 `control` has bank/keuken/spot/tafel as `unassigned`; `stripkeuken` is not yet configured in it.
 
-All devices: light sleep 1200 s / 80 ms wake, WiFi disabled on boot.
+All devices: light sleep 1500 ms / 300 ms wake, WiFi disabled on boot. (Confirmed 2026-07-19
+against `../lissabon-config/*/battery.json` — the previous "1200 s / 80 ms" here was stale/wrong.)
 
 **Exception:** `control` uses deep sleep (not light sleep).
 

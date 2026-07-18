@@ -4,6 +4,8 @@
 
 A set of measurements have been done with a pico32 board connected to a 5V power supply. The red LED on the board had not been removed, so the idle power consumption is a bit too high. This is the board that is used in the ledstrip devices, the board used in the dimmers is different (esp32dev) and will need to be measured separately.
 
+**Note (2026-07-19):** the `sleepDuration`/`wakeDuration` values below (800/80) are what this specific historical measurement session used on a bench-test device (`striphome`, not a currently-deployed device name) -- they are not today's fleet default. Deployed devices now use `sleepDuration=1500`, `wakeDuration=300` (verified against `../../lissabon-config/*/battery.json`), a tighter cycle chosen for better responsiveness -- see `../../iotsa/docs/ble-power-vs-responsiveness.md` for why that tradeoff was made. The graphs and power numbers below are accurate to the 800/80 configuration they were actually captured under and haven't been re-measured at 1500/300; treat the *shape* of the analysis (boot spike, sleep/wake duty cycle, connect behavior) as still representative, but don't read the specific millisecond figures as current.
+
 The device had WiFi disabled, and the following parameters for battery and bleserver:
 
 ```
