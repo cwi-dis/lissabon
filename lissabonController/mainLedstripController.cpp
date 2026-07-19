@@ -99,7 +99,7 @@ private:
   int selectedDimmerIndex = 0; // currently selected dimmer on display
   int savedSelectedDimmerIndex = 0;
   bool selectedDimmerIsAvailable = false;
-  int keepOpenMillis = 3000; // xxxjack should be configurable
+  int stayConnectedMillis = 3000; // deliberately not configurable yet, see cwi-dis/iotsa#144
   bool saveNeeded = false;
 };
 
@@ -317,7 +317,7 @@ void IotsaLedstripControllerMod::dimmerValueChanged() {
 
 DimmerDynamicCollection::ItemType *
 IotsaLedstripControllerMod::dimmerFactory(int num) {
-  BLEDimmer *newDimmer = new BLEDimmer(num, *this, this, keepOpenMillis);
+  BLEDimmer *newDimmer = new BLEDimmer(num, *this, this, stayConnectedMillis);
   newDimmer->followDimmerChanges(true);
   return newDimmer;
 }

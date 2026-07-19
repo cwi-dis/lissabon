@@ -15,7 +15,7 @@ namespace Lissabon {
 
 class BLEDimmer : public AbstractDimmer {
 public:
-  BLEDimmer(int _num, IotsaBLEClientMod &_bleClientMod, DimmerCallbacks *_callbacks, int _keepOpenMillis=0);
+  BLEDimmer(int _num, IotsaBLEClientMod &_bleClientMod, DimmerCallbacks *_callbacks, int _stayConnectedMillis=0);
   ~BLEDimmer();
   void followDimmerChanges(bool follow);
   void updateDimmer();
@@ -56,15 +56,25 @@ protected:
   // How long to keep a pending updateDimmer()/followDimmerChanges() sync
   // request alive while the device's address is still unknown (i.e. it
   // hasn't yet been found by a discovery scan) before giving up on it.
+  // In practice this should be comfortably above any live device's real
+  // sleep/wake or advertise cadence, so it firing means the device is
+  // genuinely gone (powered down, out of range), not just slow to find --
+  // though note BLE itself puts no ceiling on a peer's sleep cycle, so
+  // that's an assumption about today's fleet, not a protocol guarantee.
   // Deliberately not configurable yet -- see cwi-dis/iotsa#144, which
   // proposes moving this (and the rest of connectionTask()'s generic
   // connection-lifecycle orchestration) into iotsa core, where it would
   // apply to any IotsaBLEClientConnection consumer, not just dimmers.
-  const uint32_t discoveryTimeoutMillis = 10000;
+  const uint32_t unreachableGiveUpMillis = 10000;
   uint32_t disconnectAtMillis = 0;
   uint32_t noWarningPrintBefore = 0;
 public:
-  uint32_t keepOpenMillis = 0;
+  // How long to stay connected after a command, in case another one
+  // follows immediately (e.g. dragging a brightness slider) -- avoids
+  // paying the full discovery+connect cost again for a quick follow-up.
+  // Also deliberately not configurable yet, same reasoning as
+  // unreachableGiveUpMillis above (see cwi-dis/iotsa#144).
+  uint32_t stayConnectedMillis = 0;
 };
 };
 #endif // _BLEDIMMER_H_

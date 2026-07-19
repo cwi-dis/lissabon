@@ -10,10 +10,10 @@ namespace Lissabon {
 // How long we keep open a ble connection (in case we have a quick new command)
 // #define IOTSA_BLEDIMMER_KEEPOPEN_MILLIS 1000
 
-BLEDimmer::BLEDimmer(int _num, IotsaBLEClientMod &_bleClientMod, DimmerCallbacks *_callbacks, int _keepOpenMillis)
+BLEDimmer::BLEDimmer(int _num, IotsaBLEClientMod &_bleClientMod, DimmerCallbacks *_callbacks, int _stayConnectedMillis)
 : AbstractDimmer(_num, _callbacks), 
   bleClientMod(_bleClientMod),
-  keepOpenMillis(_keepOpenMillis)
+  stayConnectedMillis(_stayConnectedMillis)
 {
 #ifdef IOTSA_WITH_BLE_TASKS
   xTaskCreate(BLEDimmer::_connectionTask, name.c_str(), 5000, this, 1, &connectionTaskHandle);
@@ -45,7 +45,7 @@ void BLEDimmer::updateDimmer() {
   }
   BLEDIMMER_DEBUG IotsaSerial.printf("%s.updateDimmer() called\n", name.c_str());
   needSyncToDevice = true;
-  needTransmitTimeoutAtMillis = millis() + discoveryTimeoutMillis;
+  needTransmitTimeoutAtMillis = millis() + unreachableGiveUpMillis;
   if (callbacks) callbacks->dimmerValueChanged();
 }
 
@@ -110,7 +110,7 @@ void BLEDimmer::setup() {
     if (available()) {
       needSyncFromDevice = listenForDeviceChanges;
       _dataValid = false;
-      needTransmitTimeoutAtMillis = millis() + discoveryTimeoutMillis;
+      needTransmitTimeoutAtMillis = millis() + unreachableGiveUpMillis;
     }
   } else {
     _dataValid = true;
@@ -131,7 +131,7 @@ void BLEDimmer::followDimmerChanges(bool follow) {
     if (available()) {
       needSyncFromDevice = listenForDeviceChanges;
       _dataValid = false;
-      needTransmitTimeoutAtMillis = millis() + discoveryTimeoutMillis;
+      needTransmitTimeoutAtMillis = millis() + unreachableGiveUpMillis;
     }
   } else {
     _dataValid = true;
@@ -228,7 +228,7 @@ void BLEDimmer::connectionTask() {
     if (needSyncToDevice) {
       _syncToDevice();
     }
-    uint32_t keepOpen = min(keepOpenMillis, (uint32_t)bleClientMod.maxConnectionKeepOpen());
+    uint32_t keepOpen = min(stayConnectedMillis, (uint32_t)bleClientMod.maxConnectionKeepOpen());
     disconnectAtMillis = millis() + keepOpen;
     iotsaConfig.postponeSleep(keepOpen+1000);
     BLEDIMMER_DEBUG IotsaSerial.printf("BLEDimmer: keepopen %d\n", keepOpen);
@@ -320,7 +320,7 @@ void BLEDimmer::loop() {
   if (needSyncToDevice) {
     _syncToDevice();
   }
-  int keepOpen = min(keepOpenMillis, bleClientMod.maxConnectionKeepOpen());
+  int keepOpen = min(stayConnectedMillis, bleClientMod.maxConnectionKeepOpen());
   disconnectAtMillis = millis() + keepOpen;
   iotsaConfig.postponeSleep(keepOpen+1000);
   BLEDIMMER_DEBUG IotsaSerial.printf("BLEDimmer: keepopen %d\n", keepOpen);
