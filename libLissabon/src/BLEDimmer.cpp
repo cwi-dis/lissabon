@@ -191,6 +191,13 @@ void BLEDimmer::connectionTask() {
       maxWaitMs = 20;
     }
     if (!dimmer->isConnected()) {
+      if (dimmer->isDisconnecting()) {
+        // Previous disconnect() hasn't been confirmed complete yet.
+        // NimBLEClient::connect() hard-rejects while it's still settling --
+        // wait for it rather than trying and failing.
+        maxWaitMs = 20;
+        continue;
+      }
       // Connecting and scanning are mutually exclusive on this stack, so
       // wanting to connect actively stops any in-progress scan rather than
       // waiting for it to end on its own (see cwi-dis/iotsa#143 -- this
@@ -284,6 +291,12 @@ void BLEDimmer::loop() {
   }
   // Now we can connect, unless we are already connected
   if (!dimmer->isConnected()) {
+    if (dimmer->isDisconnecting()) {
+      // Previous disconnect() hasn't been confirmed complete yet.
+      // NimBLEClient::connect() hard-rejects while it's still settling --
+      // wait for it rather than trying and failing.
+      return;
+    }
     // If we are scanning we don't try to connect
     if (!bleClientMod.canConnect()) {
       IotsaSerial.println("BLEDimmer: BLE busy, cannot connect");
