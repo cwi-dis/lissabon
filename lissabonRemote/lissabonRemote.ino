@@ -299,12 +299,6 @@ void LissabonRemoteMod::loop() {
 // Instantiate our remote control module, and install it in the framework
 LissabonRemoteMod remoteMod(application);
 
-#if 1
-// For debugging configuration: allow backing up of all files
-#include "iotsaFilesBackup.h"
-IotsaFilesBackupMod backupMod(application);
-#endif
-
 // Standard setup() method, hands off most work to the application framework
 void setup(void){
   application.setup();
