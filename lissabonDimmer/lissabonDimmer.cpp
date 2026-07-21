@@ -182,19 +182,32 @@ String LissabonDimmerMod::info() {
 
 bool LissabonDimmerMod::getHandler(const char *path, JsonObject& reply) {
   dimmer.getHandler(reply);
+#ifdef WITH_DOUBLE_DIMMER
+  JsonObject dimmer2Reply = reply["dimmer2"].to<JsonObject>();
+  dimmer2.getHandler(dimmer2Reply);
+#endif
   return true;
 }
 
 bool LissabonDimmerMod::putHandler(const char *path, const JsonVariant& request, JsonObject& reply) {
   bool anyChanged = false;
+  bool dimmerChanged = false;
   JsonObject reqObj = request.as<JsonObject>();
   if (!reqObj) return false;
-  if (dimmer.putHandler(reqObj)) anyChanged = true;
+  if (dimmer.putHandler(reqObj)) anyChanged = dimmerChanged = true;
+  if (dimmerChanged) dimmer.updateDimmer(); // xxxjack or is this called already?
+#ifdef WITH_DOUBLE_DIMMER
+  bool dimmer2Changed = false;
+  JsonVariant dimmer2Request = reqObj["dimmer2"];
+  if (dimmer2Request) {
+    if (dimmer2.putHandler(dimmer2Request)) anyChanged = dimmer2Changed = true;
+  }
+  if (dimmer2Changed) dimmer2.updateDimmer();
+#endif
   if (anyChanged) {
     // Should do this only for config changes
     configSave();
   }
-  if (anyChanged) dimmer.updateDimmer(); // xxxjack or is this called already?
   return anyChanged;
 
 }
