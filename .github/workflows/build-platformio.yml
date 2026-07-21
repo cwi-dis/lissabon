@@ -49,6 +49,11 @@ jobs:
 
           - application: lissabonController
             variant: lissabon-controller
+
+          - application: lissabonSimpleLight
+            variant: lissabon-simple-light
+          - application: lissabonSimpleRemote
+            variant: lissabon-simple-remote
     steps:
     - name: Set env
       run: |

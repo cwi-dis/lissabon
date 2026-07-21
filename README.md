@@ -46,7 +46,13 @@ When the installation has to be reconfigured all components are sent a BLE instr
 
 This is a shared library containing iotsa modules used by multiple other components. Various options are set using C-preprocessor defines, so the library is included as source in the components that actually use it.
 
-(Its example/test components were retired 2026-07-21 for being too complex to serve as examples; simpler replacements are planned.)
+### lissabonSimpleLight
+
+A minimal example: a single on/off LED, controlled locally by a pushbutton and remotely over BLE. See `lissabonSimpleRemote` below.
+
+### lissabonSimpleRemote
+
+A minimal example: a pushbutton remote that toggles a `lissabonSimpleLight` (or any lissabon dimmer) on/off over BLE.
 
 ### lissabonDimmer
 
