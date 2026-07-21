@@ -20,10 +20,11 @@ scan orchestration, device registry, connection handling) moved to iotsa core in
 cwi-dis/iotsa#138; see `iotsa/CLAUDE.md` and `iotsa/docs/module-interface-status.md`.
 `BLEDimmer` here is the lissabon-specific adapter built on top of it.
 
-`libLissabon/platformio.ini` also builds two test/example programs via PlatformIO `src_filter`. Their source lives in top-level directories:
+`libLissabon/platformio.ini` also builds a test/example program via PlatformIO `src_filter`. Its source lives in a top-level directory:
 
 - **lissabonExample/** — touchpad BLE client with optional BLE server (`WITH_BLESERVER`)
-- **lissabonSwitch/** — single on/off button BLE client (toggles a remote dimmer)
+
+(`lissabonSwitch` — a single on/off button BLE client — was removed 2026-07-21: it had bit-rotted since it was never covered by CI, and `lissabonExample` already covers the same ground plus more.)
 
 ### Firmware appliances
 

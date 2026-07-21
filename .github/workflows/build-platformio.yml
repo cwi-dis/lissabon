@@ -49,6 +49,9 @@ jobs:
 
           - application: lissabonController
             variant: lissabon-controller
+
+          - application: libLissabon
+            variant: example-lissabonExample
     steps:
     - name: Set env
       run: |

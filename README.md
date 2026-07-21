@@ -46,10 +46,9 @@ When the installation has to be reconfigured all components are sent a BLE instr
 
 This is a shared library containing iotsa modules used by multiple other components. Various options are set using C-preprocessor defines, so the library is included as source in the components that actually use it.
 
-When building _libLissabon_ using `platformio run` it will actually build two test components:
+When building _libLissabon_ using `platformio run` it will actually build a test component:
 
 - _lissabonExample_ does not do anything useful, really, but tries to include all common modules. It is built both with "minimal" and "maximal" _CPP_ sets of defines.
-- _lissabonSwitch_ may actually be useful, at some point: a pushbutton that is used as on/off switch for one dimmer or ledstrip.
 
 ### lissabonDimmer
 

@@ -148,7 +148,7 @@ bool IotsaPixelstripMod::getHandler(const char *path, JsonObject& reply) {
     reply["pixel_method"] = IOTSA_NEOPIXEL_METHOD;
     return true;
   } else if (strcmp(path, "/api/pixels") == 0) {
-    JsonArray data = reply.createNestedArray("data");
+    JsonArray data = reply["data"].to<JsonArray>();
     if (pixelBuffer) {
       for(int i=0; i<count*IOTSA_NPB_BPP; i++) {
         data.add(pixelBuffer[i]);
