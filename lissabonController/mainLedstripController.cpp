@@ -447,6 +447,8 @@ void IotsaLedstripControllerMod::setup() {
   //
   IotsaBLEClientMod::setup();
   dimmers.setFactory(std::bind(&IotsaLedstripControllerMod::dimmerFactory, this, std::placeholders::_1));
+  // Allow switching to iotsa config mode over BLE
+  batteryMod.allowBLEConfigModeSwitch();
   //
   // Load configuration
   //
