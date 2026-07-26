@@ -99,8 +99,7 @@ void BLEDimmer::configSave(IotsaConfigFileSave& cf, const String& n_name) {
 
 void BLEDimmer::getHandler(JsonObject& reply) {
   if (_ensureConnection()) {
-    std::string address = dimmer->getAddress();
-    if (address != "") reply["address"] = String(address.c_str());
+    dimmer->getHandler(reply);
   }
   AbstractDimmer::getHandler(reply);
 }

@@ -484,8 +484,9 @@ void IotsaLedstripControllerMod::_setupDisplay() {
 
 
 void IotsaLedstripControllerMod::unknownBLEDimmerFound(const BLEAdvertisedDevice& deviceAdvertisement) {
+  // Nothing to do here -- IotsaBLEClientMod::onResult() already records this
+  // device (name/address/rssi/lastSeen) in unknownDevices before calling us.
   LOG_BLE IotsaSerial.printf("LissabonController: unknownDeviceFound: device \"%s\"\n", deviceAdvertisement.getName().c_str());
-  unknownDevices.insert(deviceAdvertisement.getName());
 }
 
 void IotsaLedstripControllerMod::knownBLEDimmerChanged(const BLEAdvertisedDevice& deviceAdvertisement) {
