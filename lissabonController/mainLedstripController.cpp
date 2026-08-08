@@ -90,6 +90,7 @@ private:
   void dimmerValueChanged();
   void dimmerAvailableChanged();
   void handler();
+  void clearAllDimmersAndReboot();
   Buttons buttons;
   DimmerDynamicCollection::ItemType* getDimmerForCommand(int num);
   void updateDisplay(bool clear);
@@ -344,8 +345,7 @@ IotsaLedstripControllerMod::handler() {
     }
   }
   if (server->hasArg("clearall") && server->arg("iamsure") == "iamsure") {
-    dimmers.clear();
-    anyChanged = true;
+    clearAllDimmersAndReboot();
   }
   if (anyChanged) configSave();
   
@@ -397,8 +397,8 @@ bool IotsaLedstripControllerMod::putHandler(const char *path, const JsonVariant&
   // This is a hack. We don't implement DELETE so we add a funny value
   bool clearall;
   if (getFromRequest<bool>(request, "clearall", clearall) && clearall) {
-    dimmers.clear();
-    anyChanged = true;
+    clearAllDimmersAndReboot();
+    return true;
   }
   // This is another hack.
   String newDimmerName;
@@ -439,6 +439,22 @@ void IotsaLedstripControllerMod::configSave() {
   cf.put("selectedDimmerIndex", selectedDimmerIndex);
   savedSelectedDimmerIndex = selectedDimmerIndex;
   dimmers.configSave(cf, "");
+}
+
+void IotsaLedstripControllerMod::clearAllDimmersAndReboot() {
+  // Deliberately don't touch the live `dimmers` collection here. Deleting a
+  // BLEDimmer whose connectionTask is still blocked inside a BLE connect
+  // attempt calls vTaskDelete() on that task (BLEDimmer::~BLEDimmer()), which
+  // can crash NimBLE's host task later when an async GAP event tries to
+  // notify the now-deleted task (observed live: a stuck connect to a
+  // just-added, flaky device, followed by "Remove All", panicked ~5s later
+  // inside xTaskGenericNotify). Simplest safe fix: persist zero dimmers and
+  // reboot -- a fresh boot never constructs them, so there's nothing to tear
+  // down.
+  IotsaConfigFileSave cf("/config/blecontroller.cfg");
+  cf.put("selectedDimmerIndex", 0);
+  cf.put("n_dimmer", 0);
+  iotsaConfig.requestReboot(1000);
 }
 
 void IotsaLedstripControllerMod::setup() {
