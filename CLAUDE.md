@@ -63,11 +63,11 @@ cwi-dis/iotsa#138; see `iotsa/CLAUDE.md` and `iotsa/docs/module-interface-status
 
 Note: does not follow the `extras/python/` convention used by other iotsa repos — should eventually be moved there.
 
-Venv setup (from repo root):
+Uses the shared `iotsa-group` venv (`~/src/iotsa-group/.venv`), not a repo-local one — see
+`iotsa-group/CLAUDE.md`'s "Python tool venv setup" section. From the `lissabon` repo root,
+with that venv activated:
 
 ```
-python3 -m venv .venv
-source .venv/bin/activate
 pip install -e ../iotsa/extras/python/
 pip install -e python/
 ```
