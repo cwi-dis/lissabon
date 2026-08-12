@@ -265,10 +265,10 @@ void LissabonRemoteMod::setup() {
   ledOff();
 }
 
-// xxxjack move to IotsaBLEClientMod?
 void LissabonRemoteMod::unknownBLEDimmerFound(const BLEAdvertisedDevice& deviceAdvertisement) {
+  // Nothing to do here -- IotsaBLEClientMod::onResult() already records this
+  // device (name/address/rssi/lastSeen) in unknownDevices before calling us.
   IFDEBUG IotsaSerial.printf("unknownBLEDimmerFound: iotsaLedstrip/iotsaDimmer \"%s\"\n", deviceAdvertisement.getName().c_str());
-  unknownDevices.insert(deviceAdvertisement.getName());
 }
 
 void LissabonRemoteMod::dimmerValueChanged() {
