@@ -15,6 +15,15 @@ striphome:
     adv_min:         30
     adv_max:         30
     tx_power:        -1
+```
+
+**Note (2026-08-14):** `tx_power` above is the field name at the time of this
+capture. It's since been renamed to `tx_power_dbm` (a requested value, user/REST-settable,
+persisted) plus a new read-only `tx_power_dbm_actual` (read back from the hardware via
+`getPower()`) -- see cwi-dis/iotsa#164. The `-1` value itself means the same thing
+before and after the rename (leave transmit power at the hardware default).
+
+```
 striphome:
   battery:
     sleepMode:       2
