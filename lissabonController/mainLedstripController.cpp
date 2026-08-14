@@ -80,8 +80,8 @@ protected:
   void _setupDisplay();
   bool getHandler(const char *path, JsonObject& reply);
   bool putHandler(const char *path, const JsonVariant& request, JsonObject& reply);
-  void unknownBLEDimmerFound(const BLEAdvertisedDevice& device);
-  void knownBLEDimmerChanged(const BLEAdvertisedDevice& device);
+  void unknownBLEDimmerFound(const NimBLEAdvertisedDevice& device);
+  void knownBLEDimmerChanged(const NimBLEAdvertisedDevice& device);
   virtual String formHandler_field_perdevice(const char *deviceName) override;
   virtual void scanningChanged() override;
   virtual void showMessage(const char *message) override;
@@ -94,7 +94,7 @@ private:
   Buttons buttons;
   DimmerDynamicCollection::ItemType* getDimmerForCommand(int num);
   void updateDisplay(bool clear);
-  typedef std::pair<std::string, BLEAddress> unknownDimmerInfo;
+  typedef std::pair<std::string, NimBLEAddress> unknownDimmerInfo;
   DimmerDynamicCollection dimmers;
   DimmerDynamicCollection::ItemType* dimmerFactory(int num);
   int selectedDimmerIndex = 0; // currently selected dimmer on display
@@ -499,13 +499,13 @@ void IotsaLedstripControllerMod::_setupDisplay() {
 }
 
 
-void IotsaLedstripControllerMod::unknownBLEDimmerFound(const BLEAdvertisedDevice& deviceAdvertisement) {
+void IotsaLedstripControllerMod::unknownBLEDimmerFound(const NimBLEAdvertisedDevice& deviceAdvertisement) {
   // Nothing to do here -- IotsaBLEClientMod::onResult() already records this
   // device (name/address/rssi/lastSeen) in unknownDevices before calling us.
   LOG_BLE IotsaSerial.printf("LissabonController: unknownDeviceFound: device \"%s\"\n", deviceAdvertisement.getName().c_str());
 }
 
-void IotsaLedstripControllerMod::knownBLEDimmerChanged(const BLEAdvertisedDevice& deviceAdvertisement) {
+void IotsaLedstripControllerMod::knownBLEDimmerChanged(const NimBLEAdvertisedDevice& deviceAdvertisement) {
   std::string name = deviceAdvertisement.getName();
   LOG_BLE IotsaSerial.printf("LissabonController: knownDeviceChanged: device \"%s\"\n", name.c_str());
   dimmerAvailableChanged();
