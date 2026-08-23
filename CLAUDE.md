@@ -59,7 +59,9 @@ cwi-dis/iotsa#138; see `iotsa/CLAUDE.md` and `iotsa/docs/module-interface-status
 
 ### Python tooling
 
-**python/** — `lissabonCalibrate` package. Calibrates RGBW ledstrips by driving the ledstrip and simultaneously measuring output with an `iotsaRGBWSensor` device over the network. Supports lux, CCT, and per-LED measurements; can produce matplotlib plots.
+**python/** — `lissabonCalibrate` package. Calibrates RGBW ledstrips by driving the ledstrip and simultaneously measuring output with an [`iotsaRGBWSensor`](https://github.com/cwi-dis/iotsaRGBWSensor) device (deployed as `colorsensor`) over the network. Supports lux, CCT, and per-LED measurements; can produce matplotlib plots.
+
+`lissabonCalibrate` talks to the device's `rgbw` REST API directly (`python/lissabonCalibrate/sensor.py`) rather than through `iotsaRGBWSensor`'s own `colorMeter` Python tool — the two were written independently a year apart (2020 vs 2021) and have no shared code; see `iotsaRGBWSensor/README.md`'s "Python tool" section if you need the simpler standalone CLI instead.
 
 Note: does not follow the `extras/python/` convention used by other iotsa repos — should eventually be moved there.
 
