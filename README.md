@@ -89,6 +89,35 @@ Controller: to be supplied
 
 In situ pictures: to be supplied
 
+## Construction notes
+
+### Keep wiring away from the ESP32 antenna
+
+Every lissabon appliance uses an ESP32 module with a PCB trace antenna at one end. Any
+conductor in the antenna's near field (roughly 20mm, in any direction) detunes it and
+costs BLE range. On deployed ledstrips, 20-35dB of lost range was traced to nothing more
+than the 12V supply leads being dressed past the antenna.
+
+This is not crosstalk: the thing being spoiled is the antenna's own tuning and
+efficiency, so a pure-DC power lead does it just as well as a signal wire, and adding a
+ground wire or ground pour near the antenna makes it *worse*, not better.
+
+When building and boxing a unit:
+
+- Mount the module so the antenna end faces open air, not the enclosure wall, the
+  battery, or structural metal.
+- Route *all* wiring (power and signal) out of the enclosure at the opposite end from the
+  antenna.
+- Twist the 12V supply pair, and twist or bundle other multi-wire runs, to minimise loop
+  area.
+- Orient the finished unit so the antenna end points away from any metal it is mounted on
+  or near (e.g. an aluminium LED channel).
+
+Symptom of getting this wrong: weak or highly variable BLE RSSI and connection drops that
+clear up when the unit is moved or the wiring re-dressed. WiFi is far more tolerant (it
+transmits ~15-20dB louder and falls back to slower bit rates), so a unit can have perfectly
+good WiFi and unusable BLE from the same cause.
+
 ## ESP32 pinouts
 
 I have been using three different boards in the various projects here. Naming of the ESP32 boards is sometimes confusing, so here are pictures of the board and their pinouts:

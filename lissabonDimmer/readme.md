@@ -20,6 +20,10 @@ is available as a [Fusion 360 Design](extras/hidden-12v-dimmer.f3d).
 
 There is also a 3D-printable case for a pluggable dinmmer as a [Fusion 360 Design](extras/pluggable-12v-dimmer.f3d), which works if you have wired up your 12V system using ancient KPN (dutch telephone company) plugs and outlets, but you can probably adapt it.
 
+### Wiring and BLE range
+
+Twist the 12V supply pair, and route it out of the enclosure at the opposite end from the ESP32 module's antenna. Supply leads dressed past the antenna have cost 20-35dB of BLE range on deployed units, with WiFi unaffected. See the top-level [README](../README.md#keep-wiring-away-from-the-esp32-antenna) for the general rule.
+
 ## Configuration
 
 At compile time you select whether to use a rotary encoder, buttons or touchpads

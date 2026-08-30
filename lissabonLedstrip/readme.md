@@ -41,6 +41,10 @@ The firmware variant (`lissabon-5v-ledstrip` vs `lissabon-12v-ledstrip`) determi
 
 **Safety: reversed connector for 12V.** To prevent accidentally plugging a 5V strip into a 12V controller (which would destroy it), the 12V hardware uses a reversed connector polarity — male on the controller side, female on the strip side (or vice versa). Make sure any replacement 12V strip uses the same reversed connector.
 
+### Wiring and BLE range
+
+Twist the 12V supply pair, and route it (and the strip leads) out of the enclosure at the opposite end from the ESP32 module's antenna. Supply leads dressed past the antenna have cost 20-35dB of BLE range on deployed units, with WiFi unaffected. See the top-level [README](../README.md#keep-wiring-away-from-the-esp32-antenna) for the general rule.
+
 ## usage
 
 The program is setup to be built for esp32. It will be built with the _IotsaBLEServer_ module so it can be controlled over Bluetooth LE as well as WiFi. It is also built with _IotsaBattery_ so it can operate in low-power mode.
