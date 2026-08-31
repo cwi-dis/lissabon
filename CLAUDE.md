@@ -52,8 +52,8 @@ cwi-dis/iotsa#138; see `iotsa/CLAUDE.md` and `iotsa/docs/module-interface-status
 | Board | Used by |
 |---|---|
 | esp32dev | most lissabonDimmer variants, lissabonSimpleLight, lissabonSimpleRemote |
-| lolin32 | lissabonDimmer (candle), lissabonController |
-| lolin32-lite | lissabonRemote (has built-in LiPo charger) |
+| lolin32-lite | lissabonDimmer (candle), lissabonRemote (both want the built-in LiPo charger) |
+| lolin32-oled (Wemos LOLIN32 OLED) | lissabonController — built-in 128×64 SSD1306 on GPIO5/4, no charger; built as `lolin32_lite` locally pending cwi-dis/iotsa#229 |
 | pico32 | lissabonLedstrip |
 | esp32-c3-devkitm-1 (SuperMini, RISC-V) | lissabon-220-switch |
 
@@ -136,7 +136,7 @@ Full inventory and config backups in `../lissabon-config/`. Summary:
 | tafel | buttons dimmer | esp32 | |
 | spot | plugin dimmer | esp32 | |
 | bank | plugin dimmer | esp32 | |
-| control | BLE controller | lolin32 | Controls the 4 strips; uses deep sleep |
+| control | BLE controller | lolin32-oled | Controls the 4 strips; uses deep sleep |
 
 `control` has bank/keuken/spot/tafel as `unassigned`; `stripkeuken` is not yet configured in it.
 
