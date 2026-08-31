@@ -79,11 +79,11 @@ using namespace Lissabon;
 // LED Lighting module. 
 //
 
-class LissabonLedstripMod : public IotsaApiMod, public DimmerCallbacks 
+class LissabonLedstripMod : public IotsaModule, public DimmerCallbacks
 {
 public:
   LissabonLedstripMod(IotsaApplication& _app, IotsaAuthenticationProvider* _auth=NULL)
-  : IotsaApiMod(_app, _auth),
+  : IotsaModule(_app, _auth),
     dimmer(1, pixelstripMod, this),
 #ifdef WITH_TOUCHPADS
     dimmerUI(dimmer),
@@ -92,7 +92,7 @@ public:
   {
   }
   void setup();
-  void serverSetup();
+  void lateSetup() override;
   String info();
   void configLoad();
   void configSave();
@@ -111,7 +111,7 @@ private:
   DimmerUI dimmerUI;
 #endif
   DimmerBLEServer dimmerBLEServer;
-  void handler();
+  void webHandler() override;
 
   uint32_t saveAtMillis = 0;
   uint32_t lastButtonChangeMillis = 0;
@@ -151,9 +151,9 @@ void LissabonLedstripMod::dimmerOnOffChanged() {
   _tap();
 
 }
-#ifdef IOTSA_WITH_WEB
 void
-LissabonLedstripMod::handler() {
+LissabonLedstripMod::webHandler() {
+  IotsaWebServer *server = api.webService->server;
   bool anyChanged = false;
   anyChanged |= dimmer.formHandler_args(server, "ledstrip", true);
 
@@ -189,7 +189,6 @@ String LissabonLedstripMod::info() {
   message += "</p>";
   return message;
 }
-#endif // IOTSA_WITH_WEB
 
 bool LissabonLedstripMod::getHandler(const char *path, JsonObject& reply) {
   dimmer.getHandler(reply);
@@ -211,14 +210,11 @@ bool LissabonLedstripMod::putHandler(const char *path, const JsonVariant& reques
   return anyChanged;
 
 }
-void LissabonLedstripMod::serverSetup() {
-  // Setup the web server hooks for this module.
-#ifdef IOTSA_WITH_WEB
-  server->on("/ledstrip", std::bind(&LissabonLedstripMod::handler, this));
-  server->on("/ledstrip", HTTP_POST, std::bind(&LissabonLedstripMod::handler, this));
-#endif // IOTSA_WITH_WEB
-  api.setup("/api/ledstrip", true, true);
+void LissabonLedstripMod::lateSetup() {
   name = "ledstrip";
+  // /ledstrip (the module page, GET + POST) is auto-registered by this
+  // get=true api.setup(); it dispatches to webHandler().
+  api.setup("ledstrip", true, true);
 }
 
 
@@ -273,7 +269,7 @@ LissabonLedstripMod ledstripMod(application);
 // Standard setup() method, hands off most work to the application framework
 void setup(void){
   application.setup();
-  application.serverSetup();
+  application.lateSetup();
 }
 
 // Standard loop() routine, hands off most work to the application framework

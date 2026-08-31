@@ -56,10 +56,10 @@ using namespace Lissabon;
 // PWM Lighting module. 
 //
 
-class LissabonDimmerMod : public IotsaApiMod, public DimmerCallbacks {
+class LissabonDimmerMod : public IotsaModule, public DimmerCallbacks {
 public:
   LissabonDimmerMod(IotsaApplication& _app, IotsaAuthenticationProvider *_auth=NULL)
-  : IotsaApiMod(_app, _auth),
+  : IotsaModule(_app, _auth),
     dimmer(1, PIN_PWM_DIMMER, CHANNEL_PWM_DIMMER, this),
 #ifdef WITH_UI
     dimmerUI(dimmer),
@@ -74,7 +74,7 @@ public:
   {
   }
   void setup();
-  void serverSetup();
+  void lateSetup() override;
   String info();
   void configLoad();
   void configSave();
@@ -84,9 +84,9 @@ protected:
   void dimmerOnOffChanged() override;
   void dimmerValueChanged() override;
   void dimmerAvailableChanged() override {};
-  void handler();
-  bool getHandler(const char *path, JsonObject& reply);
-  bool putHandler(const char *path, const JsonVariant& request, JsonObject& reply);
+  void webHandler() override;
+  bool getHandler(const char *path, JsonObject& reply) override;
+  bool putHandler(const char *path, const JsonVariant& request, JsonObject& reply) override;
 
 private:
   PWMDimmer dimmer;
@@ -129,9 +129,9 @@ void LissabonDimmerMod::dimmerOnOffChanged() {
   }
 }
 
-#ifdef IOTSA_WITH_WEB
 void
-LissabonDimmerMod::handler() {
+LissabonDimmerMod::webHandler() {
+  IotsaWebServer *server = api.webService->server;
   bool anyChanged = false;
   anyChanged |= dimmer.formHandler_args(server, "dimmer", true);
 #ifdef WITH_DOUBLE_DIMMER
@@ -178,7 +178,6 @@ String LissabonDimmerMod::info() {
   message += "</p>";
   return message;
 }
-#endif // IOTSA_WITH_WEB
 
 bool LissabonDimmerMod::getHandler(const char *path, JsonObject& reply) {
   dimmer.getHandler(reply);
@@ -212,14 +211,11 @@ bool LissabonDimmerMod::putHandler(const char *path, const JsonVariant& request,
 
 }
 
-void LissabonDimmerMod::serverSetup() {
-  // Setup the web server hooks for this module.
-#ifdef IOTSA_WITH_WEB
-  server->on("/dimmer", std::bind(&LissabonDimmerMod::handler, this));
-  server->on("/dimmer", HTTP_POST, std::bind(&LissabonDimmerMod::handler, this));
-#endif // IOTSA_WITH_WEB
-  api.setup("/api/dimmer", true, true);
+void LissabonDimmerMod::lateSetup() {
   name = "dimmer";
+  // /dimmer (the module page, GET + POST) is registered by this get=true
+  // api.setup(); it dispatches to webHandler().
+  api.setup("dimmer", true, true);
 }
 
 
@@ -307,9 +303,9 @@ LissabonDimmerMod dimmerMod(application);
 // Standard setup() method, hands off most work to the application framework
 void setup(void){
   application.setup();
-  application.serverSetup();
+  application.lateSetup();
 }
- 
+
 // Standard loop() routine, hands off most work to the application framework
 void loop(void){
   application.loop();

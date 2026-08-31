@@ -4,12 +4,6 @@
 #include "iotsaApi.h"
 #include <NeoPixelBus.h>
 
-#ifdef IOTSA_WITH_API
-#define IotsaPixelstripModBaseMod IotsaApiMod
-#else
-#define IotsaPixelstripModBaseMod IotsaMod
-#endif
-
 #ifndef IOTSA_NPB_FEATURE
 #define IOTSA_NPB_FEATURE NeoGrbFeature
 #endif
@@ -57,16 +51,16 @@ public:
 
 };
 
-class IotsaPixelstripMod : public IotsaPixelstripModBaseMod, public IotsaPixelsourceHandler {
+class IotsaPixelstripMod : public IotsaModule, public IotsaPixelsourceHandler {
 public:
   IotsaPixelstripMod(IotsaApplication& app)
-  : IotsaPixelstripModBaseMod(app),
+  : IotsaModule(app),
     source(NULL),
     strip(NULL)
   {}
-  using IotsaPixelstripModBaseMod::IotsaPixelstripModBaseMod;
+  using IotsaModule::IotsaModule;
   void setup();
-  void serverSetup();
+  void lateSetup() override;
   void loop();
   String info();
   void setPixelsource(IotsaPixelsource *_source) { source = _source; };
@@ -74,12 +68,12 @@ public:
   void powerOn(bool force=false);
   void powerOff(bool force=false);
 protected:
-  bool getHandler(const char *path, JsonObject& reply);
-  bool putHandler(const char *path, const JsonVariant& request, JsonObject& reply);
+  bool getHandler(const char *path, JsonObject& reply) override;
+  bool putHandler(const char *path, const JsonVariant& request, JsonObject& reply) override;
   void configLoad();
   void configSave();
   void setupStrip();
-  void handler();
+  void webHandler() override;
   IotsaPixelsource *source;
   IotsaNeoPixelBus *strip;
   uint8_t *pixelBuffer;

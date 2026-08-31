@@ -26,16 +26,16 @@ IotsaBLEClientMod bleClientMod(application);
 
 using namespace Lissabon;
 
-class LissabonSimpleRemoteMod : public IotsaApiMod, public DimmerCallbacks {
+class LissabonSimpleRemoteMod : public IotsaModule, public DimmerCallbacks {
 public:
   LissabonSimpleRemoteMod(IotsaApplication &_app, IotsaAuthenticationProvider *_auth=NULL)
-  : IotsaApiMod(_app, _auth),
+  : IotsaModule(_app, _auth),
     dimmer(1, bleClientMod, this),
     dimmerUI(dimmer)
   {
   }
   void setup();
-  void serverSetup();
+  void lateSetup() override;
   String info();
   void configLoad();
   void configSave();
@@ -71,9 +71,11 @@ void LissabonSimpleRemoteMod::setup() {
   dimmer.setup();
 }
 
-void LissabonSimpleRemoteMod::serverSetup() {
-  api.setup("/api/remote", true, true);
+void LissabonSimpleRemoteMod::lateSetup() {
   name = "remote";
+  // REST/BLE only -- no dedicated web page (webPage=false), matching the
+  // pre-v3 behaviour where this module registered no server->on() handler.
+  api.setup("remote", true, true, false, false);
 }
 
 String LissabonSimpleRemoteMod::info() {
@@ -114,7 +116,7 @@ LissabonSimpleRemoteMod remoteMod(application);
 // Standard setup() method, hands off most work to the application framework
 void setup(void){
   application.setup();
-  application.serverSetup();
+  application.lateSetup();
 }
 
 // Standard loop() routine, hands off most work to the application framework

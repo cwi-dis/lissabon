@@ -46,17 +46,17 @@ public:
   }
 };
 
-class LissabonSimpleLightMod : public IotsaApiMod, public DimmerCallbacks {
+class LissabonSimpleLightMod : public IotsaModule, public DimmerCallbacks {
 public:
   LissabonSimpleLightMod(IotsaApplication &_app, IotsaAuthenticationProvider *_auth=NULL)
-  : IotsaApiMod(_app, _auth),
+  : IotsaModule(_app, _auth),
     dimmer(1, this),
     dimmerBLEServer(dimmer),
     dimmerUI(dimmer)
   {
   }
   void setup();
-  void serverSetup();
+  void lateSetup() override;
   String info();
   void configLoad();
   void configSave();
@@ -87,9 +87,11 @@ void LissabonSimpleLightMod::setup() {
   dimmerBLEServer.setup();
 }
 
-void LissabonSimpleLightMod::serverSetup() {
-  api.setup("/api/light", true, true);
+void LissabonSimpleLightMod::lateSetup() {
   name = "light";
+  // REST/BLE only -- no dedicated web page (webPage=false), matching the
+  // pre-v3 behaviour where this module registered no server->on() handler.
+  api.setup("light", true, true, false, false);
 }
 
 String LissabonSimpleLightMod::info() {
@@ -129,7 +131,7 @@ LissabonSimpleLightMod lightMod(application);
 // Standard setup() method, hands off most work to the application framework
 void setup(void){
   application.setup();
-  application.serverSetup();
+  application.lateSetup();
 }
 
 // Standard loop() routine, hands off most work to the application framework

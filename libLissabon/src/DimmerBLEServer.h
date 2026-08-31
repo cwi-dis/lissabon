@@ -8,7 +8,7 @@
 
 namespace Lissabon {
 
-class DimmerBLEServer : public IotsaBLEApiProvider {
+class DimmerBLEServer : public IotsaBLEProvider {
 public:
   DimmerBLEServer(AbstractDimmer& _dimmer) : dimmer(_dimmer), auxDimmer(nullptr) {};
   void setup();
@@ -17,8 +17,8 @@ protected:
   AbstractDimmer& dimmer;
   AbstractDimmer* auxDimmer;
   IotsaBleApiService bleApi;
-  bool blePutHandler(UUIDstring charUUID);
-  bool bleGetHandler(UUIDstring charUUID);
+  bool blePutHandler(UUIDstring charUUID) override;
+  bool bleGetHandler(UUIDstring charUUID) override;
 };
 }
 #endif // IOTSA_WITH_BLE

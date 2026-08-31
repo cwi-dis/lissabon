@@ -4,14 +4,11 @@
 namespace Lissabon {
 
 void DimmerBLEServer::setup() {
-#ifdef IOTSA_WITH_BLE
-  // Set default advertising interval to be between 200ms and 600ms
-  
   bleApi.setup(Lissabon::Dimmer::serviceUUIDstring, this);
 
   bleApi.addCharacteristic(
-    Lissabon::Dimmer::isOnUUIDstring, 
-    BLE_READ|BLE_WRITE, 
+    Lissabon::Dimmer::isOnUUIDstring,
+    bleApi.BLE_READ|bleApi.BLE_WRITE,
     Lissabon::Dimmer::isOnUUID2904format, 
     Lissabon::Dimmer::isOnUUID2904unit, 
     Lissabon::Dimmer::isOnUUID2901
@@ -19,7 +16,7 @@ void DimmerBLEServer::setup() {
 #ifdef DIMMER_WITH_LEVEL
   bleApi.addCharacteristic(
     Lissabon::Dimmer::brightnessUUIDstring, 
-    BLE_READ|BLE_WRITE, 
+    bleApi.BLE_READ|bleApi.BLE_WRITE,
     Lissabon::Dimmer::brightnessUUID2904format,
     Lissabon::Dimmer::brightnessUUID2904unit,
     Lissabon::Dimmer::brightnessUUID2901
@@ -28,20 +25,19 @@ void DimmerBLEServer::setup() {
 #ifdef DIMMER_WITH_TEMPERATURE
   bleApi.addCharacteristic(
     Lissabon::Dimmer::temperatureUUIDstring, 
-    BLE_READ|BLE_WRITE, 
+    bleApi.BLE_READ|bleApi.BLE_WRITE,
     Lissabon::Dimmer::temperatureUUID2904format,
     Lissabon::Dimmer::temperatureUUID2904unit,
     Lissabon::Dimmer::temperatureUUID2901
     );
 #endif
   bleApi.addCharacteristic(
-    Lissabon::Dimmer::identifyUUIDstring, 
-    BLE_WRITE, 
+    Lissabon::Dimmer::identifyUUIDstring,
+    bleApi.BLE_WRITE,
     Lissabon::Dimmer::identifyUUID2904format,
     Lissabon::Dimmer::identifyUUID2904unit,
     Lissabon::Dimmer::identifyUUID2901
     );
-#endif
 }
 
 bool DimmerBLEServer::blePutHandler(UUIDstring charUUID) {

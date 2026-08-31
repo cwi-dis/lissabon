@@ -7,10 +7,9 @@
 #define IOTSA_NEOPIXEL_TYPE STRINGIFY(IOTSA_NPB_FEATURE)
 #define IOTSA_NEOPIXEL_METHOD STRINGIFY(IOTSA_NPB_METHOD)
 
-#ifdef IOTSA_WITH_WEB
-
 void
-IotsaPixelstripMod::handler() {
+IotsaPixelstripMod::webHandler() {
+  IotsaWebServer *server = api.webService->server;
   if( server->hasArg("setIndex") && server->hasArg("setValue")) {
     // Note: this sets the value for a single LED, not the value for a single NeoPixel (3/4 leds)
     int idx = server->arg("setIndex").toInt();
@@ -58,7 +57,6 @@ String IotsaPixelstripMod::info() {
   String message = "<p>Built with pixelstrip module. See <a href=\"/pixelstrip\">/pixelstrip</a> to change NeoPixel strip settings, <a href=\"/api/pixelstrip\">/api/pixelstrip</a> and <a href=\"/api/pixels\">/api/pixels</a> for REST API.</p>";
   return message;
 }
-#endif // IOTSA_WITH_WEB
 
 void IotsaPixelstripMod::setup() {
   configLoad();
@@ -138,7 +136,6 @@ void IotsaPixelstripMod::powerOff(bool force) {
 }
 
 
-#ifdef IOTSA_WITH_API
 bool IotsaPixelstripMod::getHandler(const char *path, JsonObject& reply) {
   if (strcmp(path, "/api/pixelstrip") == 0) {
     reply["pin"] = pin;
@@ -194,7 +191,6 @@ bool IotsaPixelstripMod::putHandler(const char *path, const JsonVariant& request
   }
   return false;
 }
-#endif // IOTSA_WITH_API
 
 void IotsaPixelstripMod::pixelSourceCallback() {
   if (pixelBuffer == NULL) {
@@ -236,15 +232,13 @@ void IotsaPixelstripMod::pixelSourceCallback() {
   // IFDEBUG IotsaSerial.println(" called");
 }
 
-void IotsaPixelstripMod::serverSetup() {
-#ifdef IOTSA_WITH_WEB
-  server->on("/pixelstrip", std::bind(&IotsaPixelstripMod::handler, this));
-#endif
-#ifdef IOTSA_WITH_API
-  api.setup("/api/pixelstrip", true, true);
-  api.setup("/api/pixels", true, true);
+void IotsaPixelstripMod::lateSetup() {
   name = "pixelstrip";
-#endif
+  // /pixelstrip (the module page) is auto-registered by this get=true api.setup().
+  api.setup("pixelstrip", true, true);
+  // /api/pixels is a second data endpoint on the same module -- no separate
+  // web page (webPage=false); getHandler/putHandler dispatch on the path.
+  api.setup("pixels", true, true, false, false);
 }
 
 void IotsaPixelstripMod::configLoad() {

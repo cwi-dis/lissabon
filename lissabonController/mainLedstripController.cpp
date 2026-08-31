@@ -63,7 +63,7 @@ public:
     buttons(this)
   {}
   void setup();
-  void serverSetup();
+  void lateSetup() override;
   String info();
   void configLoad();
   void configSave();
@@ -78,8 +78,8 @@ public:
 
 protected:
   void _setupDisplay();
-  bool getHandler(const char *path, JsonObject& reply);
-  bool putHandler(const char *path, const JsonVariant& request, JsonObject& reply);
+  bool getHandler(const char *path, JsonObject& reply) override;
+  bool putHandler(const char *path, const JsonVariant& request, JsonObject& reply) override;
   void unknownBLEDimmerFound(const NimBLEAdvertisedDevice& device);
   void knownBLEDimmerChanged(const NimBLEAdvertisedDevice& device);
   virtual String formHandler_field_perdevice(const char *deviceName) override;
@@ -89,7 +89,7 @@ private:
   void dimmerOnOffChanged();
   void dimmerValueChanged();
   void dimmerAvailableChanged();
-  void handler();
+  void webHandler() override;
   void clearAllDimmersAndReboot();
   Buttons buttons;
   DimmerDynamicCollection::ItemType* getDimmerForCommand(int num);
@@ -323,9 +323,9 @@ IotsaLedstripControllerMod::dimmerFactory(int num) {
   return newDimmer;
 }
 
-#ifdef IOTSA_WITH_WEB
 void
-IotsaLedstripControllerMod::handler() {
+IotsaLedstripControllerMod::webHandler() {
+  IotsaWebServer *server = api.webService->server;
   // xxxjack update settings for remotes?
   bool anyChanged = false;
   String error;
@@ -382,7 +382,6 @@ String IotsaLedstripControllerMod::info() {
 
   return message;
 }
-#endif // IOTSA_WITH_WEB
 
 bool IotsaLedstripControllerMod::getHandler(const char *path, JsonObject& reply) {
   IotsaBLEClientMod::getHandler(path, reply);
@@ -417,13 +416,14 @@ bool IotsaLedstripControllerMod::putHandler(const char *path, const JsonVariant&
   return true;
 }
 
-void IotsaLedstripControllerMod::serverSetup() {
-#ifdef IOTSA_WITH_WEB
-  server->on("/blecontroller", std::bind(&IotsaLedstripControllerMod::handler, this));
-  server->on("/blecontroller", HTTP_POST, std::bind(&IotsaLedstripControllerMod::handler, this));
-#endif
-  api.setup("/api/blecontroller", true, true);
+void IotsaLedstripControllerMod::lateSetup() {
   name = "blecontroller";
+  // /blecontroller (the module page, GET + POST) is auto-registered by this
+  // get=true api.setup(); it dispatches to webHandler(). Deliberately does
+  // not chain to IotsaBLEClientMod::lateSetup() -- this module exposes its
+  // own /blecontroller endpoint instead of the base /bleclient one, and
+  // getHandler()/putHandler() forward to the base explicitly.
+  api.setup("blecontroller", true, true);
 }
 
 void IotsaLedstripControllerMod::configLoad() {
@@ -570,9 +570,9 @@ IotsaLedstripControllerMod ledstripControllerMod(application);
 // Standard setup() method, hands off most work to the application framework
 void setup(void){
   application.setup();
-  application.serverSetup();
+  application.lateSetup();
 }
- 
+
 // Standard loop() routine, hands off most work to the application framework
 void loop(void){
   application.loop();

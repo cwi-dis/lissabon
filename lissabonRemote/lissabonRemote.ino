@@ -80,7 +80,7 @@ public:
   #endif
   }
   void setup() override;
-  void serverSetup() override;
+  void lateSetup() override;
   String info() override;
   void configLoad() override;
   void configSave() override;
@@ -94,7 +94,7 @@ private:
   void dimmerOnOffChanged() override;
   void dimmerValueChanged() override;
   void dimmerAvailableChanged() override {};
-  void handler();
+  void webHandler() override;
   void ledOn();
   void ledOff();
   DimmerCollection dimmers;
@@ -145,9 +145,9 @@ void LissabonRemoteMod::dimmerOnOffChanged() {
     IFDEBUG IotsaSerial.println("tap mode 0");
   }
 }
-#ifdef IOTSA_WITH_WEB
 void
-LissabonRemoteMod::handler() {
+LissabonRemoteMod::webHandler() {
+  IotsaWebServer *server = api.webService->server;
   bool anyChanged = false;
   // xxxjack this also saves the config file if a non-config setting has been changed. Oh well...
   anyChanged |= dimmers.formHandler_args(server, "", true);
@@ -178,7 +178,6 @@ String LissabonRemoteMod::info() {
   message += "</p>";
   return message;
 }
-#endif // IOTSA_WITH_WEB
 
 bool LissabonRemoteMod::getHandler(const char *path, JsonObject& reply) {
   // xxxjack need to distinguish between config and operational parameters
@@ -198,13 +197,14 @@ bool LissabonRemoteMod::putHandler(const char *path, const JsonVariant& request,
   return anyChanged;
 }
 
-void LissabonRemoteMod::serverSetup() {
-#ifdef IOTSA_WITH_WEB
-  server->on("/bledimmer", std::bind(&LissabonRemoteMod::handler, this));
-  server->on("/bledimmer", HTTP_POST,std::bind(&LissabonRemoteMod::handler, this));
-#endif
-  api.setup("/api/bledimmer", true, true);
+void LissabonRemoteMod::lateSetup() {
   name = "bledimmer";
+  // /bledimmer (the module page, GET + POST) is auto-registered by this
+  // get=true api.setup(); it dispatches to webHandler(). Deliberately does
+  // not chain to IotsaBLEClientMod::lateSetup() -- this module exposes its
+  // own /bledimmer endpoint, and getHandler()/putHandler() forward to the
+  // base explicitly.
+  api.setup("bledimmer", true, true);
 }
 
 
@@ -302,9 +302,9 @@ LissabonRemoteMod remoteMod(application);
 // Standard setup() method, hands off most work to the application framework
 void setup(void){
   application.setup();
-  application.serverSetup();
+  application.lateSetup();
 }
- 
+
 // Standard loop() routine, hands off most work to the application framework
 void loop(void){
 #if 0
