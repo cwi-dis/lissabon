@@ -38,7 +38,13 @@ jobs:
             variant: lissabon-buttons-dimmer
           - application: lissabonDimmer
             variant: lissabon-double-dimmer
-            
+          - application: lissabonDimmer
+            variant: lissabon-1button-dimmer
+          - application: lissabonDimmer
+            variant: lissabon-candle
+          - application: lissabonDimmer
+            variant: lissabon-220-switch
+
           - application: lissabonRemote
             variant: lissabon-kitchen-remote
             

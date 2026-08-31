@@ -115,11 +115,10 @@ For esp32c3 (220-switch), USB CDC flags are also needed — see `platformio.ini`
 
 ## CI
 
-GitHub Actions (`.github/workflows/`) builds a matrix of appliance × variant. **Not all variants are covered** — the following are missing and should be added:
-
-- `lissabon-candle`
-- `lissabon-220-switch`
-- `lissabon-1button-dimmer`
+GitHub Actions (`.github/workflows/`) builds a matrix of appliance × variant. Every
+`[env:*]` is covered as of 2026-08-31 (`lissabon-candle`, `lissabon-220-switch`,
+`lissabon-1button-dimmer` added then); the only build env not in the matrix is the
+retired `lissabon-5v-ledstrip-lolin` (deleted).
 
 ## Deployed devices (Tuinpark Lissabon)
 
