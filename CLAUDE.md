@@ -103,6 +103,16 @@ h2zero/NimBLE-Arduino
 
 **Always verify `lib_deps` points to `#develop` branch of iotsa before building.**
 
+Board definitions (platform, board id, USB wiring, `-DESP32C3`, NimBLE `lib_ignore`)
+are **not** hand-written per appliance any more. They are vendored verbatim from
+cwi-dis/iotsa (see cwi-dis/iotsa#224) into the two toplevel files
+`iotsa-board-defs.ini` / `iotsa-board-traits.ini`; each appliance's `platformio.ini`
+pulls them in via `extra_configs = ../iotsa-board-*.ini` and its `[env:*]` sections
+just `extends =` the relevant board section (`esp32dev`, `lolin32`, `lolin32_oled`,
+`pico32`, `esp32c3supermini`). Refresh both files whenever the iotsa dependency is
+bumped; do not hand-edit them — put appliance-specific choices (feature flags,
+partition scheme overrides) in the `[env:*]` sections.
+
 Key build flags:
 
 - `-DIOTSA_WITH_BLE` — enables BLE via NimBLE. Required for all lissabon appliances.
@@ -111,7 +121,9 @@ Key build flags:
 - `-DDIMMER_WITH_GAMMA`, `-DDIMMER_WITH_ANIMATION`, `-DDIMMER_WITH_TEMPERATURE` — optional features.
 - `board_build.partitions = min_spiffs.csv` — required when BLE is enabled on 4MB flash boards (BLE stack takes ~200KB).
 
-For esp32c3 (220-switch), USB CDC flags are also needed — see `platformio.ini` in lissabonDimmer.
+For esp32c3 (220-switch) the USB-CDC-as-Serial flags come from the vendored
+`_esp32c3_nativeusb` trait (referenced as `${_esp32c3_nativeusb.build_flags}` in the
+env), not from a hand-written section.
 
 ## CI
 
