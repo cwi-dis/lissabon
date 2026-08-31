@@ -53,9 +53,17 @@ cwi-dis/iotsa#138; see `iotsa/CLAUDE.md` and `iotsa/docs/module-interface-status
 |---|---|
 | esp32dev | most lissabonDimmer variants, lissabonSimpleLight, lissabonSimpleRemote |
 | lolin32-lite | lissabonDimmer (candle), lissabonRemote (both want the built-in LiPo charger) |
-| lolin32-oled (Wemos LOLIN32 OLED) | lissabonController — built-in 128×64 SSD1306 on GPIO5/4, no charger; built as `lolin32_lite` locally pending cwi-dis/iotsa#229 |
+| lolin32-oled (Wemos LOLIN32 OLED) | lissabonController — built-in 128×64 SSD1306 on GPIO5/4, no charger; iotsa's `[lolin32_oled]` board-def builds it as `lolin32_lite` (cwi-dis/iotsa#229) |
 | pico32 | lissabonLedstrip |
 | esp32-c3-devkitm-1 (SuperMini, RISC-V) | lissabon-220-switch |
+
+**esp32dev vs pico32 is not a meaningful choice** — both are the original dual-core
+ESP32, 4 MB flash, no PSRAM, no LiPo charger. Every appliance here uses ≤4 GPIOs, so
+the pin count never mattered; the split is just what Jack had in the drawer at the
+time. The lolin32 picks *are* deliberate (OLED / LiPo charger); this one isn't. For
+new builds default to `esp32dev` (the ubiquitous cheap board now; the PICO-KIT is
+superseded), or `esp32c3supermini` when you want small-and-cheap and don't need
+Xtensa. No reason to change deployed devices.
 
 ### Python tooling
 
