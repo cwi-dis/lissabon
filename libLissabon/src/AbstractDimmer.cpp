@@ -29,7 +29,7 @@ void AbstractDimmer::updateDimmer() {
   animationStartMillis = millis()-1;
   animationEndMillis = millis() + thisDuration;
   IotsaSerial.printf("updateDimmer%d: level %f->%f in %d ms\n", num, animationPrevLevel, newLevel, thisDuration);
-  iotsaConfig.postponeSleep(thisDuration+100);
+  iotsaController.postponeSleep(thisDuration+100);
 #endif
 }
 

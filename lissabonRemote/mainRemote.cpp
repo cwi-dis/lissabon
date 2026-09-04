@@ -131,12 +131,12 @@ void LissabonRemoteMod::dimmerOnOffChanged() {
     IFDEBUG IotsaSerial.printf("tap mode count=%d\n", buttonChangeCount);
     if (buttonChangeCount == TAP_COUNT_MODE_CHANGE) {
       IFDEBUG IotsaSerial.println("tap mode change");
-      iotsaConfig.allowRequestedConfigurationMode();
+      iotsaController.allowRequestedConfigurationMode();
     }
     if (buttonChangeCount == TAP_COUNT_REBOOT) {
       IFDEBUG IotsaSerial.println("tap mode reboot");
       ledOffUntilMillis = now + 2000;
-      iotsaConfig.requestReboot(1000);
+      iotsaController.requestReboot(1000);
     }
   } else {
     // Either the first change, or too late. Reset.
@@ -232,7 +232,7 @@ void LissabonRemoteMod::setup() {
   //
   // Setup LED (fur user feedback) and pin for disabling sleep
   //
-  iotsaConfig.allowRCMDescription("tap any touchpad 4 times");
+  iotsaController.allowRCMDescription("tap any touchpad 4 times");
 #ifdef LED_PIN
   pinMode(LED_PIN, OUTPUT);
 #endif
@@ -278,7 +278,7 @@ void LissabonRemoteMod::dimmerValueChanged() {
 
 void LissabonRemoteMod::loop() {
 #ifdef DEBUG_PRINT_HEAP_SPACE
-  { static uint32_t last; if (millis() > last+1000) { iotsaConfig.printHeapSpace(); last = millis(); }}
+  { static uint32_t last; if (millis() > last+1000) { iotsaStatus.printHeapSpace(); last = millis(); }}
 #endif
   //
   // Let our baseclass do its loop-y things

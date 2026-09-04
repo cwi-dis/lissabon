@@ -116,11 +116,11 @@ void LissabonDimmerMod::dimmerOnOffChanged() {
     buttonChangeCount++;
     if (buttonChangeCount == TAP_COUNT_MODE_CHANGE) {
       IFDEBUG IotsaSerial.println("tap mode change");
-      iotsaConfig.allowRequestedConfigurationMode();
+      iotsaController.allowRequestedConfigurationMode();
     }
     if (buttonChangeCount == TAP_COUNT_REBOOT) {
       IFDEBUG IotsaSerial.println("tap mode reboot");
-      iotsaConfig.requestReboot(1000);
+      iotsaController.requestReboot(1000);
     }
   } else {
     // Either the first change, or too late. Reset.
@@ -255,19 +255,19 @@ void LissabonDimmerMod::setup() {
 #endif
   configLoad();
 #if defined(WITH_TOUCHPADS)
-  iotsaConfig.allowRCMDescription("tap any touchpad 4 times");
+  iotsaController.allowRCMDescription("tap any touchpad 4 times");
   dimmerUI.setUpDownButtons(encoder);
 #elif defined(WITH_BUTTONS)
-  iotsaConfig.allowRCMDescription("press button 4 times");
+  iotsaController.allowRCMDescription("press button 4 times");
   dimmerUI.setUpDownButtons(encoder);
 #elif defined(WITH_1BUTTON)
-  iotsaConfig.allowRCMDescription("press button 4 times");
+  iotsaController.allowRCMDescription("press button 4 times");
   dimmerUI.setCyclingButton(encoder);
 #ifdef WITH_DOUBLE_DIMMER
   dimmerUI2.setCyclingButton(encoder2);
 #endif
 #elif defined(WITH_ROTARY)
-  iotsaConfig.allowRCMDescription("press button 4 times");
+  iotsaController.allowRCMDescription("press button 4 times");
   dimmerUI.setRotaryEncoder(button, encoder);
 #endif
   dimmer.setup();
@@ -293,7 +293,7 @@ void LissabonDimmerMod::loop() {
 }
 
 void LissabonDimmerMod::dimmerValueChanged() {
-  iotsaConfig.postponeSleep(2000);
+  iotsaController.postponeSleep(2000);
   saveAtMillis = millis() + 1000;
   configSave();
 }

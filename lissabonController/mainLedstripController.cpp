@@ -125,7 +125,7 @@ IotsaLedstripControllerMod::selectDimmer(bool next, bool prev) {
   LOG_UI IotsaSerial.printf("LissabonController: now selectedDimmer=%d\n", selectedDimmerIndex);
   updateDisplay(false);
   buttons.refreshEncoder();
-  iotsaConfig.postponeSleep(4000);
+  iotsaController.postponeSleep(4000);
   if (selectedDimmerIndex < dimmers.size()) {
     auto d = dimmers.at(selectedDimmerIndex);
     bool availableNow = d->available();
@@ -165,7 +165,7 @@ void IotsaLedstripControllerMod::setTemperature(float temperature) {
   d->updateDimmer();
   updateDisplay(false);
   LOG_UI IotsaSerial.printf("LissabonController: updated dimmer %d temperature %f\n", selectedDimmerIndex, temperature);
-  iotsaConfig.postponeSleep(4000);
+  iotsaController.postponeSleep(4000);
 #else
   display->flash();
 #endif
@@ -188,7 +188,7 @@ void IotsaLedstripControllerMod::setLevel(float level) {
   updateDisplay(false);
   LOG_UI IotsaSerial.printf("LissabonController: updated dimmer %d level %f\n", selectedDimmerIndex, level);
   if (selectedDimmerIndex != savedSelectedDimmerIndex) saveNeeded = true;
-  iotsaConfig.postponeSleep(4000);
+  iotsaController.postponeSleep(4000);
 }
 
 void IotsaLedstripControllerMod::toggle() {
@@ -294,12 +294,12 @@ void IotsaLedstripControllerMod::dimmerOnOffChanged() {
     IFDEBUG IotsaSerial.printf("tap mode count=%d\n", buttonChangeCount);
     if (buttonChangeCount == TAP_COUNT_MODE_CHANGE) {
       IFDEBUG IotsaSerial.println("tap mode change");
-      iotsaConfig.allowRequestedConfigurationMode();
+      iotsaController.allowRequestedConfigurationMode();
     }
     if (buttonChangeCount == TAP_COUNT_REBOOT) {
       IFDEBUG IotsaSerial.println("tap mode reboot");
       ledOffUntilMillis = now + 2000;
-      iotsaConfig.requestReboot(1000);
+      iotsaController.requestReboot(1000);
     }
   } else {
     // Either the first change, or too late. Reset.
@@ -454,7 +454,7 @@ void IotsaLedstripControllerMod::clearAllDimmersAndReboot() {
   IotsaConfigFileSave cf("/config/blecontroller.cfg");
   cf.put("selectedDimmerIndex", 0);
   cf.put("n_dimmer", 0);
-  iotsaConfig.requestReboot(1000);
+  iotsaController.requestReboot(1000);
 }
 
 void IotsaLedstripControllerMod::setup() {
@@ -470,7 +470,7 @@ void IotsaLedstripControllerMod::setup() {
   //
   configLoad();
  #if 0
-  iotsaConfig.allowRCMDescription("tap any touchpad 4 times");
+  iotsaController.allowRCMDescription("tap any touchpad 4 times");
 #endif
 #ifdef PIN_DISABLESLEEP
   batteryMod.setPinDisableSleep(PIN_DISABLESLEEP);

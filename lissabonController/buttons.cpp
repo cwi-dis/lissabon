@@ -73,12 +73,12 @@ void Buttons::_tap() {
     if (buttonChangeCount == TAP_COUNT_MODE_CHANGE) {
       IotsaSerial.println("TapCount: mode change");
       controller->showMessage("mode");
-      iotsaConfig.allowRequestedConfigurationMode();
+      iotsaController.allowRequestedConfigurationMode();
     }
     if (buttonChangeCount == TAP_COUNT_REBOOT) {
       IotsaSerial.println("TapCount: reboot");
       controller->showMessage("reboot");
-      iotsaConfig.requestReboot(1000);
+      iotsaController.requestReboot(1000);
     }
   }
 }

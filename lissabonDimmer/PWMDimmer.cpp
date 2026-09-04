@@ -83,12 +83,12 @@ void PWMDimmer::loop() {
   // Quick return if we have nothing to do
 #ifdef DIMMER_WITHOUT_LEVEL
   if (isOn) {
-    iotsaConfig.postponeSleep(100);
+    iotsaController.postponeSleep(100);
   }
 #else
   if (animationStartMillis == 0 || animationEndMillis == 0) {
     // The dimmer shouldn't sleep if it is controlling the PWM output
-    if (level > 0 && isOn) iotsaConfig.postponeSleep(100);
+    if (level > 0 && isOn) iotsaController.postponeSleep(100);
     return;
   }
 #endif

@@ -138,11 +138,11 @@ void LissabonLedstripMod::_tap() {
     IFDEBUG IotsaSerial.printf("TapCount: %d\n", buttonChangeCount);
     if (buttonChangeCount == TAP_COUNT_MODE_CHANGE) {
       IotsaSerial.println("TapCount: mode change");
-      iotsaConfig.allowRequestedConfigurationMode();
+      iotsaController.allowRequestedConfigurationMode();
     }
     if (buttonChangeCount == TAP_COUNT_REBOOT) {
       IotsaSerial.println("TapCount: reboot");
-      iotsaConfig.requestReboot(1000);
+      iotsaController.requestReboot(1000);
     }
   }
 }
@@ -172,7 +172,7 @@ LissabonLedstripMod::webHandler() {
   message += "<input type='submit' name='set' value='Update Configuration'></form>";
   message += "</body></html>";
   server->send(200, "text/html", message);
-  iotsaConfig.extendCurrentMode();
+  iotsaController.extendCurrentMode();
 }
 
 String LissabonLedstripMod::info() {
@@ -192,7 +192,7 @@ String LissabonLedstripMod::info() {
 
 bool LissabonLedstripMod::getHandler(const char *path, JsonObject& reply) {
   dimmer.getHandler(reply);
-  iotsaConfig.extendCurrentMode();
+  iotsaController.extendCurrentMode();
   return true;
 }
 
@@ -206,7 +206,7 @@ bool LissabonLedstripMod::putHandler(const char *path, const JsonVariant& reques
     configSave();
   }
   if (anyChanged) dimmer.updateDimmer(); // xxxjack or is this called already?
-  iotsaConfig.extendCurrentMode();
+  iotsaController.extendCurrentMode();
   return anyChanged;
 
 }
@@ -239,7 +239,7 @@ void LissabonLedstripMod::setup() {
 #endif
   configLoad();
 #ifdef WITH_TOUCHPADS
-  iotsaConfig.allowRCMDescription("tap any touchpad 4 times");
+  iotsaController.allowRCMDescription("tap any touchpad 4 times");
   dimmerUI.setUpDownButtons(levelEncoder);
   dimmerUI.setTemperatureUpDownButtons(temperatureEncoder);
 #endif
@@ -249,7 +249,7 @@ void LissabonLedstripMod::setup() {
 }
 
 void LissabonLedstripMod::dimmerValueChanged() {
-  iotsaConfig.postponeSleep(2000);
+  iotsaController.postponeSleep(2000);
   saveAtMillis = millis() + 1000;
 }
 
