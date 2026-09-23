@@ -8,7 +8,6 @@
 
 #include "iotsa.h"
 #include "iotsaWifi.h"
-#include "iotsaLed.h"
 #include "iotsaConfigFile.h"
 #include "LedstripDimmer.h"
 #include "DimmerUI.h"

@@ -67,6 +67,11 @@ public:
   void pixelSourceCallback();
   void powerOn(bool force=false);
   void powerOff(bool force=false);
+  // Keep the strip powered even while every pixel is (momentarily) all-zero,
+  // e.g. the dark phase of a status-indicator blink/breathe/gap cycle
+  // (cwi-dis/lissabon#28) -- without this, pixelSourceCallback() would power-
+  // cycle the strip on every such phase.
+  void keepPowered(bool keep) { _keepPowered = keep; }
 protected:
   bool getHandler(const char *path, JsonObject& reply) override;
   bool putHandler(const char *path, const JsonVariant& request, JsonObject& reply) override;
@@ -79,6 +84,7 @@ protected:
   uint8_t *pixelBuffer;
   int count;
   int pin;
+  bool _keepPowered = false;
 #ifdef IOTSA_NPB_POWER_PIN
   bool isPowerOn;
 #endif

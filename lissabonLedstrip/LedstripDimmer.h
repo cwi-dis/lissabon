@@ -35,6 +35,15 @@ protected:
   float *pixelLevels = NULL; // per-pixel relative intensities
   IotsaPixelsourceHandler *stripHandler;
 
+  // Status-indicator overlay on pixel 0 (cwi-dis/lissabon#28): while a signal
+  // is active, pixel 0's real light value is saved here so it can be restored
+  // once the signal clears, instead of being recomputed (which loop() only
+  // does while an animation is running).
+  bool statusOverlayActive = false;
+  uint8_t savedPixel0[4] = {0, 0, 0, 0};
+  void applyStatusPixel(uint32_t statusColor);
+  void restoreStatusPixel();
+
   void updateColorspace(float whiteTemperature, float whiteBrightness);
   void clampLevel();
   void calcPixelLevels(float wantedLevel);

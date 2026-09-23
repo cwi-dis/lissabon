@@ -299,17 +299,61 @@ void LedstripDimmer::setHandler(uint8_t *_buffer, size_t _count, int _bpp, Iotsa
   updateDimmer();
 }
 
+void LedstripDimmer::applyStatusPixel(uint32_t statusColor) {
+  if (!statusOverlayActive) {
+    // First frame of the overlay: stash pixel 0's real value so it can be
+    // put back once the status signal clears and we go idle (loop() only
+    // recomputes pixel 0 from scratch while an animation is running).
+    memcpy(savedPixel0, pixelBuffer, bpp);
+    statusOverlayActive = true;
+  }
+  pixelBuffer[0] = (statusColor >> 16) & 0xff;
+  pixelBuffer[1] = (statusColor >> 8) & 0xff;
+  pixelBuffer[2] = statusColor & 0xff;
+  if (bpp == 4) pixelBuffer[3] = 0;
+}
+
+void LedstripDimmer::restoreStatusPixel() {
+  memcpy(pixelBuffer, savedPixel0, bpp);
+  statusOverlayActive = false;
+}
+
 void LedstripDimmer::loop() {
   unsigned long loopStart = micros();
   // If we are not completely setup we return.
   if (pixelBuffer == NULL || count == 0 || stripHandler == NULL) return;
-  // Quick return if we have nothing to do
-  if (animationStartMillis == 0 || animationEndMillis == 0) return;
+
+  // Status-indicator overlay on pixel 0 (cwi-dis/lissabon#28). Checked
+  // against the semantic signal accessors, not statusColor()'s instantaneous
+  // render, so the strip's power stays latched on through the dark phases of
+  // a blink/breathe/gap cycle -- see IotsaPixelstripMod::keepPowered().
+  // Suppressed during calibration: a rogue lit pixel would corrupt the
+  // colour-sensor reading lissabonCalibrate is trying to take.
+  bool statusActive = !inCalibrationMode &&
+    (iotsaStatus.overrideSignal().colour != 0 ||
+     iotsaStatus.modeSignal().colour != 0 ||
+     iotsaStatus.wifiSignal().colour != 0);
+  mod.keepPowered(statusActive);
+
+  bool haveAnimation = (animationStartMillis != 0 && animationEndMillis != 0);
+  if (!haveAnimation) {
+    // Nothing for the real light to do -- but pixel 0 may still need to show
+    // (or stop showing) a status signal.
+    if (statusActive) {
+      applyStatusPixel(iotsaStatus.statusColor());
+      stripHandler->pixelSourceCallback();
+    } else if (statusOverlayActive) {
+      restoreStatusPixel();
+      stripHandler->pixelSourceCallback();
+    }
+    return;
+  }
   //
   // If we are in calibration mode we simply set the pixels and be done
   //
   if (inCalibrationMode) {
-    IotsaSerial.printf("Loop: calibration r1 %f g2 %f b1 %f w1 %f, r1 %f g2 %f b1 %f w1 %f\n", 
+    statusOverlayActive = false;  // pixel 0 is about to legitimately hold calibration data
+    IotsaSerial.printf("Loop: calibration r1 %f g2 %f b1 %f w1 %f, r1 %f g2 %f b1 %f w1 %f\n",
       calibrationData[0], calibrationData[1], calibrationData[2], calibrationData[3],
       calibrationData[4], calibrationData[5], calibrationData[6], calibrationData[7]
     );
@@ -353,8 +397,12 @@ void LedstripDimmer::loop() {
     *p++ = thisPixelColor.B;
     if (bpp == 4) *p++ = thisPixelColor.W;
   }
+  statusOverlayActive = false;  // pixel 0 just got its freshly-computed real value
+  if (statusActive) {
+    applyStatusPixel(iotsaStatus.statusColor());
+  }
   stripHandler->pixelSourceCallback();
-  IotsaSerial.printf("LedstripDimmer.loop: %lu us\n", micros()-loopStart);
+  DEBUG_LEDSTRIP IotsaSerial.printf("LedstripDimmer.loop: %lu us\n", micros()-loopStart);
 }
 
 }

@@ -206,7 +206,7 @@ void IotsaPixelstripMod::pixelSourceCallback() {
       break;
     }
   }
-  if (!anyOn) {
+  if (!anyOn && !_keepPowered) {
     powerOff();
     return;
   }
