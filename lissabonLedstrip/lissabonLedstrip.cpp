@@ -135,12 +135,14 @@ void LissabonLedstripMod::_tap() {
     lastButtonChangeMillis = now;
     buttonChangeCount++;
     IFDEBUG IotsaSerial.printf("TapCount: %d\n", buttonChangeCount);
+    iotsaStatus.setStatusPulse(IotsaStatus::COLOUR_WHITE, 100, 100, 200, "Tap");
     if (buttonChangeCount == TAP_COUNT_MODE_CHANGE) {
       IotsaSerial.println("TapCount: mode change");
       iotsaController.allowRequestedConfigurationMode();
     }
     if (buttonChangeCount == TAP_COUNT_REBOOT) {
       IotsaSerial.println("TapCount: reboot");
+      iotsaStatus.setStatusPulse(IotsaStatus::COLOUR_WHITE, 500, 0, 500, "Rebooting");
       iotsaController.requestReboot(1000);
     }
   }
