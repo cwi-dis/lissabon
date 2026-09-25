@@ -123,6 +123,12 @@ IotsaLedstripControllerMod::selectDimmer(bool next, bool prev) {
     display->flash();
     selectedDimmerIndex = dimmers.size()-1;
   }
+  // Missing since this save mechanism was introduced (a535ca3, 2023): setLevel()/
+  // toggle() both mark saveNeeded when they change selectedDimmerIndex's saved value,
+  // but selectDimmer() itself -- the rocker switch, the actual way the selection
+  // normally changes -- never did, so scrolling to a different strip without also
+  // touching its level/on-off was silently never persisted.
+  if (selectedDimmerIndex != savedSelectedDimmerIndex) saveNeeded = true;
   LOG_UI IotsaSerial.printf("LissabonController: now selectedDimmer=%d\n", selectedDimmerIndex);
   updateDisplay(false);
   buttons.refreshEncoder();
