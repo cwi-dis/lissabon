@@ -153,7 +153,16 @@ IotsaLedstripControllerMod::selectDimmer(bool next, bool prev) {
   LOG_UI IotsaSerial.printf("LissabonController: now selectedDimmer=%d\n", selectedDimmerIndex);
   updateDisplay(false);
   buttons.refreshEncoder();
-  iotsaController.postponeSleep(4000);
+  // Same bug class as the nudge fix above: only on a genuine rocker-driven
+  // change, not dimmerAvailableChanged()'s internal (false, false) calls --
+  // those fire constantly during connect/fail/retry churn, and
+  // postponeSleep(4000) adds activityExtraWakeDuration on top (see
+  // IotsaSleepPolicy::postponeSleep()), so unconditionally calling it here
+  // meant the sleep-inhibit deadline got pushed out by a full minute on
+  // every single internal refresh -- confirmed live, 2026-09-26: control
+  // hadn't slept in 7 hours, with postponeSleep sitting at ~64000ms
+  // (4000 + activityExtraWakeDuration) essentially continuously.
+  if (next || prev) iotsaController.postponeSleep(4000);
   if (selectedDimmerIndex < dimmers.size()) {
     auto d = dimmers.at(selectedDimmerIndex);
     bool availableNow = d->available();
