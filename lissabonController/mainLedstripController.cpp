@@ -143,7 +143,13 @@ IotsaLedstripControllerMod::selectDimmer(bool next, bool prev) {
   // normally changes -- never did, so scrolling to a different strip without also
   // touching its level/on-off was silently never persisted.
   if (selectedDimmerIndex != savedSelectedDimmerIndex) saveNeeded = true;
-  nudgeRefreshPriority(selectedDimmerIndex);
+  // Only on a genuine rocker-driven change, not the internal (false, false)
+  // refresh-only calls dimmerAvailableChanged() makes on every state change --
+  // those fire constantly during connect/fail/retry churn, and nudging on every
+  // one of them turned the intended one-time nudge into a permanent, continuously
+  // reasserted lock on whichever dimmer happened to be selected (observed live,
+  // 2026-09-26: it starved every other dimmer for the whole boot).
+  if (next || prev) nudgeRefreshPriority(selectedDimmerIndex);
   LOG_UI IotsaSerial.printf("LissabonController: now selectedDimmer=%d\n", selectedDimmerIndex);
   updateDisplay(false);
   buttons.refreshEncoder();
