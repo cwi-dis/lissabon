@@ -94,6 +94,7 @@ private:
   Buttons buttons;
   DimmerDynamicCollection::ItemType* getDimmerForCommand(int num);
   void updateDisplay(bool clear);
+  void nudgeRefreshPriority(int index);
   typedef std::pair<std::string, NimBLEAddress> unknownDimmerInfo;
   DimmerDynamicCollection dimmers;
   DimmerDynamicCollection::ItemType* dimmerFactory(int num);
@@ -104,6 +105,19 @@ private:
   bool saveNeeded = false;
   int nextRefreshIndex = 0; // round-robin cursor, see loop()
 };
+
+void
+IotsaLedstripControllerMod::nudgeRefreshPriority(int index) {
+  // One-time priority nudge, not a persistent bias: makes the round-robin
+  // refresh scheduler (loop()) try this dimmer next, without permanently
+  // anchoring it there -- a dimmer that's stuck unreachable would otherwise
+  // get retried every idle tick again, reintroducing the starvation bug
+  // round-robin was added to fix (cwi-dis/lissabon#30). Called whenever the
+  // user's own action makes one dimmer newly relevant: selecting it, booting
+  // up with a persisted selection, or issuing a command that couldn't reach
+  // it yet.
+  if (index >= 0 && index < dimmers.size()) nextRefreshIndex = index;
+}
 
 void
 IotsaLedstripControllerMod::selectDimmer(bool next, bool prev) {
@@ -129,6 +143,7 @@ IotsaLedstripControllerMod::selectDimmer(bool next, bool prev) {
   // normally changes -- never did, so scrolling to a different strip without also
   // touching its level/on-off was silently never persisted.
   if (selectedDimmerIndex != savedSelectedDimmerIndex) saveNeeded = true;
+  nudgeRefreshPriority(selectedDimmerIndex);
   LOG_UI IotsaSerial.printf("LissabonController: now selectedDimmer=%d\n", selectedDimmerIndex);
   updateDisplay(false);
   buttons.refreshEncoder();
@@ -163,6 +178,7 @@ void IotsaLedstripControllerMod::setTemperature(float temperature) {
   auto d = getDimmerForCommand(selectedDimmerIndex);
   if (d == nullptr) {
     display->flash();
+    nudgeRefreshPriority(selectedDimmerIndex);
     return;
   }
   float tempKelvin = DIMMER_MIN_TEMPERATURE + temperature * (DIMMER_MAX_TEMPERATURE-DIMMER_MIN_TEMPERATURE);
@@ -188,6 +204,7 @@ void IotsaLedstripControllerMod::setLevel(float level) {
   auto d = getDimmerForCommand(selectedDimmerIndex);
   if (d == nullptr) {
     display->flash();
+    nudgeRefreshPriority(selectedDimmerIndex);
     return;
   }
   d->level = level;
@@ -205,6 +222,8 @@ void IotsaLedstripControllerMod::toggle() {
     d->updateDimmer();
     updateDisplay(false);
     if (selectedDimmerIndex != savedSelectedDimmerIndex) saveNeeded = true;
+  } else {
+    nudgeRefreshPriority(selectedDimmerIndex);
   }
 }
 
@@ -477,6 +496,7 @@ void IotsaLedstripControllerMod::setup() {
   // Load configuration
   //
   configLoad();
+  nudgeRefreshPriority(selectedDimmerIndex); // prioritize the persisted selection on boot
  #if 0
   iotsaController.allowRCMDescription("tap any touchpad 4 times");
 #endif
