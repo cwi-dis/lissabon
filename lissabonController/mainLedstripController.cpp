@@ -215,7 +215,8 @@ IotsaLedstripControllerMod::updateDisplay(bool clear) {
     String name = elem->getUserVisibleName();
     LOG_BLE IotsaSerial.printf("  device %s, available=%d connected=%d\n", name.c_str(), elem->available(), elem->isConnected());
     StripStatus status = StripStatus::unavailable;
-    if (elem->available()) status = StripStatus::available;
+    if (elem->available()) status = StripStatus::seen;
+    if (elem->dataValid()) status = StripStatus::synced;
     if (elem->isConnecting()) status = StripStatus::connecting;
     if (elem->isConnected()) status = StripStatus::connected;
     display->addStrip(index, name, status);

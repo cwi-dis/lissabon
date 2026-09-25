@@ -41,9 +41,12 @@ static Adafruit_SSD1306 *oled;
 
 #include "icons/on.h"
 #include "icons/off.h"
-#include "icons/dot.h"
 #include "icons/sun.h"
 #include "icons/lightbulb.h"
+#include "icons/question.h"
+#include "icons/dots.h"
+#include "icons/arrow.h"
+#include "icons/doublearrow.h"
 
 Display::Display()
 {
@@ -100,15 +103,19 @@ void Display::addStrip(int index, String name, StripStatus status) {
   oled->fillRect(0, y, DISPLAY_WIDTH, STRIPS_HEIGHT+2, BLACK);
   oled->setCursor(x, y);
   oled->print(name.c_str());
-  // If the strip is available we show a connected/not connected indicator
+  // "synced" (have valid data, idle) is the normal/healthy steady state, so it's
+  // drawn blank -- every other state gets a distinct icon, on/off are reserved for
+  // the level slider above and not reused here (see StripStatus in display.h).
   if (status == StripStatus::connected) {
-    oled->drawXBitmap(ICON_X, y+ICON_Y, on_bits, on_width, on_height, WHITE);
+    oled->drawXBitmap(ICON_X, y+ICON_Y, doublearrow_bits, doublearrow_width, doublearrow_height, WHITE);
   } else if (status == StripStatus::connecting) {
-    oled->drawXBitmap(ICON_X, y+ICON_Y, off_bits, off_width, off_height, WHITE);
-  } else if (status == StripStatus::available) {
-    oled->drawXBitmap(ICON_X, y+ICON_Y, dot_bits, dot_width, dot_height, WHITE);
+    oled->drawXBitmap(ICON_X, y+ICON_Y, arrow_bits, arrow_width, arrow_height, WHITE);
+  } else if (status == StripStatus::seen) {
+    oled->drawXBitmap(ICON_X, y+ICON_Y, dots_bits, dots_width, dots_height, WHITE);
+  } else if (status == StripStatus::unavailable) {
+    oled->drawXBitmap(ICON_X, y+ICON_Y, question_bits, question_width, question_height, WHITE);
   } else {
-    // draw nothing
+    // synced: draw nothing
   }
 }
 
