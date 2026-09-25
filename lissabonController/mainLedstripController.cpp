@@ -102,6 +102,7 @@ private:
   bool selectedDimmerIsAvailable = false;
   int stayConnectedMillis = 3000; // deliberately not configurable yet, see cwi-dis/iotsa#144
   bool saveNeeded = false;
+  int nextRefreshIndex = 0; // round-robin cursor, see loop()
 };
 
 void
@@ -537,18 +538,13 @@ void IotsaLedstripControllerMod::loop() {
   // If we are idle we may want to do a save, or load any available dimmer values.
   //
   bool isIdle = true;
-  BLEDimmer *needsRefresh = nullptr;
-  for (auto& d : dimmers) {
+  int n = dimmers.size();
+  for (int i = 0; i < n; i++) {
     // Living dangerously: we don't have rtti so we can't use dynamic cast.
     // We know that is safe because we supplied the factory function.
-    BLEDimmer* d_ble = reinterpret_cast<BLEDimmer*>(d);
-    if (d_ble->available()) {
-      if ((d_ble->isConnected() || d_ble->isConnecting())) {
-        isIdle = false;
-      }
-      if (!d_ble->dataValid()) {
-        needsRefresh = d_ble;
-      }
+    BLEDimmer* d_ble = reinterpret_cast<BLEDimmer*>(dimmers.at(i));
+    if (d_ble->available() && (d_ble->isConnected() || d_ble->isConnecting())) {
+      isIdle = false;
     }
   }
   if (isIdle) {
@@ -557,9 +553,18 @@ void IotsaLedstripControllerMod::loop() {
       saveNeeded = false;
       configSave();
     }
-    if (needsRefresh != nullptr) {
-      IotsaSerial.printf("LissabonController: refresh idle dimmer %d\n", needsRefresh->num);
-      needsRefresh->refresh();
+    // Round-robin starting at nextRefreshIndex, not always from the front: a
+    // dimmer that keeps failing to connect must not starve the ones after it
+    // in the list forever (cwi-dis/lissabon#30).
+    for (int k = 0; k < n; k++) {
+      int i = (nextRefreshIndex + k) % n;
+      BLEDimmer* d_ble = reinterpret_cast<BLEDimmer*>(dimmers.at(i));
+      if (d_ble->available() && !d_ble->dataValid()) {
+        IotsaSerial.printf("LissabonController: refresh idle dimmer %d\n", d_ble->num);
+        nextRefreshIndex = (i + 1) % n;
+        d_ble->refresh();
+        break;
+      }
     }
   }
 }
