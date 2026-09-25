@@ -162,7 +162,11 @@ void BLEDimmer::connectionTask() {
         if (_ensureConnection()) {
           _isDisconnecting = true;
           _isConnecting = false;
-          dimmer->disconnect();
+          // release(), not disconnect(): also gives the NimBLEClient slot
+          // back to the shared pool, so a device with more dimmers than
+          // NIMBLE_MAX_CONNECTIONS can still round-robin through all of them
+          // instead of permanently starving whichever ones connected last.
+          dimmer->release();
           BLEDIMMER_DEBUG IotsaSerial.printf("BLEDimmer: disconnect from %s\n", name.c_str());
         }
         _availableChanged = true;
@@ -260,7 +264,9 @@ void BLEDimmer::loop() {
       if (_ensureConnection()) {
         _isDisconnecting = true;
         _isConnecting = false;
-        dimmer->disconnect();
+        // release(), not disconnect(): see the IOTSA_WITH_BLE_TASKS version
+        // of this same logic above.
+        dimmer->release();
         BLEDIMMER_DEBUG IotsaSerial.printf("BLEDimmer: disconnect from %s\n", name.c_str());
       }
       callbacks->dimmerAvailableChanged();
