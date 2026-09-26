@@ -104,36 +104,38 @@ void BLEDimmer::getHandler(JsonObject& reply) {
   AbstractDimmer::getHandler(reply);
 }
 
+// All three methods below used to force _dataValid=true in their "not
+// following" branch. Harmless for years because nothing ever actually called
+// followDimmerChanges(false) or refresh()/setup() on a not-followed dimmer --
+// every consumer (lissabonRemote, lissabonSimpleRemote, and this app before
+// cwi-dis/lissabon#31) called followDimmerChanges(true) unconditionally on
+// every dimmer, so the branch was dead code. lissabonController's #31 change
+// (only the selected dimmer follows) made it live for the first time: every
+// not-yet-selected dimmer now hits it, and got its icon forced to "synced"
+// (the blank icon) regardless of whether it had ever actually been synced --
+// confirmed live 2026-09-26, "usually empty" icons. _dataValid should reflect
+// whether we genuinely have current data, not "we've stopped trying to get
+// it, so pretend it's fine" -- removed.
 void BLEDimmer::setup() {
-  if (listenForDeviceChanges) {
-    if (available()) {
-      needSyncFromDevice = listenForDeviceChanges;
-      _dataValid = false;
-      needTransmitTimeoutAtMillis = millis() + unreachableGiveUpMillis;
-    }
-  } else {
-    _dataValid = true;
+  if (listenForDeviceChanges && available()) {
+    needSyncFromDevice = listenForDeviceChanges;
+    _dataValid = false;
+    needTransmitTimeoutAtMillis = millis() + unreachableGiveUpMillis;
   }
 }
 
 void BLEDimmer::refresh() {
   if (listenForDeviceChanges) {
-    needSyncFromDevice = listenForDeviceChanges;   
-  } else {
-    _dataValid = true;
+    needSyncFromDevice = listenForDeviceChanges;
   }
 }
 
-void BLEDimmer::followDimmerChanges(bool follow) { 
-  listenForDeviceChanges = follow; 
-  if (listenForDeviceChanges) {
-    if (available()) {
-      needSyncFromDevice = listenForDeviceChanges;
-      _dataValid = false;
-      needTransmitTimeoutAtMillis = millis() + unreachableGiveUpMillis;
-    }
-  } else {
-    _dataValid = true;
+void BLEDimmer::followDimmerChanges(bool follow) {
+  listenForDeviceChanges = follow;
+  if (listenForDeviceChanges && available()) {
+    needSyncFromDevice = listenForDeviceChanges;
+    _dataValid = false;
+    needTransmitTimeoutAtMillis = millis() + unreachableGiveUpMillis;
   }
 }
 
