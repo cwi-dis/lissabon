@@ -356,9 +356,9 @@ void DimmerBLEClient::_syncToDevice() {
   // Connected to dimmer.
   if (level < 0) level = 0;
   if (level > 1) level = 1;
-  Lissabon::Dimmer::Type_brightness levelValue = level * ((1<<sizeof(Lissabon::Dimmer::Type_brightness)*8)-1);
+  Lissabon::Type_brightness levelValue = level * ((1<<sizeof(Lissabon::Type_brightness)*8)-1);
   IFDEBUG IotsaSerial.printf("%s.syncToDevice: Transmit brightness %f (%d)\n", name.c_str(), level, levelValue);
-  ok = dimmer->set(Lissabon::Dimmer::serviceUUID, Lissabon::Dimmer::brightnessUUID, levelValue);
+  ok = dimmer->set(Lissabon::serviceUUID, Lissabon::brightnessUUID, levelValue);
   if (ok) {
     _dataValid = true;
   } else {
@@ -367,21 +367,21 @@ void DimmerBLEClient::_syncToDevice() {
   }
 #endif
 #ifdef DIMMER_WITH_TEMPERATURE
-  Lissabon::Dimmer::Type_temperature temperatureValue = temperature;
+  Lissabon::Type_temperature temperatureValue = temperature;
   IFDEBUG IotsaSerial.printf("DimmerBLEClient: Transmit temperature %d\n", temperatureValue);
-  ok = dimmer->set(Lissabon::Dimmer::serviceUUID, Lissabon::Dimmer::temperatureUUID, (Lissabon::Dimmer::Type_temperature)temperatureValue);
+  ok = dimmer->set(Lissabon::serviceUUID, Lissabon::temperatureUUID, (Lissabon::Type_temperature)temperatureValue);
   if (!ok) {
     IFDEBUG IotsaSerial.println("DimmerBLEClient: set(temperature) failed");
   }
 #endif // DIMMER_WITH_TEMPERATURE
   IFDEBUG IotsaSerial.printf("%s.syncToDevice: Transmit ison %d\n", name.c_str(), (int)isOn);
-  ok = dimmer->set(Lissabon::Dimmer::serviceUUID, Lissabon::Dimmer::isOnUUID, (Lissabon::Dimmer::Type_isOn)isOn);
+  ok = dimmer->set(Lissabon::serviceUUID, Lissabon::isOnUUID, (Lissabon::Type_isOn)isOn);
   if (!ok) {
     IFDEBUG IotsaSerial.println("DimmerBLEClient: set(isOn) failed");
   }
   if (needIdentify) {
     IFDEBUG IotsaSerial.printf("%s.syncToDevice: Transmit identify\n", name.c_str());
-    ok = dimmer->set(Lissabon::Dimmer::serviceUUID, Lissabon::Dimmer::identifyUUID, (Lissabon::Dimmer::Type_isOn)1);
+    ok = dimmer->set(Lissabon::serviceUUID, Lissabon::identifyUUID, (Lissabon::Type_isOn)1);
     needIdentify = false;
     if (!ok) {
       IFDEBUG IotsaSerial.println("DimmerBLEClient: identify failed");
@@ -403,10 +403,10 @@ bool DimmerBLEClient::_syncFromDevice() {
   bool _gotAllData = true;
 #ifdef DIMMER_WITH_LEVEL
   // Connected to dimmer.
-  Lissabon::Dimmer::Type_brightness levelValue;
-  ok = dimmer->get(Lissabon::Dimmer::serviceUUID, Lissabon::Dimmer::brightnessUUID, levelValue);
+  Lissabon::Type_brightness levelValue;
+  ok = dimmer->get(Lissabon::serviceUUID, Lissabon::brightnessUUID, levelValue);
   if (ok) {
-    level = (float)levelValue / (float)((1<<sizeof(Lissabon::Dimmer::Type_brightness)*8)-1);
+    level = (float)levelValue / (float)((1<<sizeof(Lissabon::Type_brightness)*8)-1);
     IFDEBUG IotsaSerial.printf("%s.syncFromDevice: Received brightness %f (%d)\n", name.c_str(), level, levelValue);
   } else {
     IFDEBUG IotsaSerial.printf("%s.syncFromDevice: get(brightness) failed\n", name.c_str());
@@ -414,8 +414,8 @@ bool DimmerBLEClient::_syncFromDevice() {
   }
 #endif
 #ifdef DIMMER_WITH_TEMPERATURE
-  Lissabon::Dimmer::Type_temperature temperatureValue;
-  ok = dimmer->get(Lissabon::Dimmer::serviceUUID, Lissabon::Dimmer::temperatureUUID, temperatureValue);
+  Lissabon::Type_temperature temperatureValue;
+  ok = dimmer->get(Lissabon::serviceUUID, Lissabon::temperatureUUID, temperatureValue);
   if (ok) {
     temperature = (float)temperatureValue;
     IFDEBUG IotsaSerial.printf("%s.syncFromDevice: Received temperature %f (%d)\n", name.c_str(), temperature, temperatureValue);
@@ -425,7 +425,7 @@ bool DimmerBLEClient::_syncFromDevice() {
   }
 #endif // DIMMER_WITH_TEMPERATURE
   uint8_t isOnValue;
-  ok = dimmer->get(Lissabon::Dimmer::serviceUUID, Lissabon::Dimmer::isOnUUID, isOnValue);
+  ok = dimmer->get(Lissabon::serviceUUID, Lissabon::isOnUUID, isOnValue);
   if (ok) {
     IFDEBUG IotsaSerial.printf("%s.syncFromDevice: received isOn %d\n", name.c_str(), isOnValue);
     isOn = isOnValue;

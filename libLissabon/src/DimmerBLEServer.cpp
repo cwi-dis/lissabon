@@ -4,68 +4,68 @@
 namespace Lissabon {
 
 void DimmerBLEServer::setup() {
-  bleApi.setup(Lissabon::Dimmer::serviceUUIDstring, this);
+  bleApi.setup(Lissabon::serviceUUIDstring, this);
 
   bleApi.addCharacteristic(
-    Lissabon::Dimmer::isOnUUIDstring,
+    Lissabon::isOnUUIDstring,
     bleApi.BLE_READ|bleApi.BLE_WRITE,
-    Lissabon::Dimmer::isOnUUID2904format, 
-    Lissabon::Dimmer::isOnUUID2904unit, 
-    Lissabon::Dimmer::isOnUUID2901
+    Lissabon::isOnUUID2904format, 
+    Lissabon::isOnUUID2904unit, 
+    Lissabon::isOnUUID2901
     );
 #ifdef DIMMER_WITH_LEVEL
   bleApi.addCharacteristic(
-    Lissabon::Dimmer::brightnessUUIDstring, 
+    Lissabon::brightnessUUIDstring, 
     bleApi.BLE_READ|bleApi.BLE_WRITE,
-    Lissabon::Dimmer::brightnessUUID2904format,
-    Lissabon::Dimmer::brightnessUUID2904unit,
-    Lissabon::Dimmer::brightnessUUID2901
+    Lissabon::brightnessUUID2904format,
+    Lissabon::brightnessUUID2904unit,
+    Lissabon::brightnessUUID2901
     );
 #endif
 #ifdef DIMMER_WITH_TEMPERATURE
   bleApi.addCharacteristic(
-    Lissabon::Dimmer::temperatureUUIDstring, 
+    Lissabon::temperatureUUIDstring, 
     bleApi.BLE_READ|bleApi.BLE_WRITE,
-    Lissabon::Dimmer::temperatureUUID2904format,
-    Lissabon::Dimmer::temperatureUUID2904unit,
-    Lissabon::Dimmer::temperatureUUID2901
+    Lissabon::temperatureUUID2904format,
+    Lissabon::temperatureUUID2904unit,
+    Lissabon::temperatureUUID2901
     );
 #endif
   bleApi.addCharacteristic(
-    Lissabon::Dimmer::identifyUUIDstring,
+    Lissabon::identifyUUIDstring,
     bleApi.BLE_WRITE,
-    Lissabon::Dimmer::identifyUUID2904format,
-    Lissabon::Dimmer::identifyUUID2904unit,
-    Lissabon::Dimmer::identifyUUID2901
+    Lissabon::identifyUUID2904format,
+    Lissabon::identifyUUID2904unit,
+    Lissabon::identifyUUID2901
     );
 }
 
 bool DimmerBLEServer::blePutHandler(UUIDstring charUUID) {
   bool anyChanged = false;
 #ifdef DIMMER_WITH_LEVEL
-  if (charUUID == Lissabon::Dimmer::brightnessUUIDstring) {
-    int i_level = bleApi.getAsInt(Lissabon::Dimmer::brightnessUUIDstring);
-    float maxLevel = (float)(1<<sizeof(Lissabon::Dimmer::Type_brightness)*8)-1; // Depends on max #bits in brightness type
+  if (charUUID == Lissabon::brightnessUUIDstring) {
+    int i_level = bleApi.getAsInt(Lissabon::brightnessUUIDstring);
+    float maxLevel = (float)(1<<sizeof(Lissabon::Type_brightness)*8)-1; // Depends on max #bits in brightness type
     float level = float(i_level)/maxLevel;
     if (level < dimmer.minLevel) level = dimmer.minLevel;
     if (level > 1) level = 1;
     dimmer.level = level;
-    IFDEBUG IotsaSerial.printf("xxxjack ble: wrote brightness %s value %d %f\n", Lissabon::Dimmer::brightnessUUIDstring, i_level, dimmer.level);
+    IFDEBUG IotsaSerial.printf("xxxjack ble: wrote brightness %s value %d %f\n", Lissabon::brightnessUUIDstring, i_level, dimmer.level);
     anyChanged = true;
   }
 #endif
 #ifdef DIMMER_WITH_TEMPERATURE
-  if (charUUID == Lissabon::Dimmer::temperatureUUIDstring) {
-    int temperature = bleApi.getAsInt(Lissabon::Dimmer::temperatureUUIDstring);
+  if (charUUID == Lissabon::temperatureUUIDstring) {
+    int temperature = bleApi.getAsInt(Lissabon::temperatureUUIDstring);
     dimmer.temperature = temperature;
-    IFDEBUG IotsaSerial.printf("xxxjack ble: wrote temperature %s value %d\n", Lissabon::Dimmer::temperatureUUIDstring, dimmer.temperature);
+    IFDEBUG IotsaSerial.printf("xxxjack ble: wrote temperature %s value %d\n", Lissabon::temperatureUUIDstring, dimmer.temperature);
     anyChanged = true;
   }
 #endif
-  if (charUUID == Lissabon::Dimmer::isOnUUIDstring) {
-    int value = bleApi.getAsInt(Lissabon::Dimmer::isOnUUIDstring);
+  if (charUUID == Lissabon::isOnUUIDstring) {
+    int value = bleApi.getAsInt(Lissabon::isOnUUIDstring);
     dimmer.isOn = (bool)value;
-    IFDEBUG IotsaSerial.printf("xxxjack ble: wrote isOn %s value %d\n", Lissabon::Dimmer::isOnUUIDstring, dimmer.isOn);
+    IFDEBUG IotsaSerial.printf("xxxjack ble: wrote isOn %s value %d\n", Lissabon::isOnUUIDstring, dimmer.isOn);
     if (!value && auxDimmer != nullptr) {
       auxDimmer->isOn = false;
       auxDimmer->updateDimmer();
@@ -73,10 +73,10 @@ bool DimmerBLEServer::blePutHandler(UUIDstring charUUID) {
     } 
     anyChanged = true;
   }
-  if (charUUID == Lissabon::Dimmer::identifyUUIDstring) {
-    int value = bleApi.getAsInt(Lissabon::Dimmer::identifyUUIDstring);
+  if (charUUID == Lissabon::identifyUUIDstring) {
+    int value = bleApi.getAsInt(Lissabon::identifyUUIDstring);
     if (value) dimmer.identify();
-    IFDEBUG IotsaSerial.printf("xxxjack ble: identify %s value %d\n", Lissabon::Dimmer::identifyUUIDstring, value);
+    IFDEBUG IotsaSerial.printf("xxxjack ble: identify %s value %d\n", Lissabon::identifyUUIDstring, value);
     return true;
   }
   if (anyChanged) {
@@ -89,25 +89,25 @@ bool DimmerBLEServer::blePutHandler(UUIDstring charUUID) {
 
 bool DimmerBLEServer::bleGetHandler(UUIDstring charUUID) {
 #ifdef DIMMER_WITH_LEVEL
-  if (charUUID == Lissabon::Dimmer::brightnessUUIDstring) {
-      unsigned int maxLevel = (1<<sizeof(Lissabon::Dimmer::Type_brightness)*8)-1; // Depends on max #bits in brightness. Assume <= sizeof(int)
+  if (charUUID == Lissabon::brightnessUUIDstring) {
+      unsigned int maxLevel = (1<<sizeof(Lissabon::Type_brightness)*8)-1; // Depends on max #bits in brightness. Assume <= sizeof(int)
       unsigned int level = dimmer.level*maxLevel;
-      IFDEBUG IotsaSerial.printf("xxxjack ble: read level %s value %d\n", Lissabon::Dimmer::brightnessUUIDstring, level);
-      bleApi.set(Lissabon::Dimmer::brightnessUUIDstring, (Lissabon::Dimmer::Type_brightness)level);
+      IFDEBUG IotsaSerial.printf("xxxjack ble: read level %s value %d\n", Lissabon::brightnessUUIDstring, level);
+      bleApi.set(Lissabon::brightnessUUIDstring, (Lissabon::Type_brightness)level);
       return true;
   }
 #endif
 #ifdef DIMMER_WITH_TEMPERATURE
-  if (charUUID == Lissabon::Dimmer::temperatureUUIDstring) {
+  if (charUUID == Lissabon::temperatureUUIDstring) {
       int temperature = dimmer.temperature;
-      IFDEBUG IotsaSerial.printf("xxxjack ble: read temperature %s value %d\n", Lissabon::Dimmer::isOnUUIDstring, temperature);
-      bleApi.set(Lissabon::Dimmer::temperatureUUIDstring, (Lissabon::Dimmer::Type_temperature)temperature);
+      IFDEBUG IotsaSerial.printf("xxxjack ble: read temperature %s value %d\n", Lissabon::isOnUUIDstring, temperature);
+      bleApi.set(Lissabon::temperatureUUIDstring, (Lissabon::Type_temperature)temperature);
       return true;
   }
 #endif // DIMMER_WITH_TEMPERATURE
-  if (charUUID == Lissabon::Dimmer::isOnUUIDstring) {
-      IFDEBUG IotsaSerial.printf("xxxjack ble: read isOn %s value %d\n", Lissabon::Dimmer::isOnUUIDstring, dimmer.isOn);
-      bleApi.set(Lissabon::Dimmer::isOnUUIDstring, (Lissabon::Dimmer::Type_isOn)dimmer.isOn);
+  if (charUUID == Lissabon::isOnUUIDstring) {
+      IFDEBUG IotsaSerial.printf("xxxjack ble: read isOn %s value %d\n", Lissabon::isOnUUIDstring, dimmer.isOn);
+      bleApi.set(Lissabon::isOnUUIDstring, (Lissabon::Type_isOn)dimmer.isOn);
       return true;
   }
   IotsaSerial.printf("IotsaDimmerMod: ble: read unknown uuid %s\n", charUUID);

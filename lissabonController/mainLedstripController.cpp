@@ -528,7 +528,7 @@ void IotsaLedstripControllerMod::setup() {
   auto knownCallback = std::bind(&IotsaLedstripControllerMod::knownDimmerBLEClientChanged, this, std::placeholders::_1);
   setKnownDeviceChangedCallback(knownCallback);
   setDuplicateNameFilter(true);
-  setServiceFilter(Lissabon::Dimmer::serviceUUID);
+  setServiceFilter(Lissabon::serviceUUID);
   //
   // Setup dimmers by getting current settings from BLE devices
   // xxxjack move to DimmerCollection

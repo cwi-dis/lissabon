@@ -4,7 +4,6 @@
 #include "iotsaBLE.h"
 
 namespace Lissabon {
-namespace Dimmer {
 // UUID of service advertised by iotsaLedstrip and iotsaDimmer devices
 extern NimBLEUUID serviceUUID;
 extern const char* serviceUUIDstring;
@@ -40,7 +39,6 @@ extern const uint8_t temperatureUUID2904format;
 extern const uint16_t temperatureUUID2904unit;
 typedef uint16_t Type_temperature;
 
-};
 };
 #endif // IOTSA_WITH_BLE
 #endif // _LISSABONBLE_H_

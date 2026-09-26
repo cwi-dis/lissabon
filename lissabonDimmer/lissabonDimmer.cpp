@@ -173,7 +173,7 @@ String LissabonDimmerMod::info() {
   message += " Or use REST api at <a href='/api/dimmer'>/api/dimmer</a>.";
 #endif
 #ifdef IOTSA_WITH_BLE
-  message += " Or use BLE service " + String(Lissabon::Dimmer::serviceUUIDstring) + ".";
+  message += " Or use BLE service " + String(Lissabon::serviceUUIDstring) + ".";
 #endif
   message += "</p>";
   return message;

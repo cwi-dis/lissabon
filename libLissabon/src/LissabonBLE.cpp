@@ -2,7 +2,6 @@
 #include "LissabonBLE.h"
 
 namespace Lissabon {
-namespace Dimmer {
 // UUID of service advertised by iotsaLedstrip and iotsaDimmer devices
 const char* serviceUUIDstring = "6B2F0001-38BC-4204-A506-1D3546AD3688";
 NimBLEUUID serviceUUID(serviceUUIDstring);
@@ -34,6 +33,5 @@ const char* temperatureUUID2901 = "Color Temperature";
 const uint8_t temperatureUUID2904format = NimBLE2904::FORMAT_UINT16;
 const uint16_t temperatureUUID2904unit = 0x2700;
 
-};
 };
 #endif // IOTSA_WITH_BLE
