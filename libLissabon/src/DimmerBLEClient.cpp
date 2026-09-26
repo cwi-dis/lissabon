@@ -381,7 +381,9 @@ void DimmerBLEClient::_syncToDevice() {
   }
   if (needIdentify) {
     IFDEBUG IotsaSerial.printf("%s.syncToDevice: Transmit identify\n", name.c_str());
-    ok = device->set(Lissabon::serviceUUID, Lissabon::identifyUUID, (Lissabon::Type_isOn)1);
+    // Generic core runmode identify, not Lissabon's own identifyUUID -- any
+    // iotsa BLE device supports this, not just dimmers.
+    ok = device->identify();
     needIdentify = false;
     if (!ok) {
       IFDEBUG IotsaSerial.println("DimmerBLEClient: identify failed");

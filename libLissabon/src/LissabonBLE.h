@@ -18,13 +18,6 @@ extern const uint8_t isOnUUID2904format;
 extern const uint16_t isOnUUID2904unit;
 typedef uint8_t Type_isOn;
 
-extern NimBLEUUID identifyUUID;
-extern const char* identifyUUIDstring;
-extern const char* identifyUUID2901;
-extern const uint8_t identifyUUID2904format;
-extern const uint16_t identifyUUID2904unit;
-typedef uint8_t Type_identify;
-
 extern NimBLEUUID brightnessUUID;
 extern const char* brightnessUUIDstring;
 extern const char* brightnessUUID2901;

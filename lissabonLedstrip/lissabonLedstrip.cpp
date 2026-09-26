@@ -42,6 +42,7 @@ IotsaBLEServerMod bleserverMod(application);
 #endif
 
 #include "iotsaBattery.h"
+#include "iotsaRunmode.h"
 #define PIN_DISABLESLEEP 0
 #define PIN_VBAT 35
 #define VBAT_100_PERCENT (12.7/10.0) // 100K and 1M resistors divide by 11, not 10...
@@ -232,6 +233,13 @@ void LissabonLedstripMod::configSave() {
 void LissabonLedstripMod::setup() {
   // Allow switching the dimmer to iotsa config mode over BLE or with taps
   batteryMod.allowBLEConfigModeSwitch();
+#ifdef IOTSA_WITH_BLE
+  // Wires this appliance's identify (blink) into the generic core runmode
+  // BLE identify command, so DimmerBLEClient's identify() -- which now goes
+  // through IotsaRunmodeBLEClient, not Lissabon's own identifyUUID -- has
+  // something to actually trigger here.
+  if (IotsaRunmodeMod::instance()) IotsaRunmodeMod::instance()->addIdentifyCallback([this]() { dimmer.identify(); });
+#endif
 #ifdef PIN_VBAT
   batteryMod.setPinVBat(PIN_VBAT, VBAT_100_PERCENT, VBAT_0_PERCENT);
 #endif

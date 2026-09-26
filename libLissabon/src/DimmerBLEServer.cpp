@@ -31,13 +31,6 @@ void DimmerBLEServer::setup() {
     Lissabon::temperatureUUID2901
     );
 #endif
-  bleApi.addCharacteristic(
-    Lissabon::identifyUUIDstring,
-    bleApi.BLE_WRITE,
-    Lissabon::identifyUUID2904format,
-    Lissabon::identifyUUID2904unit,
-    Lissabon::identifyUUID2901
-    );
 }
 
 bool DimmerBLEServer::blePutHandler(UUIDstring charUUID) {
@@ -72,12 +65,6 @@ bool DimmerBLEServer::blePutHandler(UUIDstring charUUID) {
       IFDEBUG IotsaSerial.printf("xxxjack ble: also turned off auxdimmer\n");
     } 
     anyChanged = true;
-  }
-  if (charUUID == Lissabon::identifyUUIDstring) {
-    int value = bleApi.getAsInt(Lissabon::identifyUUIDstring);
-    if (value) dimmer.identify();
-    IFDEBUG IotsaSerial.printf("xxxjack ble: identify %s value %d\n", Lissabon::identifyUUIDstring, value);
-    return true;
   }
   if (anyChanged) {
     dimmer.updateDimmer();
