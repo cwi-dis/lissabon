@@ -14,7 +14,14 @@
 
 namespace Lissabon {
 
-class DimmerBLEClient : public AbstractDimmer {
+// Real inheritance, not composition: DimmerBLEClient IS its own BLE
+// connection (via IotsaRunmodeBLEClient), not a wrapper holding a pointer to
+// a separately-owned one. Two unrelated base classes happen to declare
+// same-named methods (available(), isConnected(), identify(), getHandler());
+// see the .cpp for how each is resolved (either a single override serving
+// both, or an explicit base-qualified call from within DimmerBLEClient's own
+// override to reach the other one).
+class DimmerBLEClient : public AbstractDimmer, public IotsaRunmodeBLEClient {
 public:
   DimmerBLEClient(int _num, IotsaBLEClientMod &_bleClientMod, DimmerCallbacks *_callbacks, int _stayConnectedMillis=0);
   ~DimmerBLEClient();
@@ -41,8 +48,6 @@ protected:
   bool _availableChanged;
   bool _dataValidChanged;
 #endif
-  IotsaRunmodeBLEClient *device = nullptr;
-  bool _ensureConnection();
   void _syncToDevice();
   bool _syncFromDevice();
   IotsaBLEClientMod& bleClientMod;
