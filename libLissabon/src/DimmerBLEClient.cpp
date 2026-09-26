@@ -31,11 +31,11 @@ DimmerBLEClient::~DimmerBLEClient() {
 
 
 bool DimmerBLEClient::available() {
-  return _ensureConnection() && dimmer->available();
+  return _ensureConnection() && device->available();
 }
 
 bool DimmerBLEClient::isConnected() {
-  return _ensureConnection() && dimmer->isConnected() && !_isDisconnecting;
+  return _ensureConnection() && device->isConnected() && !_isDisconnecting;
 }
 
 void DimmerBLEClient::updateDimmer() {
@@ -52,9 +52,9 @@ void DimmerBLEClient::updateDimmer() {
 bool DimmerBLEClient::setName(String value) {
   if (value == name) return false;
   if (name) bleClientMod.delDevice(name);
-  if (dimmer) {
-    dimmer->clearDevice();
-    dimmer = nullptr;
+  if (device) {
+    device->clearDevice();
+    device = nullptr;
   }
   name = value;
   if (value) bleClientMod.addDevice(name);
@@ -68,8 +68,8 @@ void DimmerBLEClient::formHandler_fields(String& message, const String& text, co
   if (includeConfig) {
     message += "BLE device name: <input name='" + f_name +".name' value='" + name + "'><br>";
     _ensureConnection();
-    if (dimmer && dimmer->available()) {
-      message += "BLE device address: " + String(dimmer->getAddress().c_str()) + "<br>";
+    if (device && device->available()) {
+      message += "BLE device address: " + String(device->getAddress().c_str()) + "<br>";
     } else {
       message += "<em>BLE device not available</em><br>";
     }
@@ -90,8 +90,8 @@ void DimmerBLEClient::configSave(IotsaConfigFileSave& cf, const String& n_name) 
 //xxxjack  String s_num = String(num);
 //xxxjack  String s_name = "dimmer" + s_num;
   _ensureConnection();
-  if (dimmer) {
-    String address = String(dimmer->getAddress().c_str());
+  if (device) {
+    String address = String(device->getAddress().c_str());
     if (address != "") cf.put(n_name + ".address", address);
   }
   AbstractDimmer::configSave(cf, n_name);
@@ -99,7 +99,7 @@ void DimmerBLEClient::configSave(IotsaConfigFileSave& cf, const String& n_name) 
 
 void DimmerBLEClient::getHandler(JsonObject& reply) {
   if (_ensureConnection()) {
-    dimmer->getHandler(reply);
+    device->getHandler(reply);
   }
   AbstractDimmer::getHandler(reply);
 }
@@ -168,7 +168,7 @@ void DimmerBLEClient::connectionTask() {
           // back to the shared pool, so a device with more dimmers than
           // NIMBLE_MAX_CONNECTIONS can still round-robin through all of them
           // instead of permanently starving whichever ones connected last.
-          dimmer->release();
+          device->release();
           DIMMERBLECLIENT_DEBUG IotsaSerial.printf("DimmerBLEClient: disconnect from %s\n", name.c_str());
         }
         _availableChanged = true;
@@ -185,7 +185,7 @@ void DimmerBLEClient::connectionTask() {
       continue;
     }
     // If it exists, check that we have enough information to connect.
-    if (!dimmer->available()) {
+    if (!device->available()) {
       //IotsaSerial.println("xxxjack dimmer not available");
       if (millis() > needTransmitTimeoutAtMillis) {
         IotsaSerial.printf("DimmerBLEClient: Giving up on connecting to %s\n", name.c_str());
@@ -195,8 +195,8 @@ void DimmerBLEClient::connectionTask() {
       }
       maxWaitMs = 20;
     }
-    if (!dimmer->isConnected()) {
-      if (dimmer->isDisconnecting()) {
+    if (!device->isConnected()) {
+      if (device->isDisconnecting()) {
         // Previous disconnect() hasn't been confirmed complete yet.
         // NimBLEClient::connect() hard-rejects while it's still settling --
         // wait for it rather than trying and failing.
@@ -204,10 +204,10 @@ void DimmerBLEClient::connectionTask() {
         continue;
       }
       // Connecting and scanning are mutually exclusive on this stack;
-      // dimmer->canConnect() requests any in-progress scan to stop and
+      // device->canConnect() requests any in-progress scan to stop and
       // reports whether it's worth attempting a connect right now
       // (cwi-dis/iotsa#143).
-      if (!dimmer->canConnect()) {
+      if (!device->canConnect()) {
         if (millis() > noWarningPrintBefore) {
           IotsaSerial.printf("DimmerBLEClient: BLE busy, cannot connect to %s\n", name.c_str());
           noWarningPrintBefore = millis() + 4000;
@@ -219,16 +219,16 @@ void DimmerBLEClient::connectionTask() {
       _isDisconnecting = false;
       _isConnecting = true;
       _availableChanged = true;
-      DIMMERBLECLIENT_DEBUG IotsaSerial.printf("DimmerBLEClient: connecting to %s\n", dimmer->getName().c_str());
-      if (!dimmer->connect()) {
-        DIMMERBLECLIENT_DEBUG IotsaSerial.printf("DimmerBLEClient: connect to %s failed\n", dimmer->getName().c_str());
+      DIMMERBLECLIENT_DEBUG IotsaSerial.printf("DimmerBLEClient: connecting to %s\n", device->getName().c_str());
+      if (!device->connect()) {
+        DIMMERBLECLIENT_DEBUG IotsaSerial.printf("DimmerBLEClient: connect to %s failed\n", device->getName().c_str());
         _isConnecting = false;
         needSyncFromDevice = false;
         needSyncToDevice = false;
         _availableChanged = true;
         continue;
       }
-      DIMMERBLECLIENT_DEBUG IotsaSerial.printf("DimmerBLEClient: connected to %s\n", dimmer->getName().c_str());
+      DIMMERBLECLIENT_DEBUG IotsaSerial.printf("DimmerBLEClient: connected to %s\n", device->getName().c_str());
       _availableChanged = true;
     }
     
@@ -267,7 +267,7 @@ void DimmerBLEClient::loop() {
         _isConnecting = false;
         // release(), not disconnect(): see the IOTSA_WITH_BLE_TASKS version
         // of this same logic above.
-        dimmer->release();
+        device->release();
         DIMMERBLECLIENT_DEBUG IotsaSerial.printf("DimmerBLEClient: disconnect from %s\n", name.c_str());
       }
       callbacks->dimmerAvailableChanged();
@@ -283,7 +283,7 @@ void DimmerBLEClient::loop() {
     return;
   }
   // If it exists, check that we have enough information to connect.
-  if (!dimmer->available()) {
+  if (!device->available()) {
     //IotsaSerial.println("xxxjack dimmer not available");
     if (millis() > needTransmitTimeoutAtMillis) {
       IotsaSerial.printf("DimmerBLEClient: Giving up on connecting to %s\n", name.c_str());
@@ -295,20 +295,20 @@ void DimmerBLEClient::loop() {
     return;
   }
   // Now we can connect, unless we are already connected
-  if (!dimmer->isConnected()) {
-    if (dimmer->isDisconnecting()) {
+  if (!device->isConnected()) {
+    if (device->isDisconnecting()) {
       // Previous disconnect() hasn't been confirmed complete yet.
       // NimBLEClient::connect() hard-rejects while it's still settling --
       // wait for it rather than trying and failing.
       return;
     }
     // Connecting and scanning are mutually exclusive on this stack;
-    // dimmer->canConnect() requests any in-progress scan to stop and reports
+    // device->canConnect() requests any in-progress scan to stop and reports
     // whether it's worth attempting a connect right now (cwi-dis/iotsa#143).
     // (This non-tasks path previously never requested the scan stop at all,
     // so it could get stuck behind a full discovery scan -- fixed as a side
     // effect of moving this into IotsaBLEClientConnection.)
-    if (!dimmer->canConnect()) {
+    if (!device->canConnect()) {
       IotsaSerial.println("DimmerBLEClient: BLE busy, cannot connect");
       if (millis() > noWarningPrintBefore) {
         IotsaSerial.printf("DimmerBLEClient: BLE busy, cannot connect to %s\n", name.c_str());
@@ -322,14 +322,14 @@ void DimmerBLEClient::loop() {
     _isDisconnecting = false;
     _isConnecting = true;
     callbacks->dimmerAvailableChanged();
-    DIMMERBLECLIENT_DEBUG IotsaSerial.printf("DimmerBLEClient: conecting to %s\n", dimmer->getName().c_str());
-    if (!dimmer->connect()) {
-      DIMMERBLECLIENT_DEBUG IotsaSerial.printf("DimmerBLEClient: connect to %s failed\n", dimmer->getName().c_str());
+    DIMMERBLECLIENT_DEBUG IotsaSerial.printf("DimmerBLEClient: conecting to %s\n", device->getName().c_str());
+    if (!device->connect()) {
+      DIMMERBLECLIENT_DEBUG IotsaSerial.printf("DimmerBLEClient: connect to %s failed\n", device->getName().c_str());
       _isConnecting = false;
       callbacks->dimmerAvailableChanged();
       return;
     }
-    DIMMERBLECLIENT_DEBUG IotsaSerial.printf("DimmerBLEClient: connected to %s\n", dimmer->getName().c_str());
+    DIMMERBLECLIENT_DEBUG IotsaSerial.printf("DimmerBLEClient: connected to %s\n", device->getName().c_str());
     callbacks->dimmerAvailableChanged();
     return; // Return: next time through the loop we will send/receive data.
   }
@@ -358,7 +358,7 @@ void DimmerBLEClient::_syncToDevice() {
   if (level > 1) level = 1;
   Lissabon::Type_brightness levelValue = level * ((1<<sizeof(Lissabon::Type_brightness)*8)-1);
   IFDEBUG IotsaSerial.printf("%s.syncToDevice: Transmit brightness %f (%d)\n", name.c_str(), level, levelValue);
-  ok = dimmer->set(Lissabon::serviceUUID, Lissabon::brightnessUUID, levelValue);
+  ok = device->set(Lissabon::serviceUUID, Lissabon::brightnessUUID, levelValue);
   if (ok) {
     _dataValid = true;
   } else {
@@ -369,19 +369,19 @@ void DimmerBLEClient::_syncToDevice() {
 #ifdef DIMMER_WITH_TEMPERATURE
   Lissabon::Type_temperature temperatureValue = temperature;
   IFDEBUG IotsaSerial.printf("DimmerBLEClient: Transmit temperature %d\n", temperatureValue);
-  ok = dimmer->set(Lissabon::serviceUUID, Lissabon::temperatureUUID, (Lissabon::Type_temperature)temperatureValue);
+  ok = device->set(Lissabon::serviceUUID, Lissabon::temperatureUUID, (Lissabon::Type_temperature)temperatureValue);
   if (!ok) {
     IFDEBUG IotsaSerial.println("DimmerBLEClient: set(temperature) failed");
   }
 #endif // DIMMER_WITH_TEMPERATURE
   IFDEBUG IotsaSerial.printf("%s.syncToDevice: Transmit ison %d\n", name.c_str(), (int)isOn);
-  ok = dimmer->set(Lissabon::serviceUUID, Lissabon::isOnUUID, (Lissabon::Type_isOn)isOn);
+  ok = device->set(Lissabon::serviceUUID, Lissabon::isOnUUID, (Lissabon::Type_isOn)isOn);
   if (!ok) {
     IFDEBUG IotsaSerial.println("DimmerBLEClient: set(isOn) failed");
   }
   if (needIdentify) {
     IFDEBUG IotsaSerial.printf("%s.syncToDevice: Transmit identify\n", name.c_str());
-    ok = dimmer->set(Lissabon::serviceUUID, Lissabon::identifyUUID, (Lissabon::Type_isOn)1);
+    ok = device->set(Lissabon::serviceUUID, Lissabon::identifyUUID, (Lissabon::Type_isOn)1);
     needIdentify = false;
     if (!ok) {
       IFDEBUG IotsaSerial.println("DimmerBLEClient: identify failed");
@@ -392,9 +392,11 @@ void DimmerBLEClient::_syncToDevice() {
 }
 
 bool DimmerBLEClient::_ensureConnection() {
-  if (dimmer != nullptr) return true;
-  dimmer = bleClientMod.getDevice(name);
-  return dimmer != nullptr;
+  if (device != nullptr) return true;
+  // Safe: IotsaBLEClientMod::addDevice() always constructs an
+  // IotsaRunmodeBLEClient, this is just recovering the static type.
+  device = static_cast<IotsaRunmodeBLEClient*>(bleClientMod.getDevice(name));
+  return device != nullptr;
 }
 
 bool DimmerBLEClient::_syncFromDevice() {
@@ -404,7 +406,7 @@ bool DimmerBLEClient::_syncFromDevice() {
 #ifdef DIMMER_WITH_LEVEL
   // Connected to dimmer.
   Lissabon::Type_brightness levelValue;
-  ok = dimmer->get(Lissabon::serviceUUID, Lissabon::brightnessUUID, levelValue);
+  ok = device->get(Lissabon::serviceUUID, Lissabon::brightnessUUID, levelValue);
   if (ok) {
     level = (float)levelValue / (float)((1<<sizeof(Lissabon::Type_brightness)*8)-1);
     IFDEBUG IotsaSerial.printf("%s.syncFromDevice: Received brightness %f (%d)\n", name.c_str(), level, levelValue);
@@ -415,7 +417,7 @@ bool DimmerBLEClient::_syncFromDevice() {
 #endif
 #ifdef DIMMER_WITH_TEMPERATURE
   Lissabon::Type_temperature temperatureValue;
-  ok = dimmer->get(Lissabon::serviceUUID, Lissabon::temperatureUUID, temperatureValue);
+  ok = device->get(Lissabon::serviceUUID, Lissabon::temperatureUUID, temperatureValue);
   if (ok) {
     temperature = (float)temperatureValue;
     IFDEBUG IotsaSerial.printf("%s.syncFromDevice: Received temperature %f (%d)\n", name.c_str(), temperature, temperatureValue);
@@ -425,7 +427,7 @@ bool DimmerBLEClient::_syncFromDevice() {
   }
 #endif // DIMMER_WITH_TEMPERATURE
   uint8_t isOnValue;
-  ok = dimmer->get(Lissabon::serviceUUID, Lissabon::isOnUUID, isOnValue);
+  ok = device->get(Lissabon::serviceUUID, Lissabon::isOnUUID, isOnValue);
   if (ok) {
     IFDEBUG IotsaSerial.printf("%s.syncFromDevice: received isOn %d\n", name.c_str(), isOnValue);
     isOn = isOnValue;

@@ -6,6 +6,7 @@
 #include "iotsa.h"
 #include "iotsaConfigFile.h"
 #include "iotsaBLEClient.h"
+#include "iotsaRunmodeBLEClient.h"
 #include "AbstractDimmer.h"
 #include "LissabonBLE.h"
 
@@ -40,7 +41,7 @@ protected:
   bool _availableChanged;
   bool _dataValidChanged;
 #endif
-  IotsaBLEClientConnection *dimmer = nullptr;
+  IotsaRunmodeBLEClient *device = nullptr;
   bool _ensureConnection();
   void _syncToDevice();
   bool _syncFromDevice();
