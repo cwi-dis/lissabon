@@ -203,12 +203,11 @@ void BLEDimmer::connectionTask() {
         maxWaitMs = 20;
         continue;
       }
-      // Connecting and scanning are mutually exclusive on this stack, so
-      // wanting to connect actively stops any in-progress scan rather than
-      // waiting for it to end on its own (see cwi-dis/iotsa#143 -- this
-      // really belongs in IotsaBLEClientConnection, not here).
-      bleClientMod.requestStopScanningForConnect();
-      if (!bleClientMod.canConnect()) {
+      // Connecting and scanning are mutually exclusive on this stack;
+      // dimmer->canConnect() requests any in-progress scan to stop and
+      // reports whether it's worth attempting a connect right now
+      // (cwi-dis/iotsa#143).
+      if (!dimmer->canConnect()) {
         if (millis() > noWarningPrintBefore) {
           IotsaSerial.printf("BLEDimmer: BLE busy, cannot connect to %s\n", name.c_str());
           noWarningPrintBefore = millis() + 4000;
@@ -303,8 +302,13 @@ void BLEDimmer::loop() {
       // wait for it rather than trying and failing.
       return;
     }
-    // If we are scanning we don't try to connect
-    if (!bleClientMod.canConnect()) {
+    // Connecting and scanning are mutually exclusive on this stack;
+    // dimmer->canConnect() requests any in-progress scan to stop and reports
+    // whether it's worth attempting a connect right now (cwi-dis/iotsa#143).
+    // (This non-tasks path previously never requested the scan stop at all,
+    // so it could get stuck behind a full discovery scan -- fixed as a side
+    // effect of moving this into IotsaBLEClientConnection.)
+    if (!dimmer->canConnect()) {
       IotsaSerial.println("BLEDimmer: BLE busy, cannot connect");
       if (millis() > noWarningPrintBefore) {
         IotsaSerial.printf("BLEDimmer: BLE busy, cannot connect to %s\n", name.c_str());
