@@ -94,7 +94,7 @@ private:
   Buttons buttons;
   DimmerDynamicCollection::ItemType* getDimmerForCommand(int num);
   void updateDisplay(bool clear);
-  void nudgeRefreshPriority(int index);
+  void setDimmerFollowed(int index, bool follow);
   typedef std::pair<std::string, NimBLEAddress> unknownDimmerInfo;
   DimmerDynamicCollection dimmers;
   DimmerDynamicCollection::ItemType* dimmerFactory(int num);
@@ -103,24 +103,22 @@ private:
   bool selectedDimmerIsAvailable = false;
   int stayConnectedMillis = 3000; // deliberately not configurable yet, see cwi-dis/iotsa#144
   bool saveNeeded = false;
-  int nextRefreshIndex = 0; // round-robin cursor, see loop()
 };
 
 void
-IotsaLedstripControllerMod::nudgeRefreshPriority(int index) {
-  // One-time priority nudge, not a persistent bias: makes the round-robin
-  // refresh scheduler (loop()) try this dimmer next, without permanently
-  // anchoring it there -- a dimmer that's stuck unreachable would otherwise
-  // get retried every idle tick again, reintroducing the starvation bug
-  // round-robin was added to fix (cwi-dis/lissabon#30). Called whenever the
-  // user's own action makes one dimmer newly relevant: selecting it, booting
-  // up with a persisted selection, or issuing a command that couldn't reach
-  // it yet.
-  if (index >= 0 && index < dimmers.size()) nextRefreshIndex = index;
+IotsaLedstripControllerMod::setDimmerFollowed(int index, bool follow) {
+  // Only the selected dimmer ever gets a live, maintained BLE connection
+  // (cwi-dis/lissabon#31) -- background-syncing all of them at once is what
+  // made the shared NIMBLE_MAX_CONNECTIONS pool genuinely scarce. Living
+  // dangerously: no RTTI, but the factory only ever creates BLEDimmers.
+  if (index < 0 || index >= dimmers.size()) return;
+  BLEDimmer* d = reinterpret_cast<BLEDimmer*>(dimmers.at(index));
+  d->followDimmerChanges(follow);
 }
 
 void
 IotsaLedstripControllerMod::selectDimmer(bool next, bool prev) {
+  int oldSelectedDimmerIndex = selectedDimmerIndex;
   if (next) {
     selectedDimmerIndex++;
     selectedDimmerIsAvailable = false;
@@ -143,13 +141,20 @@ IotsaLedstripControllerMod::selectDimmer(bool next, bool prev) {
   // normally changes -- never did, so scrolling to a different strip without also
   // touching its level/on-off was silently never persisted.
   if (selectedDimmerIndex != savedSelectedDimmerIndex) saveNeeded = true;
-  // Only on a genuine rocker-driven change, not the internal (false, false)
-  // refresh-only calls dimmerAvailableChanged() makes on every state change --
-  // those fire constantly during connect/fail/retry churn, and nudging on every
-  // one of them turned the intended one-time nudge into a permanent, continuously
-  // reasserted lock on whichever dimmer happened to be selected (observed live,
-  // 2026-09-26: it starved every other dimmer for the whole boot).
-  if (next || prev) nudgeRefreshPriority(selectedDimmerIndex);
+  // Move the live connection to the new selection -- only on a genuine change,
+  // not the internal (false, false) refresh-only calls dimmerAvailableChanged()
+  // makes on every state change (those fire constantly during connect/fail/retry
+  // churn). Gating on the index actually changing, rather than next||prev,
+  // also handles the "next at the last dimmer" clamp case correctly -- next
+  // can be true with no real change, and toggling follow off-then-on on the
+  // same dimmer would force a pointless resync (same bug class as the
+  // nudge/sleep-postpone fixes below: observed live, 2026-09-26, that an
+  // unconditional per-call side effect here turns into a permanent lock or a
+  // constant reset).
+  if (selectedDimmerIndex != oldSelectedDimmerIndex) {
+    setDimmerFollowed(oldSelectedDimmerIndex, false);
+    setDimmerFollowed(selectedDimmerIndex, true);
+  }
   LOG_UI IotsaSerial.printf("LissabonController: now selectedDimmer=%d\n", selectedDimmerIndex);
   updateDisplay(false);
   buttons.refreshEncoder();
@@ -193,7 +198,6 @@ void IotsaLedstripControllerMod::setTemperature(float temperature) {
   auto d = getDimmerForCommand(selectedDimmerIndex);
   if (d == nullptr) {
     display->flash();
-    nudgeRefreshPriority(selectedDimmerIndex);
     return;
   }
   float tempKelvin = DIMMER_MIN_TEMPERATURE + temperature * (DIMMER_MAX_TEMPERATURE-DIMMER_MIN_TEMPERATURE);
@@ -219,7 +223,6 @@ void IotsaLedstripControllerMod::setLevel(float level) {
   auto d = getDimmerForCommand(selectedDimmerIndex);
   if (d == nullptr) {
     display->flash();
-    nudgeRefreshPriority(selectedDimmerIndex);
     return;
   }
   d->level = level;
@@ -237,8 +240,6 @@ void IotsaLedstripControllerMod::toggle() {
     d->updateDimmer();
     updateDisplay(false);
     if (selectedDimmerIndex != savedSelectedDimmerIndex) saveNeeded = true;
-  } else {
-    nudgeRefreshPriority(selectedDimmerIndex);
   }
 }
 
@@ -361,7 +362,8 @@ void IotsaLedstripControllerMod::dimmerValueChanged() {
 DimmerDynamicCollection::ItemType *
 IotsaLedstripControllerMod::dimmerFactory(int num) {
   BLEDimmer *newDimmer = new BLEDimmer(num, *this, this, stayConnectedMillis);
-  newDimmer->followDimmerChanges(true);
+  // Not followed by default (cwi-dis/lissabon#31) -- setup()/selectDimmer()
+  // turn following on for whichever dimmer is actually selected.
   return newDimmer;
 }
 
@@ -511,7 +513,7 @@ void IotsaLedstripControllerMod::setup() {
   // Load configuration
   //
   configLoad();
-  nudgeRefreshPriority(selectedDimmerIndex); // prioritize the persisted selection on boot
+  setDimmerFollowed(selectedDimmerIndex, true); // only the persisted selection gets a live connection (cwi-dis/lissabon#31)
  #if 0
   iotsaController.allowRCMDescription("tap any touchpad 4 times");
 #endif
@@ -595,17 +597,15 @@ void IotsaLedstripControllerMod::loop() {
       saveNeeded = false;
       configSave();
     }
-    // Round-robin starting at nextRefreshIndex, not always from the front: a
-    // dimmer that keeps failing to connect must not starve the ones after it
-    // in the list forever (cwi-dis/lissabon#30).
-    for (int k = 0; k < n; k++) {
-      int i = (nextRefreshIndex + k) % n;
-      BLEDimmer* d_ble = reinterpret_cast<BLEDimmer*>(dimmers.at(i));
+    // Only the selected dimmer is ever a refresh candidate (cwi-dis/lissabon#31)
+    // -- the round-robin this replaced (cwi-dis/lissabon#30) existed to keep
+    // one slow/unreachable dimmer from starving the others' turn, which is
+    // moot once there is only ever one dimmer in contention for a connection.
+    if (selectedDimmerIndex >= 0 && selectedDimmerIndex < n) {
+      BLEDimmer* d_ble = reinterpret_cast<BLEDimmer*>(dimmers.at(selectedDimmerIndex));
       if (d_ble->available() && !d_ble->dataValid()) {
-        IotsaSerial.printf("LissabonController: refresh idle dimmer %d\n", d_ble->num);
-        nextRefreshIndex = (i + 1) % n;
+        IotsaSerial.printf("LissabonController: refresh selected dimmer %d\n", d_ble->num);
         d_ble->refresh();
-        break;
       }
     }
   }
