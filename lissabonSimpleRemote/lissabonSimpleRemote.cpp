@@ -21,7 +21,7 @@ IotsaWifiMod wifiMod(application);
 
 IotsaBLEClientMod bleClientMod(application);
 
-#include "BLEDimmer.h"
+#include "DimmerBLEClient.h"
 #include "DimmerUI.h"
 
 using namespace Lissabon;
@@ -51,7 +51,7 @@ private:
   // over BLE -- this is what drives the LED.
   void dimmerValueChanged() override;
   void dimmerAvailableChanged() override {}
-  BLEDimmer dimmer;
+  DimmerBLEClient dimmer;
   DimmerUI dimmerUI;
 };
 

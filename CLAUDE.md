@@ -9,7 +9,7 @@ Off-grid lighting control framework built on [iotsa](../iotsa). Controls 12V LED
 **libLissabon/** — C++ library shared by all appliances. Included as source (not a pre-compiled library). Contains:
 
 - `AbstractDimmer` — base class for all dimmer types; handles level, on/off, gamma, animation, temperature
-- `BLEDimmer` — BLE client dimmer (used by remotes/controllers to control a remote appliance)
+- `DimmerBLEClient` — BLE client dimmer (used by remotes/controllers to control a remote appliance)
 - `DimmerBLEServer` — BLE server side (used by dimmers/ledstrips to advertise themselves)
 - `DimmerUI` — maps input events (buttons, touchpads, rotary encoder) to dimmer actions
 - `DimmerCollection`, `DimmerDynamicCollection` — managing sets of remote dimmers
@@ -18,7 +18,7 @@ Off-grid lighting control framework built on [iotsa](../iotsa). Controls 12V LED
 Generic BLE client infrastructure (`IotsaBLEClientMod`, `IotsaBLEClientConnection` —
 scan orchestration, device registry, connection handling) moved to iotsa core in
 cwi-dis/iotsa#138; see `iotsa/CLAUDE.md` and `iotsa/docs/module-interface-status.md`.
-`BLEDimmer` here is the lissabon-specific adapter built on top of it.
+`DimmerBLEClient` here is the lissabon-specific adapter built on top of it.
 
 `libLissabon/platformio.ini` previously built test/example programs (`lissabonExample`, `lissabonSwitch`) via PlatformIO `src_filter`. Both were removed 2026-07-21: `lissabonSwitch` had bit-rotted from lacking CI coverage, and `lissabonExample` (which had absorbed its functionality) was judged too complex to serve as an example. Replaced by two standalone, minimal examples (own `platformio.ini` each, like the real appliances below) — see **lissabonSimpleLight/** and **lissabonSimpleRemote/**. `libLissabon/platformio.ini` itself now has no `env:` sections.
 
@@ -45,7 +45,7 @@ cwi-dis/iotsa#138; see `iotsa/CLAUDE.md` and `iotsa/docs/module-interface-status
 
 **lissabonSimpleLight/** — minimal example: on/off-only local LED (no brightness level), toggled by a local pushbutton and by BLE (`DimmerBLEServer`). Persists on/off state to config across reboot, however it was set (button, BLE, or REST). esp32dev: PRG/BOOT button (GPIO0) as the pushbutton, onboard LED (GPIO2) as the light itself. GPIO2 can equally well drive a MOSFET gate instead of the LED, to switch a real load (same idea as `PWMDimmer`'s `DIMMER_WITHOUT_LEVEL` path in lissabonDimmer) — the onboard LED is just the zero-extra-hardware default.
 
-**lissabonSimpleRemote/** — minimal example: BLE client (`BLEDimmer`) that toggles a remote dimmer (e.g. `lissabonSimpleLight`) on/off via a local pushbutton. Deliberately does *not* persist on/off state — the onboard LED mirrors whatever the remote device's actual state was last confirmed to be over BLE, not the local optimistic guess. esp32dev, same pins as SimpleLight.
+**lissabonSimpleRemote/** — minimal example: BLE client (`DimmerBLEClient`) that toggles a remote dimmer (e.g. `lissabonSimpleLight`) on/off via a local pushbutton. Deliberately does *not* persist on/off state — the onboard LED mirrors whatever the remote device's actual state was last confirmed to be over BLE, not the local optimistic guess. esp32dev, same pins as SimpleLight.
 
 ### Boards used
 

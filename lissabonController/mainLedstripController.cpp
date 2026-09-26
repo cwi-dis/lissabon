@@ -48,7 +48,7 @@ IotsaBatteryMod batteryMod(application);
 IotsaInputMod touchMod(application, getInputs(), getInputCount());
 
 #include "iotsaBLEClient.h"
-#include "BLEDimmer.h"
+#include "DimmerBLEClient.h"
 
 //
 // LED Lighting control module. 
@@ -80,8 +80,8 @@ protected:
   void _setupDisplay();
   bool getHandler(const char *path, JsonObject& reply) override;
   bool putHandler(const char *path, const JsonVariant& request, JsonObject& reply) override;
-  void unknownBLEDimmerFound(const NimBLEAdvertisedDevice& device);
-  void knownBLEDimmerChanged(const NimBLEAdvertisedDevice& device);
+  void unknownDimmerBLEClientFound(const NimBLEAdvertisedDevice& device);
+  void knownDimmerBLEClientChanged(const NimBLEAdvertisedDevice& device);
   virtual String formHandler_field_perdevice(const char *deviceName) override;
   virtual void scanningChanged() override;
   virtual void showMessage(const char *message) override;
@@ -110,9 +110,9 @@ IotsaLedstripControllerMod::setDimmerFollowed(int index, bool follow) {
   // Only the selected dimmer ever gets a live, maintained BLE connection
   // (cwi-dis/lissabon#31) -- background-syncing all of them at once is what
   // made the shared NIMBLE_MAX_CONNECTIONS pool genuinely scarce. Living
-  // dangerously: no RTTI, but the factory only ever creates BLEDimmers.
+  // dangerously: no RTTI, but the factory only ever creates DimmerBLEClients.
   if (index < 0 || index >= dimmers.size()) return;
-  BLEDimmer* d = reinterpret_cast<BLEDimmer*>(dimmers.at(index));
+  DimmerBLEClient* d = reinterpret_cast<DimmerBLEClient*>(dimmers.at(index));
   d->followDimmerChanges(follow);
 }
 
@@ -252,7 +252,7 @@ IotsaLedstripControllerMod::updateDisplay(bool clear) {
   for (auto& _elem : dimmers) {
     // Living dangerously: we don't have rtti so we can't use dynamic cast.
     // We know that is safe because we supplied the factory function.
-    BLEDimmer* elem = reinterpret_cast<BLEDimmer *>(_elem);
+    DimmerBLEClient* elem = reinterpret_cast<DimmerBLEClient *>(_elem);
     String name = elem->getUserVisibleName();
     LOG_BLE IotsaSerial.printf("  device %s, available=%d connected=%d\n", name.c_str(), elem->available(), elem->isConnected());
     StripStatus status = StripStatus::unavailable;
@@ -361,7 +361,7 @@ void IotsaLedstripControllerMod::dimmerValueChanged() {
 
 DimmerDynamicCollection::ItemType *
 IotsaLedstripControllerMod::dimmerFactory(int num) {
-  BLEDimmer *newDimmer = new BLEDimmer(num, *this, this, stayConnectedMillis);
+  DimmerBLEClient *newDimmer = new DimmerBLEClient(num, *this, this, stayConnectedMillis);
   // Not followed by default (cwi-dis/lissabon#31) -- setup()/selectDimmer()
   // turn following on for whichever dimmer is actually selected.
   return newDimmer;
@@ -487,8 +487,8 @@ void IotsaLedstripControllerMod::configSave() {
 
 void IotsaLedstripControllerMod::clearAllDimmersAndReboot() {
   // Deliberately don't touch the live `dimmers` collection here. Deleting a
-  // BLEDimmer whose connectionTask is still blocked inside a BLE connect
-  // attempt calls vTaskDelete() on that task (BLEDimmer::~BLEDimmer()), which
+  // DimmerBLEClient whose connectionTask is still blocked inside a BLE connect
+  // attempt calls vTaskDelete() on that task (DimmerBLEClient::~DimmerBLEClient()), which
   // can crash NimBLE's host task later when an async GAP event tries to
   // notify the now-deleted task (observed live: a stuck connect to a
   // just-added, flaky device, followed by "Remove All", panicked ~5s later
@@ -523,9 +523,9 @@ void IotsaLedstripControllerMod::setup() {
   _setupDisplay();
   buttons.setup();
 
-  auto unknownCallback = std::bind(&IotsaLedstripControllerMod::unknownBLEDimmerFound, this, std::placeholders::_1);
+  auto unknownCallback = std::bind(&IotsaLedstripControllerMod::unknownDimmerBLEClientFound, this, std::placeholders::_1);
   setUnknownDeviceFoundCallback(unknownCallback);
-  auto knownCallback = std::bind(&IotsaLedstripControllerMod::knownBLEDimmerChanged, this, std::placeholders::_1);
+  auto knownCallback = std::bind(&IotsaLedstripControllerMod::knownDimmerBLEClientChanged, this, std::placeholders::_1);
   setKnownDeviceChangedCallback(knownCallback);
   setDuplicateNameFilter(true);
   setServiceFilter(Lissabon::Dimmer::serviceUUID);
@@ -544,13 +544,13 @@ void IotsaLedstripControllerMod::_setupDisplay() {
 }
 
 
-void IotsaLedstripControllerMod::unknownBLEDimmerFound(const NimBLEAdvertisedDevice& deviceAdvertisement) {
+void IotsaLedstripControllerMod::unknownDimmerBLEClientFound(const NimBLEAdvertisedDevice& deviceAdvertisement) {
   // Nothing to do here -- IotsaBLEClientMod::onResult() already records this
   // device (name/address/rssi/lastSeen) in unknownDevices before calling us.
   LOG_BLE IotsaSerial.printf("LissabonController: unknownDeviceFound: device \"%s\"\n", deviceAdvertisement.getName().c_str());
 }
 
-void IotsaLedstripControllerMod::knownBLEDimmerChanged(const NimBLEAdvertisedDevice& deviceAdvertisement) {
+void IotsaLedstripControllerMod::knownDimmerBLEClientChanged(const NimBLEAdvertisedDevice& deviceAdvertisement) {
   std::string name = deviceAdvertisement.getName();
   LOG_BLE IotsaSerial.printf("LissabonController: knownDeviceChanged: device \"%s\"\n", name.c_str());
   dimmerAvailableChanged();
@@ -586,7 +586,7 @@ void IotsaLedstripControllerMod::loop() {
   for (int i = 0; i < n; i++) {
     // Living dangerously: we don't have rtti so we can't use dynamic cast.
     // We know that is safe because we supplied the factory function.
-    BLEDimmer* d_ble = reinterpret_cast<BLEDimmer*>(dimmers.at(i));
+    DimmerBLEClient* d_ble = reinterpret_cast<DimmerBLEClient*>(dimmers.at(i));
     if (d_ble->available() && (d_ble->isConnected() || d_ble->isConnecting())) {
       isIdle = false;
     }
@@ -602,7 +602,7 @@ void IotsaLedstripControllerMod::loop() {
     // one slow/unreachable dimmer from starving the others' turn, which is
     // moot once there is only ever one dimmer in contention for a connection.
     if (selectedDimmerIndex >= 0 && selectedDimmerIndex < n) {
-      BLEDimmer* d_ble = reinterpret_cast<BLEDimmer*>(dimmers.at(selectedDimmerIndex));
+      DimmerBLEClient* d_ble = reinterpret_cast<DimmerBLEClient*>(dimmers.at(selectedDimmerIndex));
       if (d_ble->available() && !d_ble->dataValid()) {
         IotsaSerial.printf("LissabonController: refresh selected dimmer %d\n", d_ble->num);
         d_ble->refresh();

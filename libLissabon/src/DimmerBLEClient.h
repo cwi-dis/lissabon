@@ -1,5 +1,5 @@
-#ifndef _BLEDIMMER_H_
-#define _BLEDIMMER_H_
+#ifndef _DIMMERBLECLIENT_H_
+#define _DIMMERBLECLIENT_H_
 //
 // LED Lighting control module. 
 //
@@ -13,10 +13,10 @@
 
 namespace Lissabon {
 
-class BLEDimmer : public AbstractDimmer {
+class DimmerBLEClient : public AbstractDimmer {
 public:
-  BLEDimmer(int _num, IotsaBLEClientMod &_bleClientMod, DimmerCallbacks *_callbacks, int _stayConnectedMillis=0);
-  ~BLEDimmer();
+  DimmerBLEClient(int _num, IotsaBLEClientMod &_bleClientMod, DimmerCallbacks *_callbacks, int _stayConnectedMillis=0);
+  ~DimmerBLEClient();
   void followDimmerChanges(bool follow);
   void updateDimmer();
   bool available() override;
@@ -77,4 +77,4 @@ public:
   uint32_t stayConnectedMillis = 0;
 };
 };
-#endif // _BLEDIMMER_H_
+#endif // _DIMMERBLECLIENT_H_

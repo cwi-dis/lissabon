@@ -60,7 +60,7 @@ IotsaInputMod touchMod(application, inputs, sizeof(inputs)/sizeof(inputs[0]));
 #include "iotsaBLEClient.h"
 
 #include "DimmerCollection.h"
-#include "BLEDimmer.h"
+#include "DimmerBLEClient.h"
 #include "DimmerUI.h"
 
 using namespace Lissabon;
@@ -70,11 +70,11 @@ public:
   LissabonRemoteMod(IotsaApplication &_app, IotsaAuthenticationProvider *_auth=NULL)
   : IotsaBLEClientMod(_app, _auth)
   {
-    BLEDimmer *dimmer = new BLEDimmer(1, *this, this);
+    DimmerBLEClient *dimmer = new DimmerBLEClient(1, *this, this);
     dimmer->followDimmerChanges(true);
     dimmers.push_back(dimmer);
   #ifdef WITH_SECOND_DIMMER
-    dimmer = new BLEDimmer(2, *this, this);
+    dimmer = new DimmerBLEClient(2, *this, this);
     dimmer->followDimmerChanges(true);
     dimmers.push_back(dimmer);
   #endif
@@ -89,7 +89,7 @@ public:
 protected:
   bool getHandler(const char *path, JsonObject& reply) override;
   bool putHandler(const char *path, const JsonVariant& request, JsonObject& reply) override;
-  void unknownBLEDimmerFound(const NimBLEAdvertisedDevice& deviceAdvertisement);
+  void unknownDimmerBLEClientFound(const NimBLEAdvertisedDevice& deviceAdvertisement);
 private:
   void dimmerOnOffChanged() override;
   void dimmerValueChanged() override;
@@ -254,7 +254,7 @@ void LissabonRemoteMod::setup() {
   //
   // Setup callback so we are informaed of unknown dimmers.
   //
-  auto callback = std::bind(&LissabonRemoteMod::unknownBLEDimmerFound, this, std::placeholders::_1);
+  auto callback = std::bind(&LissabonRemoteMod::unknownDimmerBLEClientFound, this, std::placeholders::_1);
   setUnknownDeviceFoundCallback(callback);
   setDuplicateNameFilter(true);
   setServiceFilter(Lissabon::Dimmer::serviceUUID);
@@ -265,10 +265,10 @@ void LissabonRemoteMod::setup() {
   ledOff();
 }
 
-void LissabonRemoteMod::unknownBLEDimmerFound(const NimBLEAdvertisedDevice& deviceAdvertisement) {
+void LissabonRemoteMod::unknownDimmerBLEClientFound(const NimBLEAdvertisedDevice& deviceAdvertisement) {
   // Nothing to do here -- IotsaBLEClientMod::onResult() already records this
   // device (name/address/rssi/lastSeen) in unknownDevices before calling us.
-  IFDEBUG IotsaSerial.printf("unknownBLEDimmerFound: iotsaLedstrip/iotsaDimmer \"%s\"\n", deviceAdvertisement.getName().c_str());
+  IFDEBUG IotsaSerial.printf("unknownDimmerBLEClientFound: iotsaLedstrip/iotsaDimmer \"%s\"\n", deviceAdvertisement.getName().c_str());
 }
 
 void LissabonRemoteMod::dimmerValueChanged() {

@@ -8,7 +8,7 @@
 namespace Lissabon {
 class DimmerUI  {
 public:
-  //DimmerUI(int _num, DimmerCallbacks *_callbacks) : BLEDimmer(_num, _callbacks) {}
+  //DimmerUI(int _num, DimmerCallbacks *_callbacks) : DimmerBLEClient(_num, _callbacks) {}
   DimmerUI(AbstractDimmer& _dimmer) : dimmer(_dimmer) {}
   void setUpDownButtons(UpDownButtons& encoder);
   void setRotaryEncoder(Button& button, RotaryEncoder& encoder);
