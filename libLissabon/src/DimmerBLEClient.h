@@ -70,7 +70,7 @@ protected:
   // Deliberately not configurable yet -- see cwi-dis/iotsa#144, which
   // proposes moving this (and the rest of connectionTask()'s generic
   // connection-lifecycle orchestration) into iotsa core, where it would
-  // apply to any IotsaBLEClientConnection consumer, not just dimmers.
+  // apply to any IotsaBLEClientDevice consumer, not just dimmers.
   const uint32_t unreachableGiveUpMillis = 10000;
   uint32_t disconnectAtMillis = 0;
   uint32_t noWarningPrintBefore = 0;

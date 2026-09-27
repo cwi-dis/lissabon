@@ -37,16 +37,16 @@ DimmerBLEClient::~DimmerBLEClient() {
 }
 
 // available()/isConnected() exist on both unrelated base classes
-// (AbstractDimmer's is pure virtual, IotsaBLEClientConnection's is a plain
+// (AbstractDimmer's is pure virtual, IotsaBLEClientDevice's is a plain
 // method) -- DimmerBLEClient's own declaration hides the latter, so it must
 // be reached by explicit qualification from in here, not by an unqualified
 // self-call (which would just call these same overrides again).
 bool DimmerBLEClient::available() {
-  return IotsaBLEClientConnection::available();
+  return IotsaBLEClientDevice::available();
 }
 
 bool DimmerBLEClient::isConnected() {
-  return IotsaBLEClientConnection::isConnected() && !_isDisconnecting;
+  return IotsaBLEClientDevice::isConnected() && !_isDisconnecting;
 }
 
 void DimmerBLEClient::updateDimmer() {
@@ -111,7 +111,7 @@ void DimmerBLEClient::configSave(IotsaConfigFileSave& cf, const String& n_name) 
 // AbstractDimmer's second means its value always wins, and setKnownName()
 // (see setName() above) keeps it identical to the inherited bleName anyway.
 void DimmerBLEClient::getHandler(JsonObject& reply) {
-  IotsaBLEClientConnection::getHandler(reply);
+  IotsaBLEClientDevice::getHandler(reply);
   AbstractDimmer::getHandler(reply);
 }
 
@@ -298,7 +298,7 @@ void DimmerBLEClient::loop() {
     // whether it's worth attempting a connect right now (cwi-dis/iotsa#143).
     // (This non-tasks path previously never requested the scan stop at all,
     // so it could get stuck behind a full discovery scan -- fixed as a side
-    // effect of moving this into IotsaBLEClientConnection.)
+    // effect of moving this into IotsaBLEClientDevice.)
     if (!canConnect()) {
       IotsaSerial.println("DimmerBLEClient: BLE busy, cannot connect");
       if (millis() > noWarningPrintBefore) {

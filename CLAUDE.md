@@ -15,7 +15,7 @@ Off-grid lighting control framework built on [iotsa](../iotsa). Controls 12V LED
 - `DimmerCollection`, `DimmerDynamicCollection` — managing sets of remote dimmers
 - `LissabonBLE` — BLE service/characteristic UUIDs shared across all appliances
 
-Generic BLE client infrastructure (`IotsaBLEClientMod`, `IotsaBLEClientConnection` —
+Generic BLE client infrastructure (`IotsaBLEClientMod`, `IotsaBLEClientDevice` —
 scan orchestration, device registry, connection handling) moved to iotsa core in
 cwi-dis/iotsa#138; see `iotsa/CLAUDE.md` and `iotsa/docs/module-interface-status.md`.
 `DimmerBLEClient` here is the lissabon-specific adapter built on top of it.
