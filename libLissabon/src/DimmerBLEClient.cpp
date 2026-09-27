@@ -12,7 +12,11 @@ namespace Lissabon {
 
 DimmerBLEClient::DimmerBLEClient(int _num, IotsaBLEClientMod &_bleClientMod, DimmerCallbacks *_callbacks, int _stayConnectedMillis)
 : AbstractDimmer(_num, _callbacks),
-  IotsaRunmodeBLEClient(std::string()), // real name arrives later, via setName()
+  // Real name arrives later, via setName() -- but _bleClientMod is already
+  // known, so pass it as owner right away: retarget() (called from
+  // setName()) can then self-register on the very first real name, no
+  // separate addDevice() call needed.
+  IotsaRunmodeBLEClient(std::string(), "", &_bleClientMod),
   bleClientMod(_bleClientMod),
   stayConnectedMillis(_stayConnectedMillis)
 {
@@ -60,59 +64,78 @@ void DimmerBLEClient::updateDimmer() {
   if (callbacks) callbacks->dimmerValueChanged();
 }
 
+// Delegates the BLE-identity half (bleName + owner registration) to the
+// base class's retarget() -- previously hand-rolled here (delDevice/
+// clearDevice/setKnownName/addDevice), now shared with every other
+// IotsaBLEClientDevice consumer (cwi-dis/iotsa#268). AbstractDimmer::name
+// still needs its own assignment: it's a separate, dimmer-specific field
+// (display name / config key) that just happens to always equal bleName in
+// this app -- see the "name double-write" comment on getHandler() below.
 bool DimmerBLEClient::setName(String value) {
   if (value == name) return false;
-  if (name) bleClientMod.delDevice(name);
-  clearDevice(); // reset our own inherited connection state, not a separate object's
   name = value;
-  if (value) {
-    setKnownName(std::string(value.c_str())); // keep the inherited BLE identity in sync
-    bleClientMod.addDevice(name, this); // register ourselves, not a mod-constructed stand-in
-  }
+  retarget(std::string(value.c_str()));
   return true;
 }
+
+// includeConfig branch: AbstractDimmer's own fields, then the generic
+// name/address/found status from the base (text="" -- AbstractDimmer
+// already printed its own "Dimmer N: " + text header). Unlike the base's
+// own default (status shown either way), the pre-existing DimmerBLEClient
+// convention only showed it in the config form -- keep that; not worth
+// changing existing deployed-device page layout as a side effect of this
+// refactor.
 void DimmerBLEClient::formHandler_fields(String& message, const String& text, const String& f_name, bool includeConfig) {
   AbstractDimmer::formHandler_fields(message, text, f_name, includeConfig);
   if (!_dataValid) {
     message += "<i>(data may be outdated or invalid)</i><br>";
   }
   if (includeConfig) {
-    message += "BLE device name: <input name='" + f_name +".name' value='" + name + "'><br>";
-    if (available()) {
-      message += "BLE device address: " + String(getAddress().c_str()) + "<br>";
-    } else {
-      message += "<em>BLE device not available</em><br>";
-    }
+    IotsaBLEClientDevice::formHandler_fields(message, "", f_name, includeConfig);
   }
 }
 
 bool DimmerBLEClient::configLoad(IotsaConfigFileLoad& cf, const String& n_name) {
   bool rv = AbstractDimmer::configLoad(cf, n_name);
-  String address;
-  cf.get(n_name + ".address", address, "");
-  if (address != "") {
-    bleClientMod.noteKnownAddress(name, address);
-  }
+  IotsaBLEClientDevice::configLoad(cf, n_name);
   return rv;
 }
 
 void DimmerBLEClient::configSave(IotsaConfigFileSave& cf, const String& n_name) {
-//xxxjack  String s_num = String(num);
-//xxxjack  String s_name = "dimmer" + s_num;
-  String address = String(getAddress().c_str());
-  if (address != "") cf.put(n_name + ".address", address);
   AbstractDimmer::configSave(cf, n_name);
+  IotsaBLEClientDevice::configSave(cf, n_name);
 }
 
-// getHandler() also exists on both unrelated bases (both virtual, same
-// signature) -- one override here legitimately satisfies both, but has to
-// call each explicitly since the compiler won't chain them on its own. Both
-// happen to write a "name" field into reply -- harmless (not a bug): calling
-// AbstractDimmer's second means its value always wins, and setKnownName()
-// (see setName() above) keeps it identical to the inherited bleName anyway.
+// getHandler()/putHandler()/formHandler_TD()/formHandler_args() all exist on
+// both unrelated bases now (same signature) -- one override here legitimately
+// satisfies both, but has to call each explicitly since the compiler won't
+// chain them on its own. Both getHandler()/configSave() happen to write a
+// "name" field -- harmless (not a bug): calling AbstractDimmer's second means
+// its value always wins, and setName() above keeps it identical to the
+// inherited bleName anyway. Same reasoning covers putHandler()/
+// formHandler_args() both matching a submitted "name" field: whichever runs
+// first (AbstractDimmer's, via its own setName() override) already syncs
+// both, so the base's own attempt is a harmless no-op retarget().
 void DimmerBLEClient::getHandler(JsonObject& reply) {
   IotsaBLEClientDevice::getHandler(reply);
   AbstractDimmer::getHandler(reply);
+}
+
+bool DimmerBLEClient::putHandler(const JsonVariant& request) {
+  bool any = AbstractDimmer::putHandler(request);
+  any |= IotsaBLEClientDevice::putHandler(request);
+  return any;
+}
+
+void DimmerBLEClient::formHandler_TD(String& message, bool includeConfig) {
+  AbstractDimmer::formHandler_TD(message, includeConfig); // unimplemented, kept for forward-compat
+  IotsaBLEClientDevice::formHandler_TD(message, includeConfig);
+}
+
+bool DimmerBLEClient::formHandler_args(IotsaWebServer *server, const String& f_name, bool includeConfig) {
+  bool any = AbstractDimmer::formHandler_args(server, f_name, includeConfig);
+  any |= IotsaBLEClientDevice::formHandler_args(server, f_name, includeConfig);
+  return any;
 }
 
 // All three methods below used to force _dataValid=true in their "not

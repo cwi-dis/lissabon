@@ -17,10 +17,13 @@ namespace Lissabon {
 // Real inheritance, not composition: DimmerBLEClient IS its own BLE
 // connection (via IotsaRunmodeBLEClient), not a wrapper holding a pointer to
 // a separately-owned one. Two unrelated base classes happen to declare
-// same-named methods (available(), isConnected(), identify(), getHandler());
-// see the .cpp for how each is resolved (either a single override serving
-// both, or an explicit base-qualified call from within DimmerBLEClient's own
-// override to reach the other one).
+// same-named methods (available(), isConnected(), identify(), getHandler(),
+// and -- since IotsaBLEClientDevice grew a full IotsaApiModObject surface,
+// cwi-dis/iotsa#268 -- also configLoad/configSave/putHandler/
+// formHandler_fields/formHandler_TD/formHandler_args); see the .cpp for how
+// each is resolved (either a single override serving both, or an explicit
+// base-qualified call from within DimmerBLEClient's own override to reach
+// the other one).
 class DimmerBLEClient : public AbstractDimmer, public IotsaRunmodeBLEClient {
 public:
   DimmerBLEClient(int _num, IotsaBLEClientMod &_bleClientMod, DimmerCallbacks *_callbacks, int _stayConnectedMillis=0);
@@ -39,7 +42,10 @@ public:
   virtual bool configLoad(IotsaConfigFileLoad& cf, const String& name) override;
   virtual void configSave(IotsaConfigFileSave& cf, const String& name) override;
   virtual void getHandler(JsonObject& reply) override;
+  virtual bool putHandler(const JsonVariant& request) override;
   virtual void formHandler_fields(String& message, const String& text, const String& f_name, bool includeConfig) override;
+  virtual void formHandler_TD(String& message, bool includeConfig) override;
+  virtual bool formHandler_args(IotsaWebServer *server, const String& f_name, bool includeConfig) override;
 protected:
 #ifdef IOTSA_WITH_BLE_TASKS
   static void _connectionTask(void *arg);
