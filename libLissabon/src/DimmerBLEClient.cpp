@@ -106,7 +106,10 @@ void DimmerBLEClient::configSave(IotsaConfigFileSave& cf, const String& n_name) 
 
 // getHandler() also exists on both unrelated bases (both virtual, same
 // signature) -- one override here legitimately satisfies both, but has to
-// call each explicitly since the compiler won't chain them on its own.
+// call each explicitly since the compiler won't chain them on its own. Both
+// happen to write a "name" field into reply -- harmless (not a bug): calling
+// AbstractDimmer's second means its value always wins, and setKnownName()
+// (see setName() above) keeps it identical to the inherited bleName anyway.
 void DimmerBLEClient::getHandler(JsonObject& reply) {
   IotsaBLEClientConnection::getHandler(reply);
   AbstractDimmer::getHandler(reply);
