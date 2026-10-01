@@ -248,7 +248,7 @@ LissabonControllerMod::webHandler() {
   bool anyChanged = false;
   String error;
   anyChanged |= dimmers.formHandler_args(server, "", true);
-  anyChanged |= IotsaBLEClientMod::formHandler_args(server, "", true);
+  anyChanged |= IotsaBLEClientCollectionMod::formHandler_args(server, "", true);
   if (server->hasArg("add")) {
     String newDimmerName = server->arg("add");
     if (newDimmerName != "" && dimmers.find(newDimmerName) == nullptr) {
@@ -279,7 +279,7 @@ LissabonControllerMod::webHandler() {
   message += "<br><form method='post'>Remove all: <input type='checkbox' name='iamsure' value='iamsure'>I am sure <input type='submit' name='clearall' value='Remove All'></form><br>";
   message += "<br><form method='post'>Add by name: <input name='add'><input type='submit' name='addbyname' value='Add'></form><br>";
 
-  IotsaBLEClientMod::formHandler_fields(message, "BLE Dimmer", "dimmer", true);
+  IotsaBLEClientCollectionMod::formHandler_fields(message, "BLE Dimmer", "dimmer", true);
 
   message += "</body></html>";
   server->send(200, "text/html", message);
@@ -299,14 +299,14 @@ String LissabonControllerMod::info() {
 }
 
 bool LissabonControllerMod::getHandler(const char *path, JsonObject& reply) {
-  IotsaBLEClientMod::getHandler(path, reply);
+  IotsaBLEClientCollectionMod::getHandler(path, reply);
   dimmers.getHandler(reply);
   return true;
 }
 
 bool LissabonControllerMod::putHandler(const char *path, const JsonVariant& request, JsonObject& reply) {
   bool anyChanged = false;
-  anyChanged = IotsaBLEClientMod::putHandler(path, request, reply);
+  anyChanged = IotsaBLEClientCollectionMod::putHandler(path, request, reply);
   anyChanged |= dimmers.putHandler(request);
   // This is a hack. We don't implement DELETE so we add a funny value
   bool clearall;
@@ -395,8 +395,10 @@ void LissabonControllerMod::setup() {
   setUnknownDeviceFoundCallback(unknownCallback);
   auto knownCallback = std::bind(&LissabonControllerMod::knownDimmerBLEClientChanged, this, std::placeholders::_1);
   setKnownDeviceChangedCallback(knownCallback);
-  setDuplicateNameFilter(true);
-  setServiceFilter(Lissabon::serviceUUID);
+  // Service filtering is now isInterestingUnknownDevice() below, not a
+  // settable field (cwi-dis/iotsa#264) -- setDuplicateNameFilter() was
+  // already dead code (set, never read) even before that, so it's just
+  // dropped here, not replaced.
   //
   // Setup dimmers by getting current settings from BLE devices
   // xxxjack move to DimmerCollection
@@ -412,9 +414,14 @@ void LissabonControllerMod::_setupDisplay() {
 }
 
 
+bool LissabonControllerMod::isInterestingUnknownDevice(const NimBLEAdvertisedDevice* device) {
+  return device->isAdvertisingService(Lissabon::serviceUUID);
+}
+
 void LissabonControllerMod::unknownDimmerBLEClientFound(const NimBLEAdvertisedDevice& deviceAdvertisement) {
-  // Nothing to do here -- IotsaBLEClientMod::onResult() already records this
-  // device (name/address/rssi/lastSeen) in unknownDevices before calling us.
+  // Nothing to do here -- IotsaBLEClientCollectionMod::onUnknownDeviceSeen()
+  // already records this device (name/address/rssi/lastSeen) in
+  // unknownDevices before calling us.
   LOG_BLE IotsaSerial.printf("LissabonController: unknownDeviceFound: device \"%s\"\n", deviceAdvertisement.getName().c_str());
 }
 
@@ -438,7 +445,7 @@ void LissabonControllerMod::loop() {
   //
   // Let our baseclass do its loop-y things
   //
-  IotsaBLEClientMod::loop();
+  IotsaBLEClientCollectionMod::loop();
 
   //
   // Let the dimmers do any processing they need to do

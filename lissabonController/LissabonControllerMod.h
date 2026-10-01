@@ -1,7 +1,7 @@
 #ifndef _LISSABONCONTROLLERMOD_H_
 #define _LISSABONCONTROLLERMOD_H_
 #include "iotsa.h"
-#include "iotsaBLEClient.h"
+#include "iotsaBLEClientCollection.h"
 #include "DimmerDynamicCollection.h"
 #include "DimmerBLEClient.h"
 #include "display.h"
@@ -29,10 +29,10 @@ extern IotsaBatteryMod batteryMod;
 // if the collection-management part of this ever gets generalized, is a
 // smaller step.
 //
-class LissabonControllerMod : public IotsaBLEClientMod, public Lissabon::DimmerCallbacks, public ButtonsCallbacks {
+class LissabonControllerMod : public IotsaBLEClientCollectionMod, public Lissabon::DimmerCallbacks, public ButtonsCallbacks {
 public:
   LissabonControllerMod(IotsaApplication &_app, IotsaAuthenticationProvider *_auth=NULL, bool early=false)
-  : IotsaBLEClientMod(_app, _auth, early),
+  : IotsaBLEClientCollectionMod(_app, _auth, early),
     buttons(this)
   {}
   void setup();
@@ -56,6 +56,11 @@ protected:
   void unknownDimmerBLEClientFound(const NimBLEAdvertisedDevice& device);
   void knownDimmerBLEClientChanged(const NimBLEAdvertisedDevice& device);
   virtual String formHandler_field_perdevice(const char *deviceName) override;
+  // Only surface other lissabon BLE devices as "unknown/addable" candidates
+  // -- narrower than examples/BLEController's "any iotsa device" filter
+  // (cwi-dis/iotsa#264), same bar DimmerCollection already applies via its
+  // own dimmer-specific protocol.
+  virtual bool isInterestingUnknownDevice(const NimBLEAdvertisedDevice* device) override;
   virtual void scanningChanged() override;
   virtual void showMessage(const char *message) override;
 private:

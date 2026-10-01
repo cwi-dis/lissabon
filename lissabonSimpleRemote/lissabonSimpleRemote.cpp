@@ -66,7 +66,6 @@ void LissabonSimpleRemoteMod::setup() {
   digitalWrite(LED_PIN, LOW);
   configLoad();
   dimmerUI.setOnOffButton(button);
-  bleClientMod.setServiceFilter(Lissabon::serviceUUID);
   dimmer.followDimmerChanges(true);
   dimmer.setup();
 }

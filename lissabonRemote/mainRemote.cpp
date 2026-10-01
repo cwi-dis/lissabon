@@ -57,7 +57,7 @@ Input* inputs[] = {
 
 IotsaInputMod touchMod(application, inputs, sizeof(inputs)/sizeof(inputs[0]));
 
-#include "iotsaBLEClient.h"
+#include "iotsaBLEClientCollection.h"
 
 #include "DimmerCollection.h"
 #include "DimmerBLEClient.h"
@@ -65,10 +65,10 @@ IotsaInputMod touchMod(application, inputs, sizeof(inputs)/sizeof(inputs[0]));
 
 using namespace Lissabon;
 
-class LissabonRemoteMod : public IotsaBLEClientMod, public DimmerCallbacks {
+class LissabonRemoteMod : public IotsaBLEClientCollectionMod, public DimmerCallbacks {
 public:
   LissabonRemoteMod(IotsaApplication &_app, IotsaAuthenticationProvider *_auth=NULL)
-  : IotsaBLEClientMod(_app, _auth)
+  : IotsaBLEClientCollectionMod(_app, _auth)
   {
     DimmerBLEClient *dimmer = new DimmerBLEClient(1, *this, this);
     dimmer->followDimmerChanges(true);
@@ -90,6 +90,11 @@ protected:
   bool getHandler(const char *path, JsonObject& reply) override;
   bool putHandler(const char *path, const JsonVariant& request, JsonObject& reply) override;
   void unknownDimmerBLEClientFound(const NimBLEAdvertisedDevice& deviceAdvertisement);
+  // Only surface other lissabon BLE devices as "unknown/addable" candidates
+  // (cwi-dis/iotsa#264).
+  bool isInterestingUnknownDevice(const NimBLEAdvertisedDevice* device) override {
+    return device->isAdvertisingService(Lissabon::serviceUUID);
+  }
 private:
   void dimmerOnOffChanged() override;
   void dimmerValueChanged() override;
@@ -151,7 +156,7 @@ LissabonRemoteMod::webHandler() {
   bool anyChanged = false;
   // xxxjack this also saves the config file if a non-config setting has been changed. Oh well...
   anyChanged |= dimmers.formHandler_args(server, "", true);
-  anyChanged |= IotsaBLEClientMod::formHandler_args(server, "", true);
+  anyChanged |= IotsaBLEClientCollectionMod::formHandler_args(server, "", true);
   if (anyChanged) {
     configSave();
   }
@@ -164,7 +169,7 @@ LissabonRemoteMod::webHandler() {
   dimmers.formHandler_fields(message, "", "", true);
   message += "<input type='submit' name='config' value='Configure Dimmers'></form><br>";
 
-  IotsaBLEClientMod::formHandler_fields(message, "BLE Dimmer", "dimmer", true);
+  IotsaBLEClientCollectionMod::formHandler_fields(message, "BLE Dimmer", "dimmer", true);
 
   message += "</body></html>";
   server->send(200, "text/html", message);
@@ -181,7 +186,7 @@ String LissabonRemoteMod::info() {
 
 bool LissabonRemoteMod::getHandler(const char *path, JsonObject& reply) {
   // xxxjack need to distinguish between config and operational parameters
-  IotsaBLEClientMod::getHandler(path, reply);
+  IotsaBLEClientCollectionMod::getHandler(path, reply);
   dimmers.getHandler(reply);
   return true;
 }
@@ -189,7 +194,7 @@ bool LissabonRemoteMod::getHandler(const char *path, JsonObject& reply) {
 bool LissabonRemoteMod::putHandler(const char *path, const JsonVariant& request, JsonObject& reply) {
   // xxxjack need to distinguish between config and operational parameters
   bool anyChanged = false;
-  anyChanged = IotsaBLEClientMod::putHandler(path, request, reply);
+  anyChanged = IotsaBLEClientCollectionMod::putHandler(path, request, reply);
   anyChanged |= dimmers.putHandler(request);
   if (anyChanged) {
     configSave();
@@ -256,8 +261,10 @@ void LissabonRemoteMod::setup() {
   //
   auto callback = std::bind(&LissabonRemoteMod::unknownDimmerBLEClientFound, this, std::placeholders::_1);
   setUnknownDeviceFoundCallback(callback);
-  setDuplicateNameFilter(true);
-  setServiceFilter(Lissabon::serviceUUID);
+  // Service filtering is now isInterestingUnknownDevice() above, not a
+  // settable field (cwi-dis/iotsa#264) -- setDuplicateNameFilter() was
+  // already dead code (set, never read) even before that, so it's just
+  // dropped here, not replaced.
   //
   // Setup dimmers by getting current settings from BLE devices
   //
@@ -266,8 +273,9 @@ void LissabonRemoteMod::setup() {
 }
 
 void LissabonRemoteMod::unknownDimmerBLEClientFound(const NimBLEAdvertisedDevice& deviceAdvertisement) {
-  // Nothing to do here -- IotsaBLEClientMod::onResult() already records this
-  // device (name/address/rssi/lastSeen) in unknownDevices before calling us.
+  // Nothing to do here -- IotsaBLEClientCollectionMod::onUnknownDeviceSeen()
+  // already records this device (name/address/rssi/lastSeen) in
+  // unknownDevices before calling us.
   IFDEBUG IotsaSerial.printf("unknownDimmerBLEClientFound: iotsaLedstrip/iotsaDimmer \"%s\"\n", deviceAdvertisement.getName().c_str());
 }
 
@@ -283,7 +291,7 @@ void LissabonRemoteMod::loop() {
   //
   // Let our baseclass do its loop-y things
   //
-  IotsaBLEClientMod::loop();
+  IotsaBLEClientCollectionMod::loop();
   
   //
   // See whether we have a value to save (because the user has been turning the dimmer)
