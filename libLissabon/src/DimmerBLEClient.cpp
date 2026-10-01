@@ -116,6 +116,14 @@ void DimmerBLEClient::configSave(IotsaConfigFileSave& cf, const String& n_name) 
 // formHandler_args() both matching a submitted "name" field: whichever runs
 // first (AbstractDimmer's, via its own setName() override) already syncs
 // both, so the base's own attempt is a harmless no-op retarget().
+//
+// Deliberately qualified all the way up to IotsaBLEClientDevice, not
+// IotsaRunmodeBLEClient (the immediate parent) -- IotsaRunmodeBLEClient's own
+// getHandler()/putHandler()/formHandler_fields()/formHandler_args() now add
+// an identify/reboot/promoteMode/setWifiDisabled command-queue surface
+// (cwi-dis/iotsa#264's BLEController), which would be redundant here:
+// DimmerBLEClient already has its own identify path (needIdentify, fired
+// synchronously from connectionTask()) and has no use for the other three.
 void DimmerBLEClient::getHandler(JsonObject& reply) {
   IotsaBLEClientDevice::getHandler(reply);
   AbstractDimmer::getHandler(reply);
