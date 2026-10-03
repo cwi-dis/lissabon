@@ -10,7 +10,6 @@
 #include "AbstractDimmer.h"
 #include "LissabonBLE.h"
 
-#define IOTSA_WITH_BLE_TASKS
 
 namespace Lissabon {
 
@@ -32,7 +31,8 @@ public:
   void updateDimmer();
   bool available() override;
   bool isConnected();
-  bool isConnecting() { return _isConnecting || needSyncFromDevice || needSyncToDevice; }
+  // Work pending (a sync waiting for a connection) or a connect in progress.
+  bool isConnecting() { return hasPendingWork() || getLinkState() == LinkState::Connecting; }
   void refresh();
   bool dataValid() override { return _dataValid; }
   bool setName(String value);
@@ -47,13 +47,12 @@ public:
   virtual void formHandler_TD(String& message, bool includeConfig) override;
   virtual bool formHandler_args(IotsaWebServer *server, const String& f_name, bool includeConfig) override;
 protected:
-#ifdef IOTSA_WITH_BLE_TASKS
-  static void _connectionTask(void *arg);
-  void connectionTask();
-  TaskHandle_t connectionTaskHandle;
-  bool _availableChanged;
-  bool _dataValidChanged;
-#endif
+  // Connecting, lingering and disconnecting is IotsaBLEClientDevice's
+  // connection state machine (cwi-dis/iotsa#263, #144); we only say that
+  // there's a sync to do (requestWork()) and do it (doWork()).
+  bool doWork() override;
+  void workAbandoned() override;
+  void _requestSync();
   void _syncToDevice();
   bool _syncFromDevice();
   IotsaBLEClientMod& bleClientMod;
@@ -62,31 +61,16 @@ protected:
   bool needSyncFromDevice = false;
   bool _dataValid = false;
   bool needIdentify = false;
-  bool _isConnecting = false;
-  bool _isDisconnecting = false;
-  uint32_t needTransmitTimeoutAtMillis = 0;
-  // How long to keep a pending updateDimmer()/followDimmerChanges() sync
-  // request alive while the device's address is still unknown (i.e. it
-  // hasn't yet been found by a discovery scan) before giving up on it.
-  // In practice this should be comfortably above any live device's real
-  // sleep/wake or advertise cadence, so it firing means the device is
-  // genuinely gone (powered down, out of range), not just slow to find --
-  // though note BLE itself puts no ceiling on a peer's sleep cycle, so
+  // How long to keep a sync request alive while the device can't be reached
+  // before giving up on it. In practice this should be comfortably above any
+  // live device's real sleep/wake or advertise cadence, so it firing means
+  // the device is genuinely gone (powered down, out of range), not just slow
+  // to find -- though BLE itself puts no ceiling on a peer's sleep cycle, so
   // that's an assumption about today's fleet, not a protocol guarantee.
-  // Deliberately not configurable yet -- see cwi-dis/iotsa#144, which
-  // proposes moving this (and the rest of connectionTask()'s generic
-  // connection-lifecycle orchestration) into iotsa core, where it would
-  // apply to any IotsaBLEClientDevice consumer, not just dimmers.
   const uint32_t unreachableGiveUpMillis = 10000;
-  uint32_t disconnectAtMillis = 0;
-  uint32_t noWarningPrintBefore = 0;
-public:
-  // How long to stay connected after a command, in case another one
-  // follows immediately (e.g. dragging a brightness slider) -- avoids
-  // paying the full discovery+connect cost again for a quick follow-up.
-  // Also deliberately not configurable yet, same reasoning as
-  // unreachableGiveUpMillis above (see cwi-dis/iotsa#144).
-  uint32_t stayConnectedMillis = 0;
+  // Last link state reported through dimmerAvailableChanged(), so loop()
+  // reports each change once (the controller's display shows it).
+  LinkState lastReportedLinkState = LinkState::Idle;
 };
 };
 #endif // _DIMMERBLECLIENT_H_

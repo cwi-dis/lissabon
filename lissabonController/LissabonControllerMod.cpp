@@ -365,7 +365,9 @@ void LissabonControllerMod::clearAllDimmersAndReboot() {
   // just-added, flaky device, followed by "Remove All", panicked ~5s later
   // inside xTaskGenericNotify). Simplest safe fix: persist zero dimmers and
   // reboot -- a fresh boot never constructs them, so there's nothing to tear
-  // down.
+  // down. (Since cwi-dis/iotsa#263 DimmerBLEClient has no task of its own
+  // any more, so deleting one live may well be safe now -- not retested,
+  // the reboot stays.)
   IotsaConfigFileSave cf("/config/blecontroller.cfg");
   cf.put("selectedDimmerIndex", 0);
   cf.put("n_dimmer", 0);

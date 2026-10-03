@@ -7,9 +7,6 @@
 
 namespace Lissabon {
 
-// How long we keep open a ble connection (in case we have a quick new command)
-// #define IOTSA_BLEDIMMER_KEEPOPEN_MILLIS 1000
-
 DimmerBLEClient::DimmerBLEClient(int _num, IotsaBLEClientMod &_bleClientMod, DimmerCallbacks *_callbacks, int _stayConnectedMillis)
 : AbstractDimmer(_num, _callbacks),
   // Real name arrives later, via setName() -- but _bleClientMod is already
@@ -17,21 +14,17 @@ DimmerBLEClient::DimmerBLEClient(int _num, IotsaBLEClientMod &_bleClientMod, Dim
   // setName()) can then self-register on the very first real name, no
   // separate addDevice() call needed.
   IotsaRunmodeBLEClient(std::string(), "", &_bleClientMod),
-  bleClientMod(_bleClientMod),
-  stayConnectedMillis(_stayConnectedMillis)
+  bleClientMod(_bleClientMod)
 {
-#ifdef IOTSA_WITH_BLE_TASKS
-  xTaskCreate(DimmerBLEClient::_connectionTask, name.c_str(), 5000, this, 1, &connectionTaskHandle);
-#endif
+  // Stay connected this long after a sync, in case another one follows right
+  // away (e.g. dragging a brightness slider) -- avoids paying the full
+  // connect cost again for a quick follow-up. Connecting, lingering and
+  // disconnecting is the base class's connection state machine
+  // (cwi-dis/iotsa#263); it used to be a FreeRTOS task per dimmer.
+  keepOpenMillis = _stayConnectedMillis;
 }
 
 DimmerBLEClient::~DimmerBLEClient() {
-#ifdef IOTSA_WITH_BLE_TASKS
-  if (connectionTaskHandle != nullptr) {
-    vTaskDelete(connectionTaskHandle);
-    connectionTaskHandle = nullptr;
-  }
-#endif
   // We're our own connection now (not a separate object bleClientMod owns),
   // so we must unregister ourselves before we go away -- otherwise
   // bleClientMod's devices/devicesByAddress maps are left holding a dangling
@@ -50,7 +43,11 @@ bool DimmerBLEClient::available() {
 }
 
 bool DimmerBLEClient::isConnected() {
-  return IotsaBLEClientDevice::isConnected() && !_isDisconnecting;
+  return IotsaBLEClientDevice::isConnected();
+}
+
+void DimmerBLEClient::_requestSync() {
+  requestWork(unreachableGiveUpMillis);
 }
 
 void DimmerBLEClient::updateDimmer() {
@@ -60,7 +57,7 @@ void DimmerBLEClient::updateDimmer() {
   }
   DIMMERBLECLIENT_DEBUG IotsaSerial.printf("%s.updateDimmer() called\n", name.c_str());
   needSyncToDevice = true;
-  needTransmitTimeoutAtMillis = millis() + unreachableGiveUpMillis;
+  _requestSync();
   if (callbacks) callbacks->dimmerValueChanged();
 }
 
@@ -123,7 +120,7 @@ void DimmerBLEClient::configSave(IotsaConfigFileSave& cf, const String& n_name) 
 // an identify/reboot/promoteMode/setWifiDisabled command-queue surface
 // (cwi-dis/iotsa#264's BLEController), which would be redundant here:
 // DimmerBLEClient already has its own identify path (needIdentify, fired
-// synchronously from connectionTask()) and has no use for the other three.
+// from doWork()) and has no use for the other three.
 void DimmerBLEClient::getHandler(JsonObject& reply) {
   IotsaBLEClientDevice::getHandler(reply);
   AbstractDimmer::getHandler(reply);
@@ -160,24 +157,25 @@ bool DimmerBLEClient::formHandler_args(IotsaWebServer *server, const String& f_n
 // it, so pretend it's fine" -- removed.
 void DimmerBLEClient::setup() {
   if (listenForDeviceChanges && available()) {
-    needSyncFromDevice = listenForDeviceChanges;
+    needSyncFromDevice = true;
     _dataValid = false;
-    needTransmitTimeoutAtMillis = millis() + unreachableGiveUpMillis;
+    _requestSync();
   }
 }
 
 void DimmerBLEClient::refresh() {
   if (listenForDeviceChanges) {
-    needSyncFromDevice = listenForDeviceChanges;
+    needSyncFromDevice = true;
+    _requestSync();
   }
 }
 
 void DimmerBLEClient::followDimmerChanges(bool follow) {
   listenForDeviceChanges = follow;
   if (listenForDeviceChanges && available()) {
-    needSyncFromDevice = listenForDeviceChanges;
+    needSyncFromDevice = true;
     _dataValid = false;
-    needTransmitTimeoutAtMillis = millis() + unreachableGiveUpMillis;
+    _requestSync();
   }
 }
 
@@ -187,188 +185,38 @@ void DimmerBLEClient::identify() {
 }
 
 
-#ifdef IOTSA_WITH_BLE_TASKS
-void DimmerBLEClient::_connectionTask(void *arg) {
-  DimmerBLEClient *_this = reinterpret_cast<DimmerBLEClient *>(arg);
-  _this->connectionTask();
-}
-
-void DimmerBLEClient::connectionTask() {
-  IotsaSerial.printf("DimmerBLEClient: %d: connection task created\n", num);
-  uint32_t maxWaitMs = 1000;
-  while(true) {
-    auto v = ulTaskNotifyTake(0, pdMS_TO_TICKS(maxWaitMs));
-    maxWaitMs = 1000; // May be lowered by the code below.
-    if (!needSyncToDevice && !needSyncFromDevice) {
-
-    // But we first disconnect if we are connected-idle for long enough.
-      if (disconnectAtMillis > 0 && millis() > disconnectAtMillis) {
-        _isDisconnecting = true;
-        _isConnecting = false;
-        // release(), not disconnect(): also gives the NimBLEClient slot
-        // back to the shared pool, so a device with more dimmers than
-        // NIMBLE_MAX_CONNECTIONS can still round-robin through all of them
-        // instead of permanently starving whichever ones connected last.
-        release();
-        DIMMERBLECLIENT_DEBUG IotsaSerial.printf("DimmerBLEClient: disconnect from %s\n", name.c_str());
-        _availableChanged = true;
-        disconnectAtMillis = 0;
-      }
-      continue; // Nothing to do, next time through the loop
-    }
-    // Check that we have enough information to connect.
-    if (!available()) {
-      //IotsaSerial.println("xxxjack dimmer not available");
-      if (millis() > needTransmitTimeoutAtMillis) {
-        IotsaSerial.printf("DimmerBLEClient: Giving up on connecting to %s\n", name.c_str());
-        needSyncToDevice = false;
-        needSyncFromDevice = false;
-        continue;
-      }
-      maxWaitMs = 20;
-    }
-    if (!isConnected()) {
-      if (isDisconnecting()) {
-        // Previous disconnect() hasn't been confirmed complete yet.
-        // NimBLEClient::connect() hard-rejects while it's still settling --
-        // wait for it rather than trying and failing.
-        maxWaitMs = 20;
-        continue;
-      }
-      // Connecting and scanning are mutually exclusive on this stack;
-      // canConnect() requests any in-progress scan to stop and reports
-      // whether it's worth attempting a connect right now (cwi-dis/iotsa#143).
-      if (!canConnect()) {
-        if (millis() > noWarningPrintBefore) {
-          IotsaSerial.printf("DimmerBLEClient: BLE busy, cannot connect to %s\n", name.c_str());
-          noWarningPrintBefore = millis() + 4000;
-        }
-        continue;
-      }
-      noWarningPrintBefore = 0;
-      // If all that is correct, try to connect.
-      _isDisconnecting = false;
-      _isConnecting = true;
-      _availableChanged = true;
-      DIMMERBLECLIENT_DEBUG IotsaSerial.printf("DimmerBLEClient: connecting to %s\n", getName().c_str());
-      if (!connect()) {
-        DIMMERBLECLIENT_DEBUG IotsaSerial.printf("DimmerBLEClient: connect to %s failed\n", getName().c_str());
-        _isConnecting = false;
-        needSyncFromDevice = false;
-        needSyncToDevice = false;
-        _availableChanged = true;
-        continue;
-      }
-      DIMMERBLECLIENT_DEBUG IotsaSerial.printf("DimmerBLEClient: connected to %s\n", getName().c_str());
-      _availableChanged = true;
-    }
-    
-    if (needSyncFromDevice) {
-      _syncFromDevice();
-    }
-    if (needSyncToDevice) {
-      _syncToDevice();
-    }
-    uint32_t keepOpen = min(stayConnectedMillis, (uint32_t)bleClientMod.maxConnectionKeepOpen());
-    disconnectAtMillis = millis() + keepOpen;
-    iotsaController.postponeSleep(keepOpen+1000);
-    DIMMERBLECLIENT_DEBUG IotsaSerial.printf("DimmerBLEClient: keepopen %d\n", keepOpen);
-  }
-}
-#endif
-
-void DimmerBLEClient::loop() {
-#ifdef IOTSA_WITH_BLE_TASKS
-  if (_availableChanged) {
-    _availableChanged = false;
-    callbacks->dimmerAvailableChanged();
-  }
-  if (_dataValidChanged) {
-    _dataValidChanged = false;
-    callbacks->dimmerValueChanged();
-  }
-#else
-  // If we don't have anything to transmit we bail out quickly...
-  if (!needSyncToDevice && !needSyncFromDevice) {
-
-    // But we first disconnect if we are connected-idle for long enough.
-    if (disconnectAtMillis > 0 && millis() > disconnectAtMillis) {
-      _isDisconnecting = true;
-      _isConnecting = false;
-      // release(), not disconnect(): see the IOTSA_WITH_BLE_TASKS version
-      // of this same logic above.
-      release();
-      DIMMERBLECLIENT_DEBUG IotsaSerial.printf("DimmerBLEClient: disconnect from %s\n", name.c_str());
-      callbacks->dimmerAvailableChanged();
-      disconnectAtMillis = 0;
-    }
-    return;
-  }
-  // Check that we have enough information to connect.
-  if (!available()) {
-    //IotsaSerial.println("xxxjack dimmer not available");
-    if (millis() > needTransmitTimeoutAtMillis) {
-      IotsaSerial.printf("DimmerBLEClient: Giving up on connecting to %s\n", name.c_str());
-      needSyncToDevice = false;
-      needSyncFromDevice = false;
-      return;
-    }
-    // iotsaBLEClient should be listening for advertisements
-    return;
-  }
-  // Now we can connect, unless we are already connected
-  if (!isConnected()) {
-    if (isDisconnecting()) {
-      // Previous disconnect() hasn't been confirmed complete yet.
-      // NimBLEClient::connect() hard-rejects while it's still settling --
-      // wait for it rather than trying and failing.
-      return;
-    }
-    // Connecting and scanning are mutually exclusive on this stack;
-    // canConnect() requests any in-progress scan to stop and reports
-    // whether it's worth attempting a connect right now (cwi-dis/iotsa#143).
-    // (This non-tasks path previously never requested the scan stop at all,
-    // so it could get stuck behind a full discovery scan -- fixed as a side
-    // effect of moving this into IotsaBLEClientDevice.)
-    if (!canConnect()) {
-      IotsaSerial.println("DimmerBLEClient: BLE busy, cannot connect");
-      if (millis() > noWarningPrintBefore) {
-        IotsaSerial.printf("DimmerBLEClient: BLE busy, cannot connect to %s\n", name.c_str());
-        noWarningPrintBefore = millis() + 4000;
-      }
-      return;
-    }
-    noWarningPrintBefore = 0;
-    // If all that is correct, try to connect.
-    callbacks->dimmerAvailableChanged();
-    _isDisconnecting = false;
-    _isConnecting = true;
-    callbacks->dimmerAvailableChanged();
-    DIMMERBLECLIENT_DEBUG IotsaSerial.printf("DimmerBLEClient: conecting to %s\n", getName().c_str());
-    if (!connect()) {
-      DIMMERBLECLIENT_DEBUG IotsaSerial.printf("DimmerBLEClient: connect to %s failed\n", getName().c_str());
-      _isConnecting = false;
-      callbacks->dimmerAvailableChanged();
-      return;
-    }
-    DIMMERBLECLIENT_DEBUG IotsaSerial.printf("DimmerBLEClient: connected to %s\n", getName().c_str());
-    callbacks->dimmerAvailableChanged();
-    return; // Return: next time through the loop we will send/receive data.
-  }
-  
+bool DimmerBLEClient::doWork() {
+  // Connected. Called by the connection state machine on the main loop, so
+  // the callbacks can be called directly.
+  bool ok = true;
   if (needSyncFromDevice) {
-    if(_syncFromDevice()) {
-      callbacks->dimmerValueChanged();
+    if (_syncFromDevice()) {
+      if (callbacks) callbacks->dimmerValueChanged();
+    } else {
+      ok = false;
     }
   }
   if (needSyncToDevice) {
     _syncToDevice();
   }
-  int keepOpen = min(stayConnectedMillis, bleClientMod.maxConnectionKeepOpen());
-  disconnectAtMillis = millis() + keepOpen;
-  iotsaController.postponeSleep(keepOpen+1000);
-  DIMMERBLECLIENT_DEBUG IotsaSerial.printf("DimmerBLEClient: keepopen %d\n", keepOpen);
-#endif
+  return ok;
+}
+
+void DimmerBLEClient::workAbandoned() {
+  IotsaSerial.printf("DimmerBLEClient: giving up on %s\n", name.c_str());
+  needSyncToDevice = false;
+  needSyncFromDevice = false;
+  needIdentify = false;
+}
+
+void DimmerBLEClient::loop() {
+  // Report link-state changes (connecting, connected, gone) once each: the
+  // controller's display shows them.
+  LinkState st = getLinkState();
+  if (st != lastReportedLinkState) {
+    lastReportedLinkState = st;
+    if (callbacks) callbacks->dimmerAvailableChanged();
+  }
 }
 
 void DimmerBLEClient::_syncToDevice() {
