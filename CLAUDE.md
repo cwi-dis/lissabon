@@ -159,10 +159,25 @@ Full inventory and config backups in `../lissabon-config/`. Summary:
 
 `control` has bank/keuken/spot/tafel as `unassigned`; `stripkeuken` is not yet configured in it.
 
-All devices: light sleep 1500 ms / 300 ms wake, WiFi disabled on boot. (Confirmed 2026-07-19
-against `../lissabon-config/*/battery.json` — the previous "1200 s / 80 ms" here was stale/wrong.)
+All devices: light sleep 1500 ms / 300 ms wake, WiFi disabled on boot, watchdog 5000 ms. (Confirmed
+2026-10-04 against `../lissabon-config/*/runmode.json` and `config.json`, after every dimmer and strip
+was upgraded to lissabon `25b00d3` on iotsa `663a65c`.)
 
 **Exception:** `control` uses deep sleep (not light sleep).
+
+**Upgrading a device from iotsa v2 to v3 loses settings** — there is deliberately no migration code:
+
+- The sleep settings moved from `/config/battery.cfg` (v2, `/api/battery`) to `/config/sleep.cfg`
+  (v3, `/api/runmode`), and v3 doesn't read the old file. After the flash the device runs
+  with `sleepMode 0` (never sleeps).
+- `watchdogDuration` comes back as 0.
+
+So after such an upgrade, restore by hand from the device's backup in `../lissabon-config/`: the
+sleep fields (`sleepMode`, `sleepDuration`, `wakeDuration`, `bootExtraWakeDuration`,
+`activityExtraWakeDuration`, `disableSleepOnWiFi`) via `xConfig runmode` over HPS, and
+`watchdogDuration` via `xConfig config` (needs config mode, which can be confirmed over BLE). Take a
+fresh backup *before* flashing. This bit the strips unnoticed: they ran without sleep from their
+September 2026 v3 upgrade until 2026-10-04.
 
 ## Design notes
 
