@@ -50,12 +50,12 @@ void DimmerBLEClient::_requestSync() {
   requestWork(unreachableGiveUpMillis);
 }
 
+// None of the sync requests below wait for the device's address to be known:
+// the connection state machine scans for it as part of the work, and gives up
+// after unreachableGiveUpMillis. iotsa only scans for devices with work pending
+// (cwi-dis/iotsa#263), so a dimmer that never asked would never be found.
 void DimmerBLEClient::updateDimmer() {
-  if (!available()) {
-    IotsaSerial.printf("%s.updateDimmer() called but not available\n", name.c_str());
-    return;
-  }
-  DIMMERBLECLIENT_DEBUG IotsaSerial.printf("%s.updateDimmer() called\n", name.c_str());
+  DIMMERBLECLIENT_DEBUG IotsaSerial.printf("%s.updateDimmer() called%s\n", name.c_str(), available() ? "" : " (not found yet)");
   needSyncToDevice = true;
   _requestSync();
   if (callbacks) callbacks->dimmerValueChanged();
@@ -156,7 +156,7 @@ bool DimmerBLEClient::formHandler_args(IotsaWebServer *server, const String& f_n
 // whether we genuinely have current data, not "we've stopped trying to get
 // it, so pretend it's fine" -- removed.
 void DimmerBLEClient::setup() {
-  if (listenForDeviceChanges && available()) {
+  if (listenForDeviceChanges) {
     needSyncFromDevice = true;
     _dataValid = false;
     _requestSync();
@@ -172,7 +172,7 @@ void DimmerBLEClient::refresh() {
 
 void DimmerBLEClient::followDimmerChanges(bool follow) {
   listenForDeviceChanges = follow;
-  if (listenForDeviceChanges && available()) {
+  if (listenForDeviceChanges) {
     needSyncFromDevice = true;
     _dataValid = false;
     _requestSync();

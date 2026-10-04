@@ -192,7 +192,8 @@ LissabonControllerMod::getDimmerForCommand(int num) {
   }
   if (!d->available()) {
     IotsaSerial.printf("LissabonController: Dimmer %d unavailable\n", num);
-    updateScanning();
+    // Ask for it: iotsa only scans for devices with work pending (cwi-dis/iotsa#263).
+    d->refresh();
     return nullptr;
   }
   if (!d->dataValid()) {
