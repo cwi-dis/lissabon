@@ -85,6 +85,11 @@ public:
   void configLoad() override;
   void configSave() override;
   void loop() override;
+  // Fixed set of dimmers (constructed above): no adding or removing by name
+  // through the base class's REST/web (cwi-dis/iotsa#264). Renaming a dimmer
+  // still works through its own fields.
+  bool addDeviceByName(const std::string& name) override { return false; }
+  bool removeDeviceByName(const std::string& name) override { return false; }
 
 protected:
   bool getHandler(const char *path, JsonObject& reply) override;

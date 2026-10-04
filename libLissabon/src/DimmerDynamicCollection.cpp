@@ -16,6 +16,15 @@ void DimmerDynamicCollection::push_back_new(const String& name) {
   push_back(item);
 }
 
+void DimmerDynamicCollection::remove(int index) {
+  if (index < 0 || index >= (int)dimmers.size()) return;
+  delete dimmers[index];
+  dimmers.erase(dimmers.begin() + index);
+  for (int i = 0; i < (int)dimmers.size(); i++) {
+    dimmers[i]->num = i;
+  }
+}
+
 void DimmerDynamicCollection::clear() {
   for(auto d : dimmers) {
     delete d;

@@ -48,6 +48,11 @@ public:
   void setLevel(float level) override;
   void toggle() override;
   void sleepWakeupNotification(bool sleep) override;
+  // REST/web "add"/"remove" by name (cwi-dis/iotsa#264): create/delete a
+  // DimmerBLEClient in our numbered list, which registers/unregisters itself
+  // with the base class's registry.
+  bool addDeviceByName(const std::string& name) override;
+  bool removeDeviceByName(const std::string& name) override;
 
 protected:
   void _setupDisplay();

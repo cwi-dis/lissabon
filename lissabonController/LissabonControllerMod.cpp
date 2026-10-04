@@ -242,33 +242,52 @@ LissabonControllerMod::dimmerFactory(int num) {
   return newDimmer;
 }
 
+bool LissabonControllerMod::addDeviceByName(const std::string& _name) {
+  String name(_name.c_str());
+  if (dimmers.find(name) != nullptr || getDevice(_name) != nullptr) {
+    IotsaSerial.printf("LissabonController: cannot add \"%s\": already known\n", name.c_str());
+    return false;
+  }
+  dimmers.push_back_new(name);  // its setName() registers it with the base class
+  dimmers.setup();
+  updateDisplay(true);
+  return true;
+}
+
+bool LissabonControllerMod::removeDeviceByName(const std::string& _name) {
+  String name(_name.c_str());
+  int index = -1;
+  for (int i = 0; i < dimmers.size(); i++) {
+    auto d = dimmers.at(i);
+    if (d->hasName() && d->getUserVisibleName() == name) index = i;
+  }
+  if (index < 0) return IotsaBLEClientCollectionMod::removeDeviceByName(_name); // not one of our dimmers
+  bool wasSelected = (index == selectedDimmerIndex);
+  // Deleting a DimmerBLEClient live is safe since it no longer has a task of
+  // its own (cwi-dis/iotsa#263); its destructor unregisters it from the base.
+  dimmers.remove(index);
+  if (index < selectedDimmerIndex) selectedDimmerIndex--;
+  if (selectedDimmerIndex >= dimmers.size()) selectedDimmerIndex = dimmers.size() - 1;
+  if (selectedDimmerIndex < 0) selectedDimmerIndex = 0;
+  if (wasSelected) setDimmerFollowed(selectedDimmerIndex, true);
+  saveNeeded = true;
+  updateDisplay(true);
+  return true;
+}
+
 void
 LissabonControllerMod::webHandler() {
   IotsaWebServer *server = api.webService->server;
   // xxxjack update settings for remotes?
   bool anyChanged = false;
-  String error;
   anyChanged |= dimmers.formHandler_args(server, "", true);
   anyChanged |= IotsaBLEClientCollectionMod::formHandler_args(server, "", true);
-  if (server->hasArg("add")) {
-    String newDimmerName = server->arg("add");
-    if (newDimmerName != "" && dimmers.find(newDimmerName) == nullptr) {
-      dimmers.push_back_new(newDimmerName);
-      dimmers.setup();
-      anyChanged = true;
-    } else {
-      error = "Bad dimmer name";
-    }
-  }
   if (server->hasArg("clearall") && server->arg("iamsure") == "iamsure") {
     clearAllDimmersAndReboot();
   }
   if (anyChanged) configSave();
 
   String message = "<html><head><title>Lissabon Controller</title></head><body><h1>Lissabon Controller</h1>";
-  if (error != "") {
-    message += "<p><em>Error: " + error + "</em></p>";
-  }
   message += "<h2>Dimmer Settings</h2><form method='post'>";
   dimmers.formHandler_fields(message, "", "", false);
   message += "<input type='submit' name='set' value='Set Dimmers'></form><br>";
@@ -278,7 +297,6 @@ LissabonControllerMod::webHandler() {
   message += "<input type='submit' name='config' value='Configure Dimmers'></form><br>";
 
   message += "<br><form method='post'>Remove all: <input type='checkbox' name='iamsure' value='iamsure'>I am sure <input type='submit' name='clearall' value='Remove All'></form><br>";
-  message += "<br><form method='post'>Add by name: <input name='add'><input type='submit' name='addbyname' value='Add'></form><br>";
 
   IotsaBLEClientCollectionMod::formHandler_fields(message, "BLE Dimmer", "dimmer", true);
 
@@ -314,17 +332,6 @@ bool LissabonControllerMod::putHandler(const char *path, const JsonVariant& requ
   if (getFromRequest<bool>(request, "clearall", clearall) && clearall) {
     clearAllDimmersAndReboot();
     return true;
-  }
-  // This is another hack.
-  String newDimmerName;
-  if (getFromRequest<String>(request, "add", newDimmerName)) {
-    if (dimmers.find(newDimmerName) == nullptr) {
-      dimmers.push_back_new(newDimmerName);
-      dimmers.setup();
-      anyChanged = true;
-    } else {
-      IotsaSerial.println("LissabonControllerMod::putHandler: Bad add= value ");
-    }
   }
   if (anyChanged) {
     configSave();

@@ -10,6 +10,9 @@ class DimmerDynamicCollection : public DimmerCollection {
 public:
   void setFactory(FactoryFunc _factory) {factory = _factory; }
   void push_back_new(const String& name);
+  // Deletes the dimmer at index and renumbers the rest (num == index again),
+  // so the "dimmerN" config keys stay contiguous on the next configSave().
+  void remove(int index);
   void clear();
   bool configLoad(IotsaConfigFileLoad& cf, const String& f_name) override;
   void configSave(IotsaConfigFileSave& cf, const String& f_name) override;
