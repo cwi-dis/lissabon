@@ -251,8 +251,15 @@ void LissabonDimmerMod::setup() {
   // Wires this appliance's identify (blink) into the generic core runmode
   // BLE identify command, so DimmerBLEClient's identify() -- which now goes
   // through IotsaRunmodeBLEClient, not Lissabon's own identifyUUID -- has
-  // something to actually trigger here.
-  if (IotsaRunmodeMod::instance()) IotsaRunmodeMod::instance()->addIdentifyCallback([this]() { dimmer.identify(); });
+  // something to actually trigger here. A double dimmer flashes both
+  // channels: it's the device that's asked to show itself (a single channel
+  // can still be identified through its own REST/web identify field).
+  if (IotsaRunmodeMod::instance()) IotsaRunmodeMod::instance()->addIdentifyCallback([this]() {
+    dimmer.identify();
+#ifdef WITH_DOUBLE_DIMMER
+    dimmer2.identify();
+#endif
+  });
 #endif
   // Set pins for measuring battery voltage and disabling sleep.
 #ifdef PIN_VBAT

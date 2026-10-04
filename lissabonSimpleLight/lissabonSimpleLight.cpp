@@ -20,6 +20,7 @@ IotsaApplication application("Lissabon Simple Light");
 IotsaWifiMod wifiMod(application);
 
 #include "iotsaBLEServer.h"
+#include "iotsaRunmode.h"
 IotsaBLEServerMod bleserverMod(application);
 
 #include "AbstractDimmer.h"
@@ -43,6 +44,15 @@ public:
   bool available() override { return true; }
   void loop() override {
     digitalWrite(LED_PIN, isOn ? HIGH : LOW);
+  }
+  // Two quick flashes, then back to the current state (loop() restores it).
+  void identify() override {
+    for (int i = 0; i < 2; i++) {
+      digitalWrite(LED_PIN, !isOn ? HIGH : LOW);
+      delay(100);
+      digitalWrite(LED_PIN, isOn ? HIGH : LOW);
+      delay(100);
+    }
   }
 };
 
@@ -85,6 +95,8 @@ void LissabonSimpleLightMod::setup() {
   dimmerUI.setOnOffButton(button);
   dimmer.setup();
   dimmerBLEServer.setup();
+  // iotsa's device identify (REST /api/runmode, web, BLE) flashes our light.
+  if (IotsaRunmodeMod::instance()) IotsaRunmodeMod::instance()->addIdentifyCallback([this]() { dimmer.identify(); });
 }
 
 void LissabonSimpleLightMod::lateSetup() {

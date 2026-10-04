@@ -45,7 +45,6 @@ bool PWMDimmer::available() {
 
 
 void PWMDimmer::identify() {
-  IotsaSerial.printf("xxxjack identify dimmer%d channel %d pin %d\n", num, channel, pin);
 #ifdef DIMMER_WITHOUT_LEVEL
   switchLevel(true);
   delay(100);
