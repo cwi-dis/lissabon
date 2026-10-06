@@ -31,8 +31,8 @@ extern IotsaBatteryMod batteryMod;
 //
 class LissabonControllerMod : public IotsaBLEClientCollectionMod, public Lissabon::DimmerCallbacks, public ButtonsCallbacks {
 public:
-  LissabonControllerMod(IotsaApplication &_app, IotsaAuthenticationProvider *_auth=NULL, bool early=false)
-  : IotsaBLEClientCollectionMod(_app, _auth, early),
+  LissabonControllerMod(IotsaApplication &_app, bool early=false)
+  : IotsaBLEClientCollectionMod(_app, early),
     buttons(this)
   {}
   void setup();

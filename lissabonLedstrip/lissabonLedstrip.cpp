@@ -7,11 +7,9 @@
 //
 
 #include "iotsa.h"
-#include "iotsaWifi.h"
 #include "iotsaConfigFile.h"
 #include "LedstripDimmer.h"
 #include "DimmerUI.h"
-
 
 //
 // Device can be rebooted or configuration mode can be requested by quickly tapping any button.
@@ -21,22 +19,13 @@
 #define TAP_DURATION 1000
 
 // Enable Over The Air updates from ArduinoIDE. Needs at least 1MB flash.
-#define WITH_OTA
 
 // Define this to enable support for touchpads to control the led strip (otherwise only BLE/REST/WEB control)
 #define WITH_TOUCHPADS
 
 IotsaApplication application("Lissabon LEDstrip");
-IotsaWifiMod wifiMod(application);
 
-#ifdef WITH_OTA
-#include "iotsaOta.h"
-IotsaOtaMod otaMod(application);
-#endif
-
-#include "iotsaBLEServer.h"
 #ifdef IOTSA_WITH_BLE
-IotsaBLEServerMod bleserverMod(application);
 #else
 #warning Building this module without BLE support may be a bit pointless
 #endif
@@ -51,7 +40,6 @@ IotsaBatteryMod batteryMod(application);
 
 #include "iotsaPixelstrip.h"
 IotsaPixelstripMod pixelstripMod(application);
-
 
 #ifdef WITH_TOUCHPADS
 #include "iotsaInput.h"
@@ -82,8 +70,8 @@ using namespace Lissabon;
 class LissabonLedstripMod : public IotsaModule, public DimmerCallbacks
 {
 public:
-  LissabonLedstripMod(IotsaApplication& _app, IotsaAuthenticationProvider* _auth=NULL)
-  : IotsaModule(_app, _auth),
+  LissabonLedstripMod(IotsaApplication& _app)
+  : IotsaModule(_app),
     dimmer(1, pixelstripMod, this),
 #ifdef WITH_TOUCHPADS
     dimmerUI(dimmer),
@@ -218,7 +206,6 @@ void LissabonLedstripMod::lateSetup() {
   // get=true api.setup(); it dispatches to webHandler().
   api.setup("ledstrip", true, true);
 }
-
 
 void LissabonLedstripMod::configLoad() {
   IotsaConfigFileLoad cf("/config/ledstrip.cfg");

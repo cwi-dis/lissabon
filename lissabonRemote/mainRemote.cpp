@@ -7,14 +7,12 @@
 //
 
 #include "iotsa.h"
-#include "iotsaWifi.h"
 #include "iotsaLed.h"
 #include "iotsaConfigFile.h"
 #include <set>
 
 #undef DEBUG_PRINT_HEAP_SPACE
 
-#define WITH_OTA    // Enable Over The Air updates from ArduinoIDE. Needs at least 1MB flash.
 #define LED_PIN 22  // Define to turn on the LED when powered and not sleeping.
 
 //
@@ -25,12 +23,6 @@
 #define TAP_DURATION 1000
 
 IotsaApplication application("Lissabon Remote");
-IotsaWifiMod wifiMod(application);
-
-#ifdef WITH_OTA
-#include "iotsaOta.h"
-IotsaOtaMod otaMod(application);
-#endif
 
 #include "iotsaBattery.h"
 #define PIN_DISABLESLEEP 0
@@ -67,8 +59,8 @@ using namespace Lissabon;
 
 class LissabonRemoteMod : public IotsaBLEClientCollectionMod, public DimmerCallbacks {
 public:
-  LissabonRemoteMod(IotsaApplication &_app, IotsaAuthenticationProvider *_auth=NULL)
-  : IotsaBLEClientCollectionMod(_app, _auth)
+  LissabonRemoteMod(IotsaApplication &_app)
+  : IotsaBLEClientCollectionMod(_app)
   {
     DimmerBLEClient *dimmer = new DimmerBLEClient(1, *this, this);
     dimmer->followDimmerChanges(true);
@@ -216,7 +208,6 @@ void LissabonRemoteMod::lateSetup() {
   // base explicitly.
   api.setup("bledimmer", true, true);
 }
-
 
 void LissabonRemoteMod::configLoad() {
   // IotsaBLEClientMod::configLoad();

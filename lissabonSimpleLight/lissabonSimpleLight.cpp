@@ -9,7 +9,6 @@
 // LED is just the zero-extra-hardware default.
 //
 #include "iotsa.h"
-#include "iotsaWifi.h"
 #include "iotsaConfigFile.h"
 #include "iotsaInput.h"
 
@@ -17,11 +16,8 @@
 #define BUTTON_PIN 0  // PRG/BOOT button on esp32dev
 
 IotsaApplication application("Lissabon Simple Light");
-IotsaWifiMod wifiMod(application);
 
-#include "iotsaBLEServer.h"
 #include "iotsaRunmode.h"
-IotsaBLEServerMod bleserverMod(application);
 
 #include "AbstractDimmer.h"
 #include "DimmerUI.h"
@@ -58,8 +54,8 @@ public:
 
 class LissabonSimpleLightMod : public IotsaModule, public DimmerCallbacks {
 public:
-  LissabonSimpleLightMod(IotsaApplication &_app, IotsaAuthenticationProvider *_auth=NULL)
-  : IotsaModule(_app, _auth),
+  LissabonSimpleLightMod(IotsaApplication &_app)
+  : IotsaModule(_app),
     dimmer(1, this),
     dimmerBLEServer(dimmer),
     dimmerUI(dimmer)

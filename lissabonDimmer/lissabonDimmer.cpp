@@ -4,7 +4,6 @@
 //
 
 #include "iotsa.h"
-#include "iotsaWifi.h"
 #include "iotsaLed.h"
 #include "iotsaConfigFile.h"
 #include "PWMDimmer.h"
@@ -17,19 +16,9 @@
 #define TAP_COUNT_REBOOT 8
 #define TAP_DURATION 1000
 
-#define WITH_OTA    // Enable Over The Air updates from ArduinoIDE. Needs at least 1MB flash.
-
 IotsaApplication application("Lissabon Dimmer");
-IotsaWifiMod wifiMod(application);
 
-#ifdef WITH_OTA
-#include "iotsaOta.h"
-IotsaOtaMod otaMod(application);
-#endif
-
-#include "iotsaBLEServer.h"
 #ifdef IOTSA_WITH_BLE
-IotsaBLEServerMod bleserverMod(application);
 #else
 #warning Building this module without BLE support may be a bit pointless
 #endif
@@ -59,8 +48,8 @@ using namespace Lissabon;
 
 class LissabonDimmerMod : public IotsaModule, public DimmerCallbacks {
 public:
-  LissabonDimmerMod(IotsaApplication& _app, IotsaAuthenticationProvider *_auth=NULL)
-  : IotsaModule(_app, _auth),
+  LissabonDimmerMod(IotsaApplication& _app)
+  : IotsaModule(_app),
     dimmer(1, PIN_PWM_DIMMER, CHANNEL_PWM_DIMMER, this),
 #ifdef WITH_UI
     dimmerUI(dimmer),
@@ -164,7 +153,6 @@ LissabonDimmerMod::webHandler() {
   server->send(200, "text/html", message);
 }
 
-
 String LissabonDimmerMod::info() {
   // Return some information about this module, for the main page of the web server.
   String message = "<p>";
@@ -219,7 +207,6 @@ void LissabonDimmerMod::lateSetup() {
   api.setup("dimmer", true, true);
 }
 
-
 void LissabonDimmerMod::configLoad() {
   IotsaConfigFileLoad cf("/config/pwmdimmer.cfg");
   dimmer.configLoad(cf, "dimmer");
@@ -242,7 +229,6 @@ void LissabonDimmerMod::configSave() {
 #endif
 
 }
-
 
 void LissabonDimmerMod::setup() {
   // Allow switching the dimmer to iotsa config mode over BLE or with taps

@@ -8,7 +8,6 @@
 // optimistic locally-requested state, and not persisted across reboot.
 //
 #include "iotsa.h"
-#include "iotsaWifi.h"
 #include "iotsaConfigFile.h"
 #include "iotsaInput.h"
 #include "iotsaBLEClient.h"
@@ -17,7 +16,6 @@
 #define BUTTON_PIN 0  // PRG/BOOT button on esp32dev
 
 IotsaApplication application("Lissabon Simple Remote");
-IotsaWifiMod wifiMod(application);
 
 IotsaBLEClientMod bleClientMod(application);
 
@@ -28,8 +26,8 @@ using namespace Lissabon;
 
 class LissabonSimpleRemoteMod : public IotsaModule, public DimmerCallbacks {
 public:
-  LissabonSimpleRemoteMod(IotsaApplication &_app, IotsaAuthenticationProvider *_auth=NULL)
-  : IotsaModule(_app, _auth),
+  LissabonSimpleRemoteMod(IotsaApplication &_app)
+  : IotsaModule(_app),
     dimmer(1, bleClientMod, this),
     dimmerUI(dimmer)
   {
