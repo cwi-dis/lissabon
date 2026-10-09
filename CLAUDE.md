@@ -170,12 +170,12 @@ was upgraded to lissabon `25b00d3` on iotsa `663a65c`.)
 - The sleep settings moved from `/config/battery.cfg` (v2, `/api/battery`) to `/config/sleep.cfg`
   (v3, `/api/runmode`), and v3 doesn't read the old file. After the flash the device runs
   with `sleepMode 0` (never sleeps).
-- `watchdogDuration` comes back as 0.
+- (`watchdogDuration` used to come back as 0 too. Since cwi-dis/iotsa#244 it no longer exists: the watchdog
+  is always on, fixed at 15 s, so there is nothing to restore.)
 
 So after such an upgrade, restore by hand from the device's backup in `../lissabon-config/`: the
 sleep fields (`sleepMode`, `sleepDuration`, `wakeDuration`, `bootExtraWakeDuration`,
-`activityExtraWakeDuration`, `disableSleepOnWiFi`) via `xConfig runmode` over HPS, and
-`watchdogDuration` via `xConfig config` (needs config mode, which can be confirmed over BLE). Take a
+`activityExtraWakeDuration`, `disableSleepOnWiFi`) via `xConfig runmode` over HPS. Take a
 fresh backup *before* flashing. This bit the strips unnoticed: they ran without sleep from their
 September 2026 v3 upgrade until 2026-10-04.
 
