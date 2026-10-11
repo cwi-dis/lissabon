@@ -156,7 +156,7 @@ bool IotsaPixelstripMod::getHandler(const char *path, JsonObject& reply) {
   return false;
 }
 
-bool IotsaPixelstripMod::putHandler(const char *path, const JsonVariant& request, JsonObject& reply) {
+bool IotsaPixelstripMod::putHandler(const char *path, const JsonVariant& request, JsonObject& reply, bool *changed) {
     JsonObject reqObj = request.as<JsonObject>();
   if (strcmp(path, "/api/pixelstrip") == 0) {
     bool anyChanged = false;
@@ -170,8 +170,9 @@ bool IotsaPixelstripMod::putHandler(const char *path, const JsonVariant& request
     if (anyChanged) {
       configSave();
       setupStrip();
+      if (changed) *changed = true;
     }
-    return anyChanged;
+    return true;
   } else if (strcmp(path, "/api/pixels") == 0) {
     if (pixelBuffer == NULL) return false;
     bool clear;

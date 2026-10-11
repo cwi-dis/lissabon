@@ -57,7 +57,7 @@ public:
 protected:
   void _setupDisplay();
   bool getHandler(const char *path, JsonObject& reply) override;
-  bool putHandler(const char *path, const JsonVariant& request, JsonObject& reply) override;
+  bool putHandler(const char *path, const JsonVariant& request, JsonObject& reply, bool *changed = nullptr) override;
   void unknownDimmerBLEClientFound(const NimBLEAdvertisedDevice& device);
   void knownDimmerBLEClientChanged(const NimBLEAdvertisedDevice& device);
   virtual String formHandler_field_perdevice(const char *deviceName) override;

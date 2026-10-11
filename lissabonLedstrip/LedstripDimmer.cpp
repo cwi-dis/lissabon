@@ -137,7 +137,7 @@ bool LedstripDimmer::available() {
   return true;
 }
 
-void LedstripDimmer::getHandler(JsonObject& reply) {
+bool LedstripDimmer::getHandler(JsonObject& reply) {
   reply["whiteTemperature"] = rgbwSpace.WTemperature;
   reply["whiteBrightness"] = rgbwSpace.WBrightness;
   reply["focalPoint"] = focalPoint;
@@ -159,11 +159,16 @@ void LedstripDimmer::getHandler(JsonObject& reply) {
     reply["ccLevel_w"] = correctRgbwColor.W;
   }
   AbstractDimmer::getHandler(reply);
+  return true;
 }
 
-bool LedstripDimmer::putHandler(const JsonVariant& request) {
-  AbstractDimmer::putHandler(request);
+bool LedstripDimmer::putHandler(const JsonVariant& request, JsonObject& reply, bool *changed) {
+  if (!AbstractDimmer::putHandler(request, reply, changed)) return false;
   // Handle configuration settings
+  if (changed && (!request["whiteTemperature"].isNull() || !request["whiteBrightness"].isNull()
+      || !request["focalPoint"].isNull() || !request["focalSpread"].isNull())) {
+    *changed = true;
+  }
   if (true) {
     float whiteTemperature = request["whiteTemperature"]|rgbwSpace.WTemperature;
     float whiteBrightness = request["whiteBrightness"]|rgbwSpace.WBrightness;

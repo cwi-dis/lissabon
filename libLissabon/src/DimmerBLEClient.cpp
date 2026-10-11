@@ -121,15 +121,15 @@ void DimmerBLEClient::configSave(IotsaConfigFileSave& cf, const String& n_name) 
 // (cwi-dis/iotsa#264's BLEController), which would be redundant here:
 // DimmerBLEClient already has its own identify path (needIdentify, fired
 // from doWork()) and has no use for the other three.
-void DimmerBLEClient::getHandler(JsonObject& reply) {
+bool DimmerBLEClient::getHandler(JsonObject& reply) {
   IotsaBLEClientDevice::getHandler(reply);
   AbstractDimmer::getHandler(reply);
+  return true;
 }
 
-bool DimmerBLEClient::putHandler(const JsonVariant& request) {
-  bool any = AbstractDimmer::putHandler(request);
-  any |= IotsaBLEClientDevice::putHandler(request);
-  return any;
+bool DimmerBLEClient::putHandler(const JsonVariant& request, JsonObject& reply, bool *changed) {
+  if (!AbstractDimmer::putHandler(request, reply, changed)) return false;
+  return IotsaBLEClientDevice::putHandler(request, reply, changed);
 }
 
 void DimmerBLEClient::formHandler_TD(String& message, bool includeConfig) {

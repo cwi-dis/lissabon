@@ -40,7 +40,7 @@ public:
   void loop();
 protected:
   bool getHandler(const char *path, JsonObject& reply) override;
-  bool putHandler(const char *path, const JsonVariant& request, JsonObject& reply) override;
+  bool putHandler(const char *path, const JsonVariant& request, JsonObject& reply, bool *changed = nullptr) override;
 private:
   // Fires on the optimistic local button press, before the remote has
   // confirmed anything -- deliberately not used to drive the LED.
@@ -84,10 +84,14 @@ bool LissabonSimpleRemoteMod::getHandler(const char *path, JsonObject& reply) {
   return true;
 }
 
-bool LissabonSimpleRemoteMod::putHandler(const char *path, const JsonVariant& request, JsonObject& reply) {
-  bool anyChanged = dimmer.putHandler(request);
-  if (anyChanged) configSave();
-  return anyChanged;
+bool LissabonSimpleRemoteMod::putHandler(const char *path, const JsonVariant& request, JsonObject& reply, bool *changed) {
+  bool anyChanged = false;
+  if (!dimmer.putHandler(request, reply, &anyChanged)) return false;
+  if (anyChanged) {
+    configSave();
+    if (changed) *changed = true;
+  }
+  return true;
 }
 
 void LissabonSimpleRemoteMod::configLoad() {

@@ -74,7 +74,7 @@ public:
   void keepPowered(bool keep) { _keepPowered = keep; }
 protected:
   bool getHandler(const char *path, JsonObject& reply) override;
-  bool putHandler(const char *path, const JsonVariant& request, JsonObject& reply) override;
+  bool putHandler(const char *path, const JsonVariant& request, JsonObject& reply, bool *changed = nullptr) override;
   void configLoad();
   void configSave();
   void setupStrip();

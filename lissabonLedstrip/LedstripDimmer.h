@@ -17,8 +17,8 @@ public:
   void identify();
   void loop();
   // Overrides
-  virtual void getHandler(JsonObject& reply) override;
-  virtual bool putHandler(const JsonVariant& request) override;
+  virtual bool getHandler(JsonObject& reply) override;
+  virtual bool putHandler(const JsonVariant& request, JsonObject& reply, bool *changed = nullptr) override;
   virtual bool formHandler_args(IotsaWebServer *server, const String& f_name, bool includeConfig) override;
   virtual bool configLoad(IotsaConfigFileLoad& cf, const String& name) override;
   virtual void configSave(IotsaConfigFileSave& cf, const String& name) override;

@@ -69,7 +69,7 @@ public:
   void loop();
 protected:
   bool getHandler(const char *path, JsonObject& reply) override;
-  bool putHandler(const char *path, const JsonVariant& request, JsonObject& reply) override;
+  bool putHandler(const char *path, const JsonVariant& request, JsonObject& reply, bool *changed = nullptr) override;
 private:
   void dimmerOnOffChanged() override {}
   void dimmerValueChanged() override {}
@@ -111,8 +111,8 @@ bool LissabonSimpleLightMod::getHandler(const char *path, JsonObject& reply) {
   return true;
 }
 
-bool LissabonSimpleLightMod::putHandler(const char *path, const JsonVariant& request, JsonObject& reply) {
-  return dimmer.putHandler(request);
+bool LissabonSimpleLightMod::putHandler(const char *path, const JsonVariant& request, JsonObject& reply, bool *changed) {
+  return dimmer.putHandler(request, reply, changed);
 }
 
 void LissabonSimpleLightMod::configLoad() {

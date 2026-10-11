@@ -91,7 +91,7 @@ protected:
   void dimmerValueChanged() override;
   void dimmerAvailableChanged() override {};
   bool getHandler(const char *path, JsonObject& reply) override;
-  bool putHandler(const char *path, const JsonVariant& request, JsonObject& reply) override;
+  bool putHandler(const char *path, const JsonVariant& request, JsonObject& reply, bool *changed = nullptr) override;
 private:
   void _tap();
   LedstripDimmer dimmer;
@@ -186,18 +186,19 @@ bool LissabonLedstripMod::getHandler(const char *path, JsonObject& reply) {
   return true;
 }
 
-bool LissabonLedstripMod::putHandler(const char *path, const JsonVariant& request, JsonObject& reply) {
-  bool anyChanged = false;
+bool LissabonLedstripMod::putHandler(const char *path, const JsonVariant& request, JsonObject& reply, bool *changed) {
   JsonObject reqObj = request.as<JsonObject>();
-  if (!reqObj) return false;
-  if (dimmer.putHandler(reqObj)) anyChanged = true;
-  if (anyChanged) {
+  if (!reqObj) return apiError(400, "expected an object");
+  bool dimmerChanged = false;
+  if (!dimmer.putHandler(reqObj, reply, &dimmerChanged)) return false;
+  if (dimmerChanged) {
     // Should do this only for configuration changes
     configSave();
+    if (changed) *changed = true;
   }
-  if (anyChanged) dimmer.updateDimmer(); // xxxjack or is this called already?
+  // (No second updateDimmer() here: AbstractDimmer::putHandler() already calls it.)
   iotsaController.extendCurrentMode();
-  return anyChanged;
+  return true;
 
 }
 void LissabonLedstripMod::lateSetup() {

@@ -26,7 +26,9 @@ public:
   iterator end();
 
   void getHandler(JsonObject& reply);
-  bool putHandler(const JsonVariant& request);
+  // Same rules as the iotsa handlers (cwi-dis/iotsa#280): returns success,
+  // sets *changed when a dimmer changed something that needs saving.
+  bool putHandler(const JsonVariant& request, JsonObject& reply, bool *changed = nullptr);
   void setup();
   void loop();
   virtual bool configLoad(IotsaConfigFileLoad& cf, const String& f_name);

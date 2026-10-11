@@ -76,7 +76,7 @@ protected:
   void dimmerAvailableChanged() override {};
   void webHandler() override;
   bool getHandler(const char *path, JsonObject& reply) override;
-  bool putHandler(const char *path, const JsonVariant& request, JsonObject& reply) override;
+  bool putHandler(const char *path, const JsonVariant& request, JsonObject& reply, bool *changed = nullptr) override;
 
 private:
   PWMDimmer dimmer;
@@ -177,26 +177,24 @@ bool LissabonDimmerMod::getHandler(const char *path, JsonObject& reply) {
   return true;
 }
 
-bool LissabonDimmerMod::putHandler(const char *path, const JsonVariant& request, JsonObject& reply) {
+bool LissabonDimmerMod::putHandler(const char *path, const JsonVariant& request, JsonObject& reply, bool *changed) {
   bool anyChanged = false;
-  bool dimmerChanged = false;
   JsonObject reqObj = request.as<JsonObject>();
-  if (!reqObj) return false;
-  if (dimmer.putHandler(reqObj)) anyChanged = dimmerChanged = true;
-  if (dimmerChanged) dimmer.updateDimmer(); // xxxjack or is this called already?
+  if (!reqObj) return apiError(400, "expected an object");
+  // (No second updateDimmer() here: AbstractDimmer::putHandler() already calls it.)
+  if (!dimmer.putHandler(reqObj, reply, &anyChanged)) return false;
 #ifdef WITH_DOUBLE_DIMMER
-  bool dimmer2Changed = false;
   JsonVariant dimmer2Request = reqObj["dimmer2"];
   if (dimmer2Request) {
-    if (dimmer2.putHandler(dimmer2Request)) anyChanged = dimmer2Changed = true;
+    if (!dimmer2.putHandler(dimmer2Request, reply, &anyChanged)) return false;
   }
-  if (dimmer2Changed) dimmer2.updateDimmer();
 #endif
   if (anyChanged) {
     // Should do this only for config changes
     configSave();
+    if (changed) *changed = true;
   }
-  return anyChanged;
+  return true;
 
 }
 

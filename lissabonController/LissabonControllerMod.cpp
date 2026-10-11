@@ -323,10 +323,10 @@ bool LissabonControllerMod::getHandler(const char *path, JsonObject& reply) {
   return true;
 }
 
-bool LissabonControllerMod::putHandler(const char *path, const JsonVariant& request, JsonObject& reply) {
+bool LissabonControllerMod::putHandler(const char *path, const JsonVariant& request, JsonObject& reply, bool *changed) {
   bool anyChanged = false;
-  anyChanged = IotsaBLEClientCollectionMod::putHandler(path, request, reply);
-  anyChanged |= dimmers.putHandler(request);
+  if (!IotsaBLEClientCollectionMod::putHandler(path, request, reply, &anyChanged)) return false;
+  if (!dimmers.putHandler(request, reply, &anyChanged)) return false;
   // This is a hack. We don't implement DELETE so we add a funny value
   bool clearall;
   if (getFromRequest<bool>(request, "clearall", clearall) && clearall) {
@@ -335,6 +335,7 @@ bool LissabonControllerMod::putHandler(const char *path, const JsonVariant& requ
   }
   if (anyChanged) {
     configSave();
+    if (changed) *changed = true;
   }
   return true;
 }

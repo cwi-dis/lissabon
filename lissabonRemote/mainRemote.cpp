@@ -85,7 +85,7 @@ public:
 
 protected:
   bool getHandler(const char *path, JsonObject& reply) override;
-  bool putHandler(const char *path, const JsonVariant& request, JsonObject& reply) override;
+  bool putHandler(const char *path, const JsonVariant& request, JsonObject& reply, bool *changed = nullptr) override;
   void unknownDimmerBLEClientFound(const NimBLEAdvertisedDevice& deviceAdvertisement);
   // Only surface other lissabon BLE devices as "unknown/addable" candidates
   // (cwi-dis/iotsa#264).
@@ -188,15 +188,16 @@ bool LissabonRemoteMod::getHandler(const char *path, JsonObject& reply) {
   return true;
 }
 
-bool LissabonRemoteMod::putHandler(const char *path, const JsonVariant& request, JsonObject& reply) {
+bool LissabonRemoteMod::putHandler(const char *path, const JsonVariant& request, JsonObject& reply, bool *changed) {
   // xxxjack need to distinguish between config and operational parameters
   bool anyChanged = false;
-  anyChanged = IotsaBLEClientCollectionMod::putHandler(path, request, reply);
-  anyChanged |= dimmers.putHandler(request);
+  if (!IotsaBLEClientCollectionMod::putHandler(path, request, reply, &anyChanged)) return false;
+  if (!dimmers.putHandler(request, reply, &anyChanged)) return false;
   if (anyChanged) {
     configSave();
+    if (changed) *changed = true;
   }
-  return anyChanged;
+  return true;
 }
 
 void LissabonRemoteMod::lateSetup() {

@@ -54,17 +54,16 @@ void DimmerCollection::getHandler(JsonObject& reply) {
   }
 }
 
-bool DimmerCollection::putHandler(const JsonVariant& request) {
-  bool anyChanged = false;
+bool DimmerCollection::putHandler(const JsonVariant& request, JsonObject& reply, bool *changed) {
   JsonObject reqObj = request.as<JsonObject>();
   for (auto d : dimmers) {
     String ident = "dimmer" + String(d->num);
     JsonVariant dimmerRequest = reqObj[ident];
     if (dimmerRequest) {
-      if (d->putHandler(dimmerRequest)) anyChanged = true;
+      if (!d->putHandler(dimmerRequest, reply, changed)) return false;
     }
   }
-  return anyChanged;
+  return true;
 }
 
 bool DimmerCollection::configLoad(IotsaConfigFileLoad& cf, const String& f_name) {

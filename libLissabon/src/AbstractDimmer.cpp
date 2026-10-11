@@ -317,7 +317,7 @@ void AbstractDimmer::formHandler_TD(String& message, bool includeConfig) {
   IotsaSerial.println("AbstractDimmer: formHandler_TD not implemented");
 }
 
-void AbstractDimmer::getHandler(JsonObject& reply) {
+bool AbstractDimmer::getHandler(JsonObject& reply) {
   reply["name"] = name;
   reply["available"] = available();
   reply["isOn"] = isOn;
@@ -337,13 +337,14 @@ void AbstractDimmer::getHandler(JsonObject& reply) {
 #ifdef DIMMER_WITH_PWMFREQUENCY
   reply["pwmFrequency"] = pwmFrequency;
 #endif // DIMMER_WITH_PWMFREQUENCY
+  return true;
 }
 
-bool AbstractDimmer::putHandler(const JsonVariant& request) {
+bool AbstractDimmer::putHandler(const JsonVariant& request, JsonObject& reply, bool *changed) {
   bool anyChanged = false;
   bool dimmerChanged = false;
   JsonObject reqObj = request.as<JsonObject>();
-  if (!reqObj) return false;
+  if (!reqObj) return apiError(400, "expected an object");
   if (reqObj["identify"]|0) {
     identify();
     anyChanged = true;
@@ -409,7 +410,9 @@ bool AbstractDimmer::putHandler(const JsonVariant& request) {
     anyChanged |= configChanged;
 
   }
-  return anyChanged;
+  // The return value is success (cwi-dis/iotsa#280); whether to save is *changed.
+  if (anyChanged && changed) *changed = true;
+  return true;
 }
 
 
