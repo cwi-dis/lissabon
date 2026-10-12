@@ -49,7 +49,7 @@ Input* inputs[] = {
 
 IotsaInputMod touchMod(application, inputs, sizeof(inputs)/sizeof(inputs[0]));
 
-#include "iotsaBLEClientCollection.h"
+#include "iotsaBLEClientManager.h"
 
 #include "DimmerCollection.h"
 #include "DimmerBLEClient.h"
@@ -57,10 +57,10 @@ IotsaInputMod touchMod(application, inputs, sizeof(inputs)/sizeof(inputs[0]));
 
 using namespace Lissabon;
 
-class LissabonRemoteMod : public IotsaBLEClientCollectionMod, public DimmerCallbacks {
+class LissabonRemoteMod : public IotsaBLEClientManagerMod, public DimmerCallbacks {
 public:
   LissabonRemoteMod(IotsaApplication &_app)
-  : IotsaBLEClientCollectionMod(_app)
+  : IotsaBLEClientManagerMod(_app)
   {
     DimmerBLEClient *dimmer = new DimmerBLEClient(1, *this, this);
     dimmer->followDimmerChanges(true);
@@ -153,7 +153,7 @@ LissabonRemoteMod::webHandler() {
   bool anyChanged = false;
   // xxxjack this also saves the config file if a non-config setting has been changed. Oh well...
   anyChanged |= dimmers.formHandler_args(server, "", true);
-  anyChanged |= IotsaBLEClientCollectionMod::formHandler_args(server, "", true);
+  anyChanged |= IotsaBLEClientManagerMod::formHandler_args(server, "", true);
   if (anyChanged) {
     configSave();
   }
@@ -166,7 +166,7 @@ LissabonRemoteMod::webHandler() {
   dimmers.formHandler_fields(message, "", "", true);
   message += "<input type='submit' name='config' value='Configure Dimmers'></form><br>";
 
-  IotsaBLEClientCollectionMod::formHandler_fields(message, "BLE Dimmer", "dimmer", true);
+  IotsaBLEClientManagerMod::formHandler_fields(message, "dimmers", "dimmer", true);
 
   message += "</body></html>";
   server->send(200, "text/html", message);
@@ -183,7 +183,7 @@ String LissabonRemoteMod::info() {
 
 bool LissabonRemoteMod::getHandler(const char *path, JsonObject& reply) {
   // xxxjack need to distinguish between config and operational parameters
-  IotsaBLEClientCollectionMod::getHandler(path, reply);
+  IotsaBLEClientManagerMod::getHandler(path, reply);
   dimmers.getHandler(reply);
   return true;
 }
@@ -191,7 +191,7 @@ bool LissabonRemoteMod::getHandler(const char *path, JsonObject& reply) {
 bool LissabonRemoteMod::putHandler(const char *path, const JsonVariant& request, JsonObject& reply, bool *changed) {
   // xxxjack need to distinguish between config and operational parameters
   bool anyChanged = false;
-  if (!IotsaBLEClientCollectionMod::putHandler(path, request, reply, &anyChanged)) return false;
+  if (!IotsaBLEClientManagerMod::putHandler(path, request, reply, &anyChanged)) return false;
   if (!dimmers.putHandler(request, reply, &anyChanged)) return false;
   if (anyChanged) {
     configSave();
@@ -270,7 +270,7 @@ void LissabonRemoteMod::setup() {
 }
 
 void LissabonRemoteMod::unknownDimmerBLEClientFound(const NimBLEAdvertisedDevice& deviceAdvertisement) {
-  // Nothing to do here -- IotsaBLEClientCollectionMod::onUnknownDeviceSeen()
+  // Nothing to do here -- IotsaBLEClientManagerMod::onUnknownDeviceSeen()
   // already records this device (name/address/rssi/lastSeen) in
   // unknownDevices before calling us.
   IFDEBUG IotsaSerial.printf("unknownDimmerBLEClientFound: iotsaLedstrip/iotsaDimmer \"%s\"\n", deviceAdvertisement.getName().c_str());
@@ -288,7 +288,7 @@ void LissabonRemoteMod::loop() {
   //
   // Let our baseclass do its loop-y things
   //
-  IotsaBLEClientCollectionMod::loop();
+  IotsaBLEClientManagerMod::loop();
   
   //
   // See whether we have a value to save (because the user has been turning the dimmer)

@@ -261,7 +261,7 @@ bool LissabonControllerMod::removeDeviceByName(const std::string& _name) {
     auto d = dimmers.at(i);
     if (d->hasName() && d->getUserVisibleName() == name) index = i;
   }
-  if (index < 0) return IotsaBLEClientCollectionMod::removeDeviceByName(_name); // not one of our dimmers
+  if (index < 0) return IotsaBLEClientManagerMod::removeDeviceByName(_name); // not one of our dimmers
   bool wasSelected = (index == selectedDimmerIndex);
   // Deleting a DimmerBLEClient live is safe since it no longer has a task of
   // its own (cwi-dis/iotsa#263); its destructor unregisters it from the base.
@@ -281,7 +281,7 @@ LissabonControllerMod::webHandler() {
   // xxxjack update settings for remotes?
   bool anyChanged = false;
   anyChanged |= dimmers.formHandler_args(server, "", true);
-  anyChanged |= IotsaBLEClientCollectionMod::formHandler_args(server, "", true);
+  anyChanged |= IotsaBLEClientManagerMod::formHandler_args(server, "", true);
   if (server->hasArg("clearall") && server->arg("iamsure") == "iamsure") {
     clearAllDimmersAndReboot();
   }
@@ -298,7 +298,7 @@ LissabonControllerMod::webHandler() {
 
   message += "<br><form method='post'>Remove all: <input type='checkbox' name='iamsure' value='iamsure'>I am sure <input type='submit' name='clearall' value='Remove All'></form><br>";
 
-  IotsaBLEClientCollectionMod::formHandler_fields(message, "BLE Dimmer", "dimmer", true);
+  IotsaBLEClientManagerMod::formHandler_fields(message, "dimmers", "dimmer", true);
 
   message += "</body></html>";
   server->send(200, "text/html", message);
@@ -318,14 +318,14 @@ String LissabonControllerMod::info() {
 }
 
 bool LissabonControllerMod::getHandler(const char *path, JsonObject& reply) {
-  IotsaBLEClientCollectionMod::getHandler(path, reply);
+  IotsaBLEClientManagerMod::getHandler(path, reply);
   dimmers.getHandler(reply);
   return true;
 }
 
 bool LissabonControllerMod::putHandler(const char *path, const JsonVariant& request, JsonObject& reply, bool *changed) {
   bool anyChanged = false;
-  if (!IotsaBLEClientCollectionMod::putHandler(path, request, reply, &anyChanged)) return false;
+  if (!IotsaBLEClientManagerMod::putHandler(path, request, reply, &anyChanged)) return false;
   if (!dimmers.putHandler(request, reply, &anyChanged)) return false;
   // This is a hack. We don't implement DELETE so we add a funny value
   bool clearall;
@@ -430,7 +430,7 @@ bool LissabonControllerMod::isInterestingUnknownDevice(const NimBLEAdvertisedDev
 }
 
 void LissabonControllerMod::unknownDimmerBLEClientFound(const NimBLEAdvertisedDevice& deviceAdvertisement) {
-  // Nothing to do here -- IotsaBLEClientCollectionMod::onUnknownDeviceSeen()
+  // Nothing to do here -- IotsaBLEClientManagerMod::onUnknownDeviceSeen()
   // already records this device (name/address/rssi/lastSeen) in
   // unknownDevices before calling us.
   LOG_BLE IotsaSerial.printf("LissabonController: unknownDeviceFound: device \"%s\"\n", deviceAdvertisement.getName().c_str());
@@ -456,7 +456,7 @@ void LissabonControllerMod::loop() {
   //
   // Let our baseclass do its loop-y things
   //
-  IotsaBLEClientCollectionMod::loop();
+  IotsaBLEClientManagerMod::loop();
 
   //
   // Let the dimmers do any processing they need to do
