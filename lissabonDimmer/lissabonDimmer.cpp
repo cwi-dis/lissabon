@@ -293,8 +293,13 @@ void LissabonDimmerMod::loop() {
 
 void LissabonDimmerMod::dimmerValueChanged() {
   iotsaController.postponeSleep(2000);
-  saveAtMillis = millis() + 1000;
+#ifdef TOGGLE_ONOFF_ON_REBOOT
+  // The candle is switched by cutting its power: the state must be on flash
+  // before that happens, or the next boot toggles from a stale state.
   configSave();
+#else
+  saveAtMillis = millis() + 1000;
+#endif
 }
 // Instantiate the Led module, and install it in the framework
 LissabonDimmerMod dimmerMod(application);
