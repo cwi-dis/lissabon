@@ -14,7 +14,7 @@ IotsaPixelstripMod::webHandler() {
     // Note: this sets the value for a single LED, not the value for a single NeoPixel (3/4 leds)
     int idx = server->arg("setIndex").toInt();
     int val = server->arg("setValue").toInt();
-    if (pixelBuffer && idx >= 0 && idx <= count*IOTSA_NPB_BPP) {
+    if (pixelBuffer && idx >= 0 && idx < count*IOTSA_NPB_BPP) {
       pixelBuffer[idx] = val;
       pixelSourceCallback();
     }
