@@ -19,7 +19,7 @@ namespace Lissabon {
 // same-named methods (available(), isConnected(), identify(), getHandler(),
 // and -- since IotsaBLEClientDevice grew a full IotsaApiModObject surface,
 // cwi-dis/iotsa#268 -- also configLoad/configSave/putHandler/
-// formHandler_fields/formHandler_TD/formHandler_args); see the .cpp for how
+// formHandler_fields/formHandler_args); see the .cpp for how
 // each is resolved (either a single override serving both, or an explicit
 // base-qualified call from within DimmerBLEClient's own override to reach
 // the other one).
@@ -41,11 +41,12 @@ public:
   void identify() override;
   virtual bool configLoad(IotsaConfigFileLoad& cf, const String& name) override;
   virtual void configSave(IotsaConfigFileSave& cf, const String& name) override;
-  virtual bool getHandler(JsonObject& reply) override;
-  virtual bool putHandler(const JsonVariant& request, JsonObject& reply, bool *changed = nullptr) override;
-  virtual void formHandler_fields(String& message, const String& text, const String& f_name, bool includeConfig) override;
-  virtual void formHandler_TD(String& message, bool includeConfig) override;
-  virtual bool formHandler_args(IotsaWebServer *server, const String& f_name, bool includeConfig) override;
+  void getHandler(IotsaApiContext& ctx) override;
+  void putHandler(IotsaApiContext& ctx) override;
+#ifdef IOTSA_WITH_WEB
+  void formHandler_args(IotsaWebContext& ctx) override;
+  void formHandler_fields(IotsaWebContext& ctx) override;
+#endif
 protected:
   // Connecting, lingering and disconnecting is IotsaBLEClientDevice's
   // connection state machine (cwi-dis/iotsa#263, #144); we only say that

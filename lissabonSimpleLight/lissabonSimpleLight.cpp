@@ -68,8 +68,13 @@ public:
   void configSave();
   void loop();
 protected:
-  bool getHandler(const char *path, JsonObject& reply) override;
-  bool putHandler(const char *path, const JsonVariant& request, JsonObject& reply, bool *changed = nullptr) override;
+  void getHandler(IotsaApiContext& ctx) override { dimmer.getHandler(ctx); }
+  void putHandler(IotsaApiContext& ctx) override { dimmer.putHandler(ctx); }
+#ifdef IOTSA_WITH_WEB
+  String webTitle() override { return "Light"; }
+  void formHandler_args(IotsaWebContext& ctx) override { dimmer.formHandler_args(ctx); }
+  void formHandler_fields(IotsaWebContext& ctx) override { dimmer.formHandler_fields(ctx); }
+#endif
 private:
   void dimmerOnOffChanged() override {}
   void dimmerValueChanged() override {}
@@ -78,8 +83,8 @@ private:
   DimmerBLEServer dimmerBLEServer;
   DimmerUI dimmerUI;
   // isOn can also change through the BLE server (a remote turning us on/off),
-  // which doesn't run through dimmerOnOffChanged() or putHandler() below --
-  // so we poll for changes in loop() instead of hooking either of those.
+  // which doesn't run through dimmerOnOffChanged() or the handlers (where
+  // the framework saves) -- so we poll for changes in loop() instead.
   bool lastSavedIsOn = false;
 };
 
@@ -97,22 +102,13 @@ void LissabonSimpleLightMod::setup() {
 
 void LissabonSimpleLightMod::lateSetup() {
   name = "light";
-  // REST/BLE only -- no dedicated web page (webPage=false), matching the
-  // pre-v3 behaviour where this module registered no server->on() handler.
-  api.setup("light", true, true, false, false);
+  // /light (the module page, GET + POST) is auto-registered by this
+  // get=true api.setup().
+  api.setup("light", true, true);
 }
 
 String LissabonSimpleLightMod::info() {
-  return "Simple on/off light. See <a href='/api/light'>/api/light</a> for the REST API.<br>";
-}
-
-bool LissabonSimpleLightMod::getHandler(const char *path, JsonObject& reply) {
-  dimmer.getHandler(reply);
-  return true;
-}
-
-bool LissabonSimpleLightMod::putHandler(const char *path, const JsonVariant& request, JsonObject& reply, bool *changed) {
-  return dimmer.putHandler(request, reply, changed);
+  return "<p>Simple on/off light. See <a href='/light'>/light</a>, or <a href='/api/light'>/api/light</a> for the REST API.</p>";
 }
 
 void LissabonSimpleLightMod::configLoad() {

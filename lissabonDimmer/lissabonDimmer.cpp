@@ -74,9 +74,13 @@ protected:
   void dimmerOnOffChanged() override;
   void dimmerValueChanged() override;
   void dimmerAvailableChanged() override {};
-  void webHandler() override;
-  bool getHandler(const char *path, JsonObject& reply) override;
-  bool putHandler(const char *path, const JsonVariant& request, JsonObject& reply, bool *changed = nullptr) override;
+  void getHandler(IotsaApiContext& ctx) override;
+  void putHandler(IotsaApiContext& ctx) override;
+#ifdef IOTSA_WITH_WEB
+  String webTitle() override { return "Dimmer"; }
+  void formHandler_args(IotsaWebContext& ctx) override;
+  void formHandler_fields(IotsaWebContext& ctx) override;
+#endif
 
 private:
   PWMDimmer dimmer;
@@ -119,40 +123,6 @@ void LissabonDimmerMod::dimmerOnOffChanged() {
   }
 }
 
-void
-LissabonDimmerMod::webHandler() {
-  IotsaWebServer *server = api.webService->server;
-  bool anyChanged = false;
-  anyChanged |= dimmer.formHandler_args(server, "dimmer", true);
-#ifdef WITH_DOUBLE_DIMMER
-  anyChanged |= dimmer2.formHandler_args(server, "dimmer2", true);
-#endif
-  if (anyChanged) {
-    configSave();
-    dimmer.updateDimmer();
-  }
-  
-  String message = "<html><head><title>Dimmer</title></head><body><h1>Dimmer</h1>";
-  message += "<h2>Settings</h2><form method='post'>";
-  dimmer.formHandler_fields(message, "dimmer", "dimmer", false);
-  message += "<input type='submit' name='set' value='Set Dimmer'></form>";
-#ifdef WITH_DOUBLE_DIMMER
-  message += "<form method='post'>";
-  dimmer2.formHandler_fields(message, "dimmer2", "dimmer2", false);
-  message += "<input type='submit' name='set' value='Set Dimmer'></form>";
-#endif
-  message += "<h2>Configuration</h2><form method='post'>";
-  dimmer.formHandler_fields(message, "dimmer", "dimmer", true);
-  message += "<input type='submit' name='set' value='Update Configuration'></form>";
-#ifdef WITH_DOUBLE_DIMMER
-  message += "<form method='post'>";
-  dimmer2.formHandler_fields(message, "dimmer2", "dimmer2", true);
-  message += "<input type='submit' name='set' value='Update Configuration'></form>";
-#endif
-  message += "</body></html>";
-  server->send(200, "text/html", message);
-}
-
 String LissabonDimmerMod::info() {
   // Return some information about this module, for the main page of the web server.
   String message = "<p>";
@@ -168,40 +138,53 @@ String LissabonDimmerMod::info() {
   return message;
 }
 
-bool LissabonDimmerMod::getHandler(const char *path, JsonObject& reply) {
-  dimmer.getHandler(reply);
+// The first dimmer's fields are the module's own (the shape of the deployed
+// dimmers' backups), a second dimmer's are under "dimmer2".
+void LissabonDimmerMod::getHandler(IotsaApiContext& ctx) {
+  dimmer.getHandler(ctx);
 #ifdef WITH_DOUBLE_DIMMER
-  JsonObject dimmer2Reply = reply["dimmer2"].to<JsonObject>();
-  dimmer2.getHandler(dimmer2Reply);
+  IotsaApiContext::Scope s(ctx, "dimmer2", JsonObject(), ctx.reply()["dimmer2"].to<JsonObject>());
+  dimmer2.getHandler(ctx);
 #endif
-  return true;
 }
 
-bool LissabonDimmerMod::putHandler(const char *path, const JsonVariant& request, JsonObject& reply, bool *changed) {
-  bool anyChanged = false;
-  JsonObject reqObj = request.as<JsonObject>();
-  if (!reqObj) return apiError(400, "expected an object");
-  // (No second updateDimmer() here: AbstractDimmer::putHandler() already calls it.)
-  if (!dimmer.putHandler(reqObj, reply, &anyChanged)) return false;
+void LissabonDimmerMod::putHandler(IotsaApiContext& ctx) {
+  dimmer.putHandler(ctx);
 #ifdef WITH_DOUBLE_DIMMER
-  JsonVariant dimmer2Request = reqObj["dimmer2"];
-  if (dimmer2Request) {
-    if (!dimmer2.putHandler(dimmer2Request, reply, &anyChanged)) return false;
+  JsonVariant dimmer2Request = ctx.request()["dimmer2"];
+  if (dimmer2Request.isNull()) return;
+  ctx.used("dimmer2");
+  if (!dimmer2Request.is<JsonObject>()) {
+    ctx.error(400, "dimmer2: expected an object");
+    return;
   }
+  IotsaApiContext::Scope s(ctx, "dimmer2", dimmer2Request.as<JsonObject>(), JsonObject());
+  dimmer2.putHandler(ctx);
 #endif
-  if (anyChanged) {
-    // Should do this only for config changes
-    configSave();
-    if (changed) *changed = true;
-  }
-  return true;
-
 }
+
+#ifdef IOTSA_WITH_WEB
+void LissabonDimmerMod::formHandler_args(IotsaWebContext& ctx) {
+  dimmer.formHandler_args(ctx);
+#ifdef WITH_DOUBLE_DIMMER
+  IotsaWebContext::Scope s(ctx, "dimmer2");
+  dimmer2.formHandler_args(ctx);
+#endif
+}
+
+void LissabonDimmerMod::formHandler_fields(IotsaWebContext& ctx) {
+  dimmer.formHandler_fields(ctx);
+#ifdef WITH_DOUBLE_DIMMER
+  IotsaWebContext::Scope s(ctx, "dimmer2");
+  dimmer2.formHandler_fields(ctx);
+#endif
+}
+#endif // IOTSA_WITH_WEB
 
 void LissabonDimmerMod::lateSetup() {
   name = "dimmer";
   // /dimmer (the module page, GET + POST) is registered by this get=true
-  // api.setup(); it dispatches to webHandler().
+  // api.setup().
   api.setup("dimmer", true, true);
 }
 

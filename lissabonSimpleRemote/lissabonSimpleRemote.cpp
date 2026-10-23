@@ -39,8 +39,13 @@ public:
   void configSave();
   void loop();
 protected:
-  bool getHandler(const char *path, JsonObject& reply) override;
-  bool putHandler(const char *path, const JsonVariant& request, JsonObject& reply, bool *changed = nullptr) override;
+  void getHandler(IotsaApiContext& ctx) override { dimmer.getHandler(ctx); }
+  void putHandler(IotsaApiContext& ctx) override { dimmer.putHandler(ctx); }
+#ifdef IOTSA_WITH_WEB
+  String webTitle() override { return "Remote"; }
+  void formHandler_args(IotsaWebContext& ctx) override { dimmer.formHandler_args(ctx); }
+  void formHandler_fields(IotsaWebContext& ctx) override { dimmer.formHandler_fields(ctx); }
+#endif
 private:
   // Fires on the optimistic local button press, before the remote has
   // confirmed anything -- deliberately not used to drive the LED.
@@ -70,34 +75,19 @@ void LissabonSimpleRemoteMod::setup() {
 
 void LissabonSimpleRemoteMod::lateSetup() {
   name = "remote";
-  // REST/BLE only -- no dedicated web page (webPage=false), matching the
-  // pre-v3 behaviour where this module registered no server->on() handler.
-  api.setup("remote", true, true, false, false);
+  // /remote (the module page, GET + POST) is auto-registered by this
+  // get=true api.setup().
+  api.setup("remote", true, true);
 }
 
 String LissabonSimpleRemoteMod::info() {
-  return "Simple BLE on/off remote. See <a href='/api/remote'>/api/remote</a> for the REST API.<br>";
-}
-
-bool LissabonSimpleRemoteMod::getHandler(const char *path, JsonObject& reply) {
-  dimmer.getHandler(reply);
-  return true;
-}
-
-bool LissabonSimpleRemoteMod::putHandler(const char *path, const JsonVariant& request, JsonObject& reply, bool *changed) {
-  bool anyChanged = false;
-  if (!dimmer.putHandler(request, reply, &anyChanged)) return false;
-  if (anyChanged) {
-    configSave();
-    if (changed) *changed = true;
-  }
-  return true;
+  return "<p>Simple BLE on/off remote. See <a href='/remote'>/remote</a>, or <a href='/api/remote'>/api/remote</a> for the REST API.</p>";
 }
 
 void LissabonSimpleRemoteMod::configLoad() {
   // Loads the target device's name/address (so we know which device to
-  // connect to). Also loads a default isOn, but that's immediately
-  // superseded by the real value once the first BLE sync completes.
+  // connect to). isOn isn't saved: it comes from the device, once the first
+  // BLE sync completes.
   IotsaConfigFileLoad cf("/config/remote.cfg");
   dimmer.configLoad(cf, "dimmer");
 }

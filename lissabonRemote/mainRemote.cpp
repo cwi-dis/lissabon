@@ -77,15 +77,19 @@ public:
   void configLoad() override;
   void configSave() override;
   void loop() override;
-  // Fixed set of dimmers (constructed above): no adding or removing by name
-  // through the base class's REST/web (cwi-dis/iotsa#264). Renaming a dimmer
-  // still works through its own fields.
-  bool addDeviceByName(const std::string& name) override { return false; }
-  bool removeDeviceByName(const std::string& name) override { return false; }
+  // A fixed set of dimmers (constructed above), each controlled by its own
+  // buttons. A dimmer without a name isn't registered with the base class,
+  // so its page and REST interface don't show it: "add" names the first
+  // unnamed dimmer, "remove" clears the name again (cwi-dis/iotsa#183
+  // downstream sweep).
+  bool addDeviceByName(const std::string& name) override;
+  bool removeDeviceByName(const std::string& name) override;
 
 protected:
-  bool getHandler(const char *path, JsonObject& reply) override;
-  bool putHandler(const char *path, const JsonVariant& request, JsonObject& reply, bool *changed = nullptr) override;
+#ifdef IOTSA_WITH_WEB
+  String webTitle() override { return "BLE Dimmers"; }
+  const char *devicesLabel() override { return "dimmers"; }
+#endif
   void unknownDimmerBLEClientFound(const NimBLEAdvertisedDevice& deviceAdvertisement);
   // Only surface other lissabon BLE devices as "unknown/addable" candidates
   // (cwi-dis/iotsa#264).
@@ -96,12 +100,11 @@ private:
   void dimmerOnOffChanged() override;
   void dimmerValueChanged() override;
   void dimmerAvailableChanged() override {};
-  void webHandler() override;
   void ledOn();
   void ledOff();
   DimmerCollection dimmers;
   std::vector<DimmerUI*> dimmerUIs;
-  uint32_t saveAtMillis = 0;
+  uint32_t ledOffAtMillis = 0;
   uint32_t ledOffUntilMillis = 0;
   uint32_t lastButtonChangeMillis = 0;
   int buttonChangeCount = 0;
@@ -147,29 +150,23 @@ void LissabonRemoteMod::dimmerOnOffChanged() {
     IFDEBUG IotsaSerial.println("tap mode 0");
   }
 }
-void
-LissabonRemoteMod::webHandler() {
-  IotsaWebServer *server = api.webService->server;
-  bool anyChanged = false;
-  // xxxjack this also saves the config file if a non-config setting has been changed. Oh well...
-  anyChanged |= dimmers.formHandler_args(server, "", true);
-  anyChanged |= IotsaBLEClientManagerMod::formHandler_args(server, "", true);
-  if (anyChanged) {
-    configSave();
+bool LissabonRemoteMod::addDeviceByName(const std::string& _name) {
+  String name(_name.c_str());
+  if (dimmers.find(name) != nullptr) return false;
+  for (auto d : dimmers) {
+    if (d->hasName()) continue;
+    d->setName(name);  // registers it with the base class
+    d->setup();
+    return true;
   }
-  String message = "<html><head><title>BLE Dimmers</title></head><body><h1>BLE Dimmers</h1>";
-  message += "<h2>Dimmer Settings</h2><form method='post'>";
-  dimmers.formHandler_fields(message, "", "", false);
-  message += "<input type='submit' name='set' value='Set Dimmers'></form><br>";
+  return false;
+}
 
-  message += "<h2>Dimmer Configuration</h2><form method='post'>";
-  dimmers.formHandler_fields(message, "", "", true);
-  message += "<input type='submit' name='config' value='Configure Dimmers'></form><br>";
-
-  IotsaBLEClientManagerMod::formHandler_fields(message, "dimmers", "dimmer", true);
-
-  message += "</body></html>";
-  server->send(200, "text/html", message);
+bool LissabonRemoteMod::removeDeviceByName(const std::string& _name) {
+  AbstractDimmer *d = dimmers.find(String(_name.c_str()));
+  if (d == nullptr) return false;
+  d->setName("");  // unregisters it
+  return true;
 }
 
 String LissabonRemoteMod::info() {
@@ -181,32 +178,12 @@ String LissabonRemoteMod::info() {
   return message;
 }
 
-bool LissabonRemoteMod::getHandler(const char *path, JsonObject& reply) {
-  // xxxjack need to distinguish between config and operational parameters
-  IotsaBLEClientManagerMod::getHandler(path, reply);
-  dimmers.getHandler(reply);
-  return true;
-}
-
-bool LissabonRemoteMod::putHandler(const char *path, const JsonVariant& request, JsonObject& reply, bool *changed) {
-  // xxxjack need to distinguish between config and operational parameters
-  bool anyChanged = false;
-  if (!IotsaBLEClientManagerMod::putHandler(path, request, reply, &anyChanged)) return false;
-  if (!dimmers.putHandler(request, reply, &anyChanged)) return false;
-  if (anyChanged) {
-    configSave();
-    if (changed) *changed = true;
-  }
-  return true;
-}
-
 void LissabonRemoteMod::lateSetup() {
   name = "bledimmer";
   // /bledimmer (the module page, GET + POST) is auto-registered by this
-  // get=true api.setup(); it dispatches to webHandler(). Deliberately does
-  // not chain to IotsaBLEClientMod::lateSetup() -- this module exposes its
-  // own /bledimmer endpoint, and getHandler()/putHandler() forward to the
-  // base explicitly.
+  // get=true api.setup(). Deliberately does not chain to
+  // IotsaBLEClientMod::lateSetup() -- this module exposes its own
+  // /bledimmer endpoint instead of the base /bleclient one.
   api.setup("bledimmer", true, true);
 }
 
@@ -276,8 +253,10 @@ void LissabonRemoteMod::unknownDimmerBLEClientFound(const NimBLEAdvertisedDevice
   IFDEBUG IotsaSerial.printf("unknownDimmerBLEClientFound: iotsaLedstrip/iotsaDimmer \"%s\"\n", deviceAdvertisement.getName().c_str());
 }
 
+// The values aren't saved (they are the dimmer's), so this only lights the
+// LED for a moment.
 void LissabonRemoteMod::dimmerValueChanged() {
-  saveAtMillis = millis() + 1000;
+  ledOffAtMillis = millis() + 1000;
   ledOn();
 }
 
@@ -290,12 +269,8 @@ void LissabonRemoteMod::loop() {
   //
   IotsaBLEClientManagerMod::loop();
   
-  //
-  // See whether we have a value to save (because the user has been turning the dimmer)
-  //
-  if (saveAtMillis > 0 && millis() > saveAtMillis) {
-    saveAtMillis = 0;
-    configSave();
+  if (ledOffAtMillis > 0 && millis() > ledOffAtMillis) {
+    ledOffAtMillis = 0;
     ledOff();
   }
   dimmers.loop();

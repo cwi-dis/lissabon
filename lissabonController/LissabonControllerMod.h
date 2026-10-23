@@ -56,11 +56,18 @@ public:
 
 protected:
   void _setupDisplay();
-  bool getHandler(const char *path, JsonObject& reply) override;
-  bool putHandler(const char *path, const JsonVariant& request, JsonObject& reply, bool *changed = nullptr) override;
+  // The dimmers are the base class's devices: its page and REST interface
+  // show them (cwi-dis/iotsa#183 downstream sweep). We add "remove all".
+  void putHandler(IotsaApiContext& ctx) override;
+#ifdef IOTSA_WITH_WEB
+  String webTitle() override { return "Lissabon Controller"; }
+  const char *devicesLabel() override { return "dimmers"; }
+  void formHandler_args(IotsaWebContext& ctx) override;
+  void formHandler_fields(IotsaWebContext& ctx) override;
+  String formHandler_field_perdevice(const char *deviceName) override;
+#endif
   void unknownDimmerBLEClientFound(const NimBLEAdvertisedDevice& device);
   void knownDimmerBLEClientChanged(const NimBLEAdvertisedDevice& device);
-  virtual String formHandler_field_perdevice(const char *deviceName) override;
   // Only surface other lissabon BLE devices as "unknown/addable" candidates
   // -- narrower than examples/BLEManager's "any iotsa device" filter
   // (cwi-dis/iotsa#264), same bar DimmerCollection already applies via its
@@ -72,7 +79,6 @@ private:
   void dimmerOnOffChanged();
   void dimmerValueChanged();
   void dimmerAvailableChanged();
-  void webHandler() override;
   void clearAllDimmersAndReboot();
   Buttons buttons;
   Lissabon::DimmerDynamicCollection::ItemType* getDimmerForCommand(int num);
@@ -86,5 +92,6 @@ private:
   bool selectedDimmerIsAvailable = false;
   int stayConnectedMillis = 3000; // deliberately not configurable yet, see cwi-dis/iotsa#144
   bool saveNeeded = false;
+  bool clearAllPending = false;  // configSave() saves no dimmers, a reboot follows
 };
 #endif // _LISSABONCONTROLLERMOD_H_

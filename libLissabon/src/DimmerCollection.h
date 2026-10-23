@@ -12,6 +12,10 @@
 //using namespace ArduinoJson;
 
 namespace Lissabon {
+// The dimmers of a remote or controller, in config-file order ("dimmerN").
+// Only loading, saving and finding: the web page and REST interface show the
+// dimmers through IotsaBLEClientManagerMod, keyed by name (cwi-dis/iotsa#183
+// downstream sweep, a step towards cwi-dis/lissabon#37).
 class DimmerCollection {
 public:
   typedef AbstractDimmer ItemType;
@@ -25,16 +29,10 @@ public:
   iterator begin();
   iterator end();
 
-  void getHandler(JsonObject& reply);
-  // Same rules as the iotsa handlers (cwi-dis/iotsa#280): returns success,
-  // sets *changed when a dimmer changed something that needs saving.
-  bool putHandler(const JsonVariant& request, JsonObject& reply, bool *changed = nullptr);
   void setup();
   void loop();
   virtual bool configLoad(IotsaConfigFileLoad& cf, const String& f_name);
   virtual void configSave(IotsaConfigFileSave& cf, const String& f_name);
-  bool formHandler_args(IotsaWebServer *server, const String& f_name, bool includeConfig);
-  void formHandler_fields(String& message, const String& text, const String& f_name, bool includeConfig);
   String info();
 protected:
   ItemVectorType dimmers;

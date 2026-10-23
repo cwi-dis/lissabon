@@ -90,8 +90,13 @@ protected:
   void dimmerOnOffChanged() override;
   void dimmerValueChanged() override;
   void dimmerAvailableChanged() override {};
-  bool getHandler(const char *path, JsonObject& reply) override;
-  bool putHandler(const char *path, const JsonVariant& request, JsonObject& reply, bool *changed = nullptr) override;
+  void getHandler(IotsaApiContext& ctx) override { dimmer.getHandler(ctx); }
+  void putHandler(IotsaApiContext& ctx) override { dimmer.putHandler(ctx); }
+#ifdef IOTSA_WITH_WEB
+  String webTitle() override { return "Lissabon Ledstrip"; }
+  void formHandler_args(IotsaWebContext& ctx) override { dimmer.formHandler_args(ctx); }
+  void formHandler_fields(IotsaWebContext& ctx) override { dimmer.formHandler_fields(ctx); }
+#endif
 private:
   void _tap();
   LedstripDimmer dimmer;
@@ -99,7 +104,6 @@ private:
   DimmerUI dimmerUI;
 #endif
   DimmerBLEServer dimmerBLEServer;
-  void webHandler() override;
 
   uint32_t saveAtMillis = 0;
   uint32_t lastButtonChangeMillis = 0;
@@ -141,30 +145,6 @@ void LissabonLedstripMod::dimmerOnOffChanged() {
   _tap();
 
 }
-void
-LissabonLedstripMod::webHandler() {
-  IotsaWebServer *server = api.webService->server;
-  bool anyChanged = false;
-  anyChanged |= dimmer.formHandler_args(server, "ledstrip", true);
-
-  if (anyChanged) {
-    configSave();
-    dimmer.updateDimmer();
-  }
-  
-  
-  String message = "<html><head><title>Lissabon Ledstrip</title></head><body><h1>Lissabon Ledstrip</h1>";
-  message += "<h2>Settings</h2><form method='post'>";
-  dimmer.formHandler_fields(message, "ledstrip", "ledstrip", false);
-  message += "<input type='submit' name='set' value='Set Level'></form>";
-  message += "<h2>Configuration</h2><form method='post'>";
-  dimmer.formHandler_fields(message, "ledstrip", "ledstrip", true);
-  message += "<input type='submit' name='set' value='Update Configuration'></form>";
-  message += "</body></html>";
-  server->send(200, "text/html", message);
-  iotsaController.extendCurrentMode();
-}
-
 String LissabonLedstripMod::info() {
   // Return some information about this module, for the main page of the web server.
   String message = "<p>";
@@ -180,31 +160,10 @@ String LissabonLedstripMod::info() {
   return message;
 }
 
-bool LissabonLedstripMod::getHandler(const char *path, JsonObject& reply) {
-  dimmer.getHandler(reply);
-  iotsaController.extendCurrentMode();
-  return true;
-}
-
-bool LissabonLedstripMod::putHandler(const char *path, const JsonVariant& request, JsonObject& reply, bool *changed) {
-  JsonObject reqObj = request.as<JsonObject>();
-  if (!reqObj) return apiError(400, "expected an object");
-  bool dimmerChanged = false;
-  if (!dimmer.putHandler(reqObj, reply, &dimmerChanged)) return false;
-  if (dimmerChanged) {
-    // Should do this only for configuration changes
-    configSave();
-    if (changed) *changed = true;
-  }
-  // (No second updateDimmer() here: AbstractDimmer::putHandler() already calls it.)
-  iotsaController.extendCurrentMode();
-  return true;
-
-}
 void LissabonLedstripMod::lateSetup() {
   name = "ledstrip";
   // /ledstrip (the module page, GET + POST) is auto-registered by this
-  // get=true api.setup(); it dispatches to webHandler().
+  // get=true api.setup().
   api.setup("ledstrip", true, true);
 }
 

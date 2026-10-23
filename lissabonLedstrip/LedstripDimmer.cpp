@@ -12,7 +12,7 @@ const float SQRT_HALF = sqrt(0.5);
 namespace Lissabon {
 
 LedstripDimmer::LedstripDimmer(int _num, IotsaPixelstripMod& _mod, DimmerCallbacks *_callbacks)
-: AbstractDimmer(num, _callbacks),
+: AbstractDimmer(_num, _callbacks),
   mod(_mod)
 {
 
@@ -137,108 +137,92 @@ bool LedstripDimmer::available() {
   return true;
 }
 
-bool LedstripDimmer::getHandler(JsonObject& reply) {
-  reply["whiteTemperature"] = rgbwSpace.WTemperature;
-  reply["whiteBrightness"] = rgbwSpace.WBrightness;
-  reply["focalPoint"] = focalPoint;
-  reply["focalSpread"] = focalSpread;
-  reply["inCalibrationMode"] = inCalibrationMode;
+template<class Ctx> bool LedstripDimmer::_stripArgs(Ctx& ctx) {
+  float whiteTemperature = rgbwSpace.WTemperature;
+  float whiteBrightness = rgbwSpace.WBrightness;
+  bool changed = false;
+  changed |= ctx.arg("whiteTemperature", whiteTemperature, IotsaContext::Saved);
+  changed |= ctx.arg("whiteBrightness", whiteBrightness, IotsaContext::Saved);
+  changed |= ctx.arg("focalPoint", focalPoint, IotsaContext::Saved);
+  changed |= ctx.arg("focalSpread", focalSpread, IotsaContext::Saved);
+  if (changed) updateColorspace(whiteTemperature, whiteBrightness);
+  return changed;
+}
+
+void LedstripDimmer::getHandler(IotsaApiContext& ctx) {
+  ctx.show("whiteTemperature", rgbwSpace.WTemperature);
+  ctx.show("whiteBrightness", rgbwSpace.WBrightness);
+  ctx.show("focalPoint", focalPoint);
+  ctx.show("focalSpread", focalSpread);
+  ctx.show("inCalibrationMode", inCalibrationMode);
   if (inCalibrationMode) {
-    JsonArray _calibrationData = reply["calibrationData"].to<JsonArray>();
+    JsonArray _calibrationData = ctx.reply()["calibrationData"].to<JsonArray>();
     for(int i=0; i <8; i++) {
       _calibrationData.add<float>(calibrationData[i]);
     }
   } else {
-    reply["ccMaxLevel"] = maxLevelCorrectColor();
-    reply["ccTemperature"] = temperature;
+    ctx.show("ccMaxLevel", maxLevelCorrectColor());
+    ctx.show("ccTemperature", temperature);
     TempFColor maxTFColor(temperature, level);
     RgbwFColor correctRgbwColor = rgbwSpace.toRgbw(maxTFColor);
-    reply["ccLevel_r"] = correctRgbwColor.R;
-    reply["ccLevel_g"] = correctRgbwColor.G;
-    reply["ccLevel_b"] = correctRgbwColor.B;
-    reply["ccLevel_w"] = correctRgbwColor.W;
+    ctx.show("ccLevel_r", correctRgbwColor.R);
+    ctx.show("ccLevel_g", correctRgbwColor.G);
+    ctx.show("ccLevel_b", correctRgbwColor.B);
+    ctx.show("ccLevel_w", correctRgbwColor.W);
   }
-  AbstractDimmer::getHandler(reply);
-  return true;
+  AbstractDimmer::getHandler(ctx);
 }
 
-bool LedstripDimmer::putHandler(const JsonVariant& request, JsonObject& reply, bool *changed) {
-  if (!AbstractDimmer::putHandler(request, reply, changed)) return false;
-  // Handle configuration settings
-  if (changed && (!request["whiteTemperature"].isNull() || !request["whiteBrightness"].isNull()
-      || !request["focalPoint"].isNull() || !request["focalSpread"].isNull())) {
-    *changed = true;
-  }
-  if (true) {
-    float whiteTemperature = request["whiteTemperature"]|rgbwSpace.WTemperature;
-    float whiteBrightness = request["whiteBrightness"]|rgbwSpace.WBrightness;
-    focalPoint = request["focalPoint"] | focalPoint;
-    focalSpread = request["focalSpread"] | focalSpread;
-    if (request["calibrationData"].is<JsonArray>()) {
-      JsonArray _calibrationData = request["calibrationData"];
-      int size = _calibrationData.size();
-      if (_calibrationData && (size == 4 || size == 8)) {
-        for (int i =0; i<8; i++) {
-          calibrationData[i] = _calibrationData[i % size];
-        }
-        animationStartMillis = animationEndMillis = millis();
-        inCalibrationMode = true;
-        IFDEBUG IotsaSerial.println("Got calibrationData, in calibration mode");
-      } else if (size == 0) {
-        animationStartMillis = animationEndMillis = millis();
-        inCalibrationMode = false;
-        IFDEBUG IotsaSerial.println("Got empty calibrationData, left calibrationMode");
-      } else {
-        IFDEBUG IotsaSerial.println("Bad calibrationData");
+// Calibration (lissabonCalibrate) is REST only: calibrationData, 4 or 8
+// values (RGBW, or two RGBW sets for alternating pixels), sets the pixels
+// directly; empty, or a PUT without it, goes back to normal.
+void LedstripDimmer::putHandler(IotsaApiContext& ctx) {
+  AbstractDimmer::putHandler(ctx);
+  if (_stripArgs(ctx)) updateDimmer();
+  if (ctx.argAction("calibrationData", IotsaContext::Transient)) {
+    JsonArray _calibrationData = ctx.request()["calibrationData"].as<JsonArray>();
+    int size = _calibrationData.size();
+    if (_calibrationData && (size == 4 || size == 8)) {
+      for (int i =0; i<8; i++) {
+        calibrationData[i] = _calibrationData[i % size];
       }
+      animationStartMillis = animationEndMillis = millis();
+      inCalibrationMode = true;
+      IFDEBUG IotsaSerial.println("Got calibrationData, in calibration mode");
+    } else if (_calibrationData && size == 0) {
+      animationStartMillis = animationEndMillis = millis();
+      inCalibrationMode = false;
+      IFDEBUG IotsaSerial.println("Got empty calibrationData, left calibrationMode");
     } else {
-      if (inCalibrationMode) {
-        IFDEBUG IotsaSerial.println("No calibrationData, left calibration mode");
-      }
-        animationStartMillis = animationEndMillis = millis();
-        inCalibrationMode = false;
+      ctx.error(400, "calibrationData: 4 or 8 values, or none");
     }
-    updateColorspace(whiteTemperature, whiteBrightness);
+  } else if (inCalibrationMode && !ctx.failed()) {
+    IFDEBUG IotsaSerial.println("No calibrationData, left calibration mode");
+    animationStartMillis = animationEndMillis = millis();
+    inCalibrationMode = false;
   }
-  return true;
 }
 
-bool LedstripDimmer::formHandler_args(IotsaWebServer *server, const String& f_name, bool includeConfig) {
-  bool anyChanged = AbstractDimmer::formHandler_args(server, f_name, includeConfig);
-  // Configuration settings
-  float whiteTemperature = rgbwSpace.WTemperature;
-  float whiteBrightness = rgbwSpace.WBrightness;
-
-  String argName = f_name + ".whiteTemperature";
-  if( server->hasArg(argName)) {
-    whiteTemperature = server->arg(argName).toFloat();
-    anyChanged = true;
-  }
-
-  argName = f_name + ".whiteBrightness";
-  if( server->hasArg(argName)) {
-    whiteBrightness = server->arg(argName).toFloat();
-    anyChanged = true;
-  }
-
-  argName = f_name + ".focalPoint";
-  if( server->hasArg(argName)) {
-    focalPoint = server->arg(argName).toFloat();
-    anyChanged = true;
-  }
-
-  argName = f_name + ".focalSpread";
-  if( server->hasArg(argName)) {
-    focalSpread = server->arg(argName).toFloat();
-    anyChanged = true;
-  }
-
-  if (anyChanged) {
-    updateColorspace(whiteTemperature, whiteBrightness);
-    updateDimmer();
-  }
-  return anyChanged;
+#ifdef IOTSA_WITH_WEB
+void LedstripDimmer::formHandler_args(IotsaWebContext& ctx) {
+  AbstractDimmer::formHandler_args(ctx);
+  if (_stripArgs(ctx)) updateDimmer();
 }
+
+void LedstripDimmer::formHandler_fields(IotsaWebContext& ctx) {
+  AbstractDimmer::formHandler_fields(ctx);
+  if (!ctx.includesSettings()) return;
+  {
+    IotsaWebContext::Form form(ctx, "Save", "LED strip");
+    ctx.showField("White LED temperature", "whiteTemperature", rgbwSpace.WTemperature, IotsaContext::Saved, "kelvin");
+    ctx.showField("White LED brightness", "whiteBrightness", rgbwSpace.WBrightness, IotsaContext::Saved);
+    ctx.showField("Focal point", "focalPoint", focalPoint, IotsaContext::Saved, "0.0 is the first LED, 1.0 the last");
+    ctx.showField("Focal spread", "focalSpread", focalSpread, IotsaContext::Saved, "0.0 is narrow, 1.0 the full width");
+  }
+  ctx << "<p>Color calibration can only be done through the REST interface, with calibrationData.</p>";
+  ctx << colorDump();
+}
+#endif // IOTSA_WITH_WEB
 
 bool LedstripDimmer::configLoad(IotsaConfigFileLoad& cf, const String& f_name) {
   float whiteTemperature, whiteBrightness;
@@ -257,23 +241,6 @@ void LedstripDimmer::configSave(IotsaConfigFileSave& cf, const String& f_name) {
   cf.put(f_name + ".focalPoint", focalPoint);
   cf.put(f_name + ".focalSpread", focalSpread);
   AbstractDimmer::configSave(cf, f_name);
-}
-
-void LedstripDimmer::formHandler_fields(String& message, const String& text, const String& f_name, bool includeConfig) {
-  AbstractDimmer::formHandler_fields(message, text, f_name, includeConfig);
-  if (includeConfig) {
-    // Configuration parameters
-    message += "White LED temperature: <input type='text' name='" + f_name + ".whiteTemperature' value='" + String(rgbwSpace.WTemperature) +"' ><br>";
-    message += "White LED brightness: <input type='text' name='" + f_name + ".whiteBrightness' value='" + String(rgbwSpace.WBrightness) +"' ><br>";
-    message += "Focal point: <input type='text' name='" + f_name + ".focalPoint' value='" + String(focalPoint) +"' > (0.0 is first LED, 1.0 is last LED)<br>";
-    message += "Focal spread: <input type='text' name='" + f_name +".focalSpread' value='" + String(focalSpread) +"' > (0.0 is narrow, 1.0 is as full width)<br>";
-    message += "(Color calibration can only be done through REST interface calibrationData)<br>";
-    message += colorDump();
-  }
-}
-
-void LedstripDimmer::formHandler_TD(String& message, bool includeConfig) {
-
 }
 
 void LedstripDimmer::identify() {

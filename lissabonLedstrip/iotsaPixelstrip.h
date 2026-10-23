@@ -73,12 +73,19 @@ public:
   // cycle the strip on every such phase.
   void keepPowered(bool keep) { _keepPowered = keep; }
 protected:
-  bool getHandler(const char *path, JsonObject& reply) override;
-  bool putHandler(const char *path, const JsonVariant& request, JsonObject& reply, bool *changed = nullptr) override;
+  // Two endpoints: /api/pixelstrip (the settings), /api/pixels (the pixel data).
+  void getHandler(IotsaApiContext& ctx) override;
+  void putHandler(IotsaApiContext& ctx) override;
+#ifdef IOTSA_WITH_WEB
+  String webTitle() override { return "Pixelstrip"; }
+  void formHandler_args(IotsaWebContext& ctx) override;
+  void formHandler_fields(IotsaWebContext& ctx) override;
+#endif
   void configLoad();
   void configSave();
   void setupStrip();
-  void webHandler() override;
+  // pin and count, for both contexts. Returns true if one changed.
+  template<class Ctx> bool _stripArgs(Ctx& ctx);
   IotsaPixelsource *source;
   IotsaNeoPixelBus *strip;
   uint8_t *pixelBuffer;

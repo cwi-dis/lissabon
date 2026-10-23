@@ -24,7 +24,16 @@ public:
   virtual void dimmerAvailableChanged() = 0;
 };
 
-class AbstractDimmer : IotsaApiModObject {
+//
+// A dimmer has values (isOn, level, temperature: the everyday part of its
+// interface) and settings (name, minLevel, gamma, animation, pwmFrequency).
+// The settings are always saved. The values are saved by a light, which must
+// come back as it was after a reboot, but not by a dimmer that only mirrors
+// another device (DimmerBLEClient): its values come from that device
+// (cwi-dis/iotsa#183 downstream sweep). The subclass decides, with
+// valuePersistence.
+//
+class AbstractDimmer : public IotsaApiModObject {
 public:
   AbstractDimmer(int _num, DimmerCallbacks* _callbacks)
   : num(_num),
@@ -34,17 +43,19 @@ public:
   virtual void updateDimmer();
   void calcCurLevel();
   virtual bool available() = 0;
+  // Whether the values are known to be the device's own: always for a light,
+  // only after a read (or write) for a DimmerBLEClient.
   virtual bool dataValid() { return true; }
   virtual void refresh() {}
   String info();
-  virtual bool getHandler(JsonObject& reply) override;
-  virtual bool putHandler(const JsonVariant& request, JsonObject& reply, bool *changed = nullptr) override;
+  void getHandler(IotsaApiContext& ctx) override;
+  void putHandler(IotsaApiContext& ctx) override;
   virtual bool configLoad(IotsaConfigFileLoad& cf, const String& name) override;
   virtual void configSave(IotsaConfigFileSave& cf, const String& name) override;
-  virtual bool formHandler_args(IotsaWebServer *server, const String& f_name, bool includeConfig) override;
-//  virtual bool formArgHandler_config(IotsaWebServer *server, const String& f_name);
-  virtual void formHandler_fields(String& message, const String& text, const String& f_name, bool includeConfig) override;
-  virtual void formHandler_TD(String& message, bool includeConfig) override /* unimplemented */;
+#ifdef IOTSA_WITH_WEB
+  void formHandler_args(IotsaWebContext& ctx) override;
+  void formHandler_fields(IotsaWebContext& ctx) override;
+#endif
   virtual bool setName(String value);
   String getUserVisibleName();
   bool hasName();
@@ -81,6 +92,24 @@ public:
 #endif // DIMMER_WITH_PWMFREQUENCY
 protected:
   String name;
+  IotsaContext::Persistence valuePersistence = IotsaContext::Saved;
+  // The handlers in parts, for a subclass with a name of its own
+  // (DimmerBLEClient): the values (with identify) and the settings, without
+  // the name. The arg halves work on both contexts, and return whether
+  // something changed; the caller calls updateDimmer().
+  template<class Ctx> bool _valueArgs(Ctx& ctx);
+  template<class Ctx> bool _settingArgs(Ctx& ctx);
+  void _showValues(IotsaApiContext& ctx);
+  void _showSettings(IotsaApiContext& ctx);
+#ifdef IOTSA_WITH_WEB
+  void _valueFields(IotsaWebContext& ctx, const String& heading);
+  void _settingFields(IotsaWebContext& ctx, const String& heading, bool withName);
+  // The heading of the dimmer's forms: its name, or its number.
+  String _label();
+#endif
+private:
+  // The whole put side, name included.
+  template<class Ctx> void _args(Ctx& ctx);
 };
 };
 #endif // _ABSTRACTDIMMER_H_

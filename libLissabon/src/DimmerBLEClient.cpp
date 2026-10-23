@@ -22,6 +22,8 @@ DimmerBLEClient::DimmerBLEClient(int _num, IotsaBLEClientMod &_bleClientMod, Dim
   // disconnecting is the base class's connection state machine
   // (cwi-dis/iotsa#263); it used to be a FreeRTOS task per dimmer.
   keepOpenMillis = _stayConnectedMillis;
+  // The values are the device's: read from it, never saved here.
+  valuePersistence = IotsaContext::Transient;
 }
 
 DimmerBLEClient::~DimmerBLEClient() {
@@ -66,30 +68,13 @@ void DimmerBLEClient::updateDimmer() {
 // clearDevice/setKnownName/addDevice), now shared with every other
 // IotsaBLEClientDevice consumer (cwi-dis/iotsa#268). AbstractDimmer::name
 // still needs its own assignment: it's a separate, dimmer-specific field
-// (display name / config key) that just happens to always equal bleName in
-// this app -- see the "name double-write" comment on getHandler() below.
+// (display name / config key) that always equals bleName -- the handlers
+// below change the name through the device, and copy it back.
 bool DimmerBLEClient::setName(String value) {
   if (value == name) return false;
   name = value;
   retarget(std::string(value.c_str()));
   return true;
-}
-
-// includeConfig branch: AbstractDimmer's own fields, then the generic
-// name/address/found status from the base (text="" -- AbstractDimmer
-// already printed its own "Dimmer N: " + text header). Unlike the base's
-// own default (status shown either way), the pre-existing DimmerBLEClient
-// convention only showed it in the config form -- keep that; not worth
-// changing existing deployed-device page layout as a side effect of this
-// refactor.
-void DimmerBLEClient::formHandler_fields(String& message, const String& text, const String& f_name, bool includeConfig) {
-  AbstractDimmer::formHandler_fields(message, text, f_name, includeConfig);
-  if (!_dataValid) {
-    message += "<i>(data may be outdated or invalid)</i><br>";
-  }
-  if (includeConfig) {
-    IotsaBLEClientDevice::formHandler_fields(message, "", f_name, includeConfig);
-  }
 }
 
 bool DimmerBLEClient::configLoad(IotsaConfigFileLoad& cf, const String& n_name) {
@@ -103,45 +88,55 @@ void DimmerBLEClient::configSave(IotsaConfigFileSave& cf, const String& n_name) 
   IotsaBLEClientDevice::configSave(cf, n_name);
 }
 
-// getHandler()/putHandler()/formHandler_TD()/formHandler_args() all exist on
-// both unrelated bases now (same signature) -- one override here legitimately
-// satisfies both, but has to call each explicitly since the compiler won't
-// chain them on its own. Both getHandler()/configSave() happen to write a
-// "name" field -- harmless (not a bug): calling AbstractDimmer's second means
-// its value always wins, and setName() above keeps it identical to the
-// inherited bleName anyway. Same reasoning covers putHandler()/
-// formHandler_args() both matching a submitted "name" field: whichever runs
-// first (AbstractDimmer's, via its own setName() override) already syncs
-// both, so the base's own attempt is a harmless no-op retarget().
+// The handlers exist on both unrelated bases (same signature), so one
+// override here serves both, and calls each part explicitly. The name is
+// the BLE device's: it is shown, changed (retarget()) and saved by
+// IotsaBLEClientDevice, and AbstractDimmer::name follows it. The rest is
+// AbstractDimmer's values and settings.
 //
 // Deliberately qualified all the way up to IotsaBLEClientDevice, not
 // IotsaRunmodeBLEClient (the immediate parent) -- IotsaRunmodeBLEClient's own
-// getHandler()/putHandler()/formHandler_fields()/formHandler_args() now add
-// an identify/reboot/promoteMode/setWifiDisabled command-queue surface
-// (cwi-dis/iotsa#264's BLEController), which would be redundant here:
+// handlers add an identify/reboot/promoteMode/setWifiDisabled command-queue
+// surface (cwi-dis/iotsa#264's BLEController), which would be redundant here:
 // DimmerBLEClient already has its own identify path (needIdentify, fired
 // from doWork()) and has no use for the other three.
-bool DimmerBLEClient::getHandler(JsonObject& reply) {
-  IotsaBLEClientDevice::getHandler(reply);
-  AbstractDimmer::getHandler(reply);
-  return true;
+void DimmerBLEClient::getHandler(IotsaApiContext& ctx) {
+  IotsaBLEClientDevice::getHandler(ctx);
+  ctx.show("available", available());
+  ctx.show("dataValid", _dataValid);
+  _showValues(ctx);
+  _showSettings(ctx);
 }
 
-bool DimmerBLEClient::putHandler(const JsonVariant& request, JsonObject& reply, bool *changed) {
-  if (!AbstractDimmer::putHandler(request, reply, changed)) return false;
-  return IotsaBLEClientDevice::putHandler(request, reply, changed);
+// A settings change is ours only (minLevel): nothing to send to the device.
+void DimmerBLEClient::putHandler(IotsaApiContext& ctx) {
+  _settingArgs(ctx);
+  bool changed = _valueArgs(ctx);
+  IotsaBLEClientDevice::putHandler(ctx);
+  name = String(getName().c_str());
+  if (changed) updateDimmer();
 }
 
-void DimmerBLEClient::formHandler_TD(String& message, bool includeConfig) {
-  AbstractDimmer::formHandler_TD(message, includeConfig); // unimplemented, kept for forward-compat
-  IotsaBLEClientDevice::formHandler_TD(message, includeConfig);
+#ifdef IOTSA_WITH_WEB
+void DimmerBLEClient::formHandler_args(IotsaWebContext& ctx) {
+  _settingArgs(ctx);
+  bool changed = _valueArgs(ctx);
+  IotsaBLEClientDevice::formHandler_args(ctx);
+  name = String(getName().c_str());
+  if (changed) updateDimmer();
 }
 
-bool DimmerBLEClient::formHandler_args(IotsaWebServer *server, const String& f_name, bool includeConfig) {
-  bool any = AbstractDimmer::formHandler_args(server, f_name, includeConfig);
-  any |= IotsaBLEClientDevice::formHandler_args(server, f_name, includeConfig);
-  return any;
+// The device's status line and the dimmer's values in the everyday part,
+// renaming and the dimmer's settings in the settings part.
+void DimmerBLEClient::formHandler_fields(IotsaWebContext& ctx) {
+  IotsaBLEClientDevice::formHandler_fields(ctx);
+  if (ctx.includesEveryday()) {
+    if (!_dataValid) ctx.showStatus("Values", "dataValid", "not read from the dimmer yet, or outdated");
+    _valueFields(ctx, "");
+  }
+  if (ctx.includesSettings()) _settingFields(ctx, "", false);
 }
+#endif // IOTSA_WITH_WEB
 
 // All three methods below used to force _dataValid=true in their "not
 // following" branch. Harmless for years because nothing ever actually called

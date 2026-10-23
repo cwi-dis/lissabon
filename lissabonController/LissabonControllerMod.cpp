@@ -275,41 +275,29 @@ bool LissabonControllerMod::removeDeviceByName(const std::string& _name) {
   return true;
 }
 
-void
-LissabonControllerMod::webHandler() {
-  IotsaWebServer *server = api.webService->server;
-  // xxxjack update settings for remotes?
-  bool anyChanged = false;
-  anyChanged |= dimmers.formHandler_args(server, "", true);
-  anyChanged |= IotsaBLEClientManagerMod::formHandler_args(server, "", true);
-  if (server->hasArg("clearall") && server->arg("iamsure") == "iamsure") {
+#ifdef IOTSA_WITH_WEB
+void LissabonControllerMod::formHandler_args(IotsaWebContext& ctx) {
+  IotsaBLEClientManagerMod::formHandler_args(ctx);
+  if (ctx.argConfirmedAction("clearall")) {
     clearAllDimmersAndReboot();
+    ctx.feedback("All dimmers removed. Rebooting.");
   }
-  if (anyChanged) configSave();
-
-  String message = "<html><head><title>Lissabon Controller</title></head><body><h1>Lissabon Controller</h1>";
-  message += "<h2>Dimmer Settings</h2><form method='post'>";
-  dimmers.formHandler_fields(message, "", "", false);
-  message += "<input type='submit' name='set' value='Set Dimmers'></form><br>";
-
-  message += "<h2>Dimmer Configurations</h2><form method='post'>";
-  dimmers.formHandler_fields(message, "", "", true);
-  message += "<input type='submit' name='config' value='Configure Dimmers'></form><br>";
-
-  message += "<br><form method='post'>Remove all: <input type='checkbox' name='iamsure' value='iamsure'>I am sure <input type='submit' name='clearall' value='Remove All'></form><br>";
-
-  IotsaBLEClientManagerMod::formHandler_fields(message, "dimmers", "dimmer", true);
-
-  message += "</body></html>";
-  server->send(200, "text/html", message);
 }
 
+void LissabonControllerMod::formHandler_fields(IotsaWebContext& ctx) {
+  IotsaBLEClientManagerMod::formHandler_fields(ctx);
+  if (ctx.includesSettings()) ctx.showConfirmedButton("clearall", "Remove all dimmers", IotsaContext::Saved);
+}
+
+// An unknown dimmer, with a button that adds it: the base class's add form
+// ("new.name", "new.add"), filled in.
 String LissabonControllerMod::formHandler_field_perdevice(const char *_deviceName) {
-  String deviceName(_deviceName);
+  String deviceName = htmlEncode(_deviceName);
   String rv(deviceName);
-  rv += "<form method='post'><input type='hidden' name='add' value='" + deviceName + "'><input type='submit' value='Add'></form>";
+  rv += " <form method='post' class='button'><input type='hidden' name='new.name' value='" + deviceName + "'><button type='submit' name='new.add' value='1'>Add</button></form>";
   return rv;
 }
+#endif // IOTSA_WITH_WEB
 
 String LissabonControllerMod::info() {
   String message = "<p>See <a href='/blecontroller'>/blecontroller</a> to change settings or <a href='/api/blecontroller'>/api/blecontroller</a> for REST API.<br>";
@@ -317,36 +305,21 @@ String LissabonControllerMod::info() {
   return message;
 }
 
-bool LissabonControllerMod::getHandler(const char *path, JsonObject& reply) {
-  IotsaBLEClientManagerMod::getHandler(path, reply);
-  dimmers.getHandler(reply);
-  return true;
-}
-
-bool LissabonControllerMod::putHandler(const char *path, const JsonVariant& request, JsonObject& reply, bool *changed) {
-  bool anyChanged = false;
-  if (!IotsaBLEClientManagerMod::putHandler(path, request, reply, &anyChanged)) return false;
-  if (!dimmers.putHandler(request, reply, &anyChanged)) return false;
-  // This is a hack. We don't implement DELETE so we add a funny value
-  bool clearall;
-  if (getFromRequest<bool>(request, "clearall", clearall) && clearall) {
-    clearAllDimmersAndReboot();
-    return true;
-  }
-  if (anyChanged) {
-    configSave();
-    if (changed) *changed = true;
-  }
-  return true;
+// Removing all dimmers is a PUT, as there is no DELETE.
+void LissabonControllerMod::putHandler(IotsaApiContext& ctx) {
+  IotsaBLEClientManagerMod::putHandler(ctx);
+  bool clearall = false;
+  ctx.arg("clearall", clearall, IotsaContext::Saved);
+  if (ctx.failed()) return;
+  if (clearall) clearAllDimmersAndReboot();
 }
 
 void LissabonControllerMod::lateSetup() {
   name = "blecontroller";
   // /blecontroller (the module page, GET + POST) is auto-registered by this
-  // get=true api.setup(); it dispatches to webHandler(). Deliberately does
-  // not chain to IotsaBLEClientMod::lateSetup() -- this module exposes its
-  // own /blecontroller endpoint instead of the base /bleclient one, and
-  // getHandler()/putHandler() forward to the base explicitly.
+  // get=true api.setup(). Deliberately does not chain to
+  // IotsaBLEClientMod::lateSetup() -- this module exposes its own
+  // /blecontroller endpoint instead of the base /bleclient one.
   api.setup("blecontroller", true, true);
 }
 
@@ -360,6 +333,11 @@ void LissabonControllerMod::configLoad() {
 void LissabonControllerMod::configSave() {
   IotsaConfigFileSave cf("/config/blecontroller.cfg");
   IotsaSerial.println("LissabonController: save blecontroller config");
+  if (clearAllPending) {
+    cf.put("selectedDimmerIndex", 0);
+    cf.put("n_dimmer", 0);
+    return;
+  }
   cf.put("selectedDimmerIndex", selectedDimmerIndex);
   savedSelectedDimmerIndex = selectedDimmerIndex;
   dimmers.configSave(cf, "");
@@ -376,10 +354,10 @@ void LissabonControllerMod::clearAllDimmersAndReboot() {
   // reboot -- a fresh boot never constructs them, so there's nothing to tear
   // down. (Since cwi-dis/iotsa#263 DimmerBLEClient has no task of its own
   // any more, so deleting one live may well be safe now -- not retested,
-  // the reboot stays.)
-  IotsaConfigFileSave cf("/config/blecontroller.cfg");
-  cf.put("selectedDimmerIndex", 0);
-  cf.put("n_dimmer", 0);
+  // the reboot stays.) From now on configSave() saves no dimmers, also when
+  // the framework saves after this request.
+  clearAllPending = true;
+  configSave();
   iotsaController.requestReboot(1000);
 }
 

@@ -7,51 +7,65 @@
 #define IOTSA_NEOPIXEL_TYPE STRINGIFY(IOTSA_NPB_FEATURE)
 #define IOTSA_NEOPIXEL_METHOD STRINGIFY(IOTSA_NPB_METHOD)
 
-void
-IotsaPixelstripMod::webHandler() {
-  IotsaWebServer *server = api.webService->server;
-  if( server->hasArg("setIndex") && server->hasArg("setValue")) {
+template<class Ctx> bool IotsaPixelstripMod::_stripArgs(Ctx& ctx) {
+  bool changed = false;
+  changed |= ctx.arg("pin", pin, IotsaContext::Saved);
+  changed |= ctx.arg("count", count, IotsaContext::Saved);
+  if (count < 2) {
+    IotsaSerial.println("count set to 2 to workaround bug");
+    count = 2;
+  }
+  return changed;
+}
+
+#ifdef IOTSA_WITH_WEB
+void IotsaPixelstripMod::formHandler_args(IotsaWebContext& ctx) {
+  if (ctx.argAction("set", IotsaContext::Transient)) {
     // Note: this sets the value for a single LED, not the value for a single NeoPixel (3/4 leds)
-    int idx = server->arg("setIndex").toInt();
-    int val = server->arg("setValue").toInt();
+    int idx = 0;
+    int val = 0;
+    ctx.arg("setIndex", idx, IotsaContext::Transient);
+    ctx.arg("setValue", val, IotsaContext::Transient);
+    if (ctx.failed()) return;
     if (pixelBuffer && idx >= 0 && idx < count*IOTSA_NPB_BPP) {
       pixelBuffer[idx] = val;
       pixelSourceCallback();
+    } else {
+      ctx.error("No such LED.");
     }
-  } else if (server->hasArg("clear")) {
+    return;
+  }
+  if (ctx.argAction("clear", IotsaContext::Transient)) {
     if (pixelBuffer) {
       memset(pixelBuffer, 0, count*IOTSA_NPB_BPP);
       pixelSourceCallback();
     }
-  } else {
-    bool anyChanged = false;
-    if( server->hasArg("pin")) {
-      if (needsAuthentication()) return;
-      pin = server->arg("pin").toInt();
-      anyChanged = true;
-    }
-    if( server->hasArg("count")) {
-      if (needsAuthentication()) return;
-      count = server->arg("count").toInt();
-      anyChanged = true;
-    }
-    if (anyChanged) {
-      configSave();
-      setupStrip();
-    }
+    return;
   }
-
-  String message = "<html><head><title>Pixelstrip module</title></head><body><h1>Pixelstrip module</h1>";
-  message += "<h2>Configuration</h2><form method='get'>GPIO pin: <input name='pin' value='" + String(pin) + "'><br>";
-  message += "Number of NeoPixels: <input name='count' value='" + String(count) + "'><br>";
-  message += "NeoPixel type: " + String(IOTSA_NEOPIXEL_TYPE) + ", control method: " + String(IOTSA_NEOPIXEL_METHOD) + "<br>";
-  message += "LEDs per NeoPixel: " + String(IOTSA_NPB_BPP) + "<br>";
-  message += "<input type='submit'></form>";
-  message += "<h2>Set pixel</h2><form method='get'><br>Set pixel <input name='setIndex'> to <input name='setValue'><br>";
-  message += "<input type='submit'></form>";
-  message += "<h2>Clear All</h2><form method='get'><input type='submit' name='clear'></form>";
-  server->send(200, "text/html", message);
+  bool changed = _stripArgs(ctx);
+  if (ctx.failed()) return;
+  if (changed) setupStrip();
 }
+
+void IotsaPixelstripMod::formHandler_fields(IotsaWebContext& ctx) {
+  if (ctx.includesEveryday()) {
+    {
+      IotsaWebContext::Form form(ctx, "Set", "Set pixel", "set");
+      ctx.showField("LED", "setIndex", 0, IotsaContext::Transient, "a single LED, not a NeoPixel (3 or 4 LEDs)");
+      ctx.showField("Value", "setValue", 0, IotsaContext::Transient, "0 to 255");
+    }
+    ctx.showButton("clear", "Clear all", IotsaContext::Transient);
+  }
+  if (ctx.includesSettings()) {
+    IotsaWebContext::Form form(ctx);
+    ctx.showField("GPIO pin", "pin", pin, IotsaContext::Saved);
+    ctx.showField("Number of NeoPixels", "count", count, IotsaContext::Saved);
+    ctx.showStatus("NeoPixel type", "pixel_type", IOTSA_NEOPIXEL_TYPE);
+    ctx.showStatus("Control method", "pixel_method", IOTSA_NEOPIXEL_METHOD);
+    ctx.showStatus("LEDs per NeoPixel", "pixel_bpp", String(IOTSA_NPB_BPP));
+  }
+}
+#endif // IOTSA_WITH_WEB
 
 String IotsaPixelstripMod::info() {
   String message = "<p>Built with pixelstrip module. See <a href=\"/pixelstrip\">/pixelstrip</a> to change NeoPixel strip settings, <a href=\"/api/pixelstrip\">/api/pixelstrip</a> and <a href=\"/api/pixels\">/api/pixels</a> for REST API.</p>";
@@ -136,61 +150,53 @@ void IotsaPixelstripMod::powerOff(bool force) {
 }
 
 
-bool IotsaPixelstripMod::getHandler(const char *path, JsonObject& reply) {
-  if (strcmp(path, "/api/pixelstrip") == 0) {
-    reply["pin"] = pin;
-    reply["count"] = count;
-    reply["pixel_type"] = IOTSA_NEOPIXEL_TYPE;
-    reply["pixel_bpp"] = IOTSA_NPB_BPP;
-    reply["pixel_method"] = IOTSA_NEOPIXEL_METHOD;
-    return true;
-  } else if (strcmp(path, "/api/pixels") == 0) {
-    JsonArray data = reply["data"].to<JsonArray>();
+void IotsaPixelstripMod::getHandler(IotsaApiContext& ctx) {
+  if (ctx.path() == "/api/pixelstrip") {
+    ctx.show("pin", pin);
+    ctx.show("count", count);
+    ctx.show("pixel_type", IOTSA_NEOPIXEL_TYPE);
+    ctx.show("pixel_bpp", IOTSA_NPB_BPP);
+    ctx.show("pixel_method", IOTSA_NEOPIXEL_METHOD);
+  } else if (ctx.path() == "/api/pixels") {
+    JsonArray data = ctx.reply()["data"].to<JsonArray>();
     if (pixelBuffer) {
       for(int i=0; i<count*IOTSA_NPB_BPP; i++) {
         data.add(pixelBuffer[i]);
       }
     }
-    return true;
   }
-  return false;
 }
 
-bool IotsaPixelstripMod::putHandler(const char *path, const JsonVariant& request, JsonObject& reply, bool *changed) {
-    JsonObject reqObj = request.as<JsonObject>();
-  if (strcmp(path, "/api/pixelstrip") == 0) {
-    bool anyChanged = false;
-    if (getFromRequest<int>(reqObj, "pin", pin)) anyChanged = true;
-    if (getFromRequest<int>(reqObj, "count", count)) anyChanged = true;
-    if (count < 2) {
-      IotsaSerial.println("count set to 2 to workaround bug");
-      count = 2;
-    }
-    checkUnhandled(reqObj);
-    if (anyChanged) {
-      configSave();
-      setupStrip();
-      if (changed) *changed = true;
-    }
-    return true;
-  } else if (strcmp(path, "/api/pixels") == 0) {
-    if (pixelBuffer == NULL) return false;
-    bool clear;
-    if (getFromRequest<bool>(reqObj, "clear", clear) && clear) {
-      memset(pixelBuffer, 0, count*IOTSA_NPB_BPP);
-    }
+// /api/pixels: clear, then data (one value per LED) from start on.
+void IotsaPixelstripMod::putHandler(IotsaApiContext& ctx) {
+  if (ctx.path() == "/api/pixelstrip") {
+    bool changed = _stripArgs(ctx);
+    if (ctx.failed()) return;
+    if (changed) setupStrip();
+  } else if (ctx.path() == "/api/pixels") {
+    bool clear = false;
     int start = 0;
-    (void)getFromRequest<int>(reqObj, "start", start);
-    JsonArray data = reqObj["data"];
-    for(JsonArray::iterator it=data.begin(); it!=data.end(); ++it) {
-      if (start >= count*IOTSA_NPB_BPP) return false;
-      int value = it->as<int>();
-      pixelBuffer[start++] = value;
+    ctx.arg("clear", clear, IotsaContext::Transient);
+    ctx.arg("start", start, IotsaContext::Transient);
+    bool haveData = ctx.argAction("data", IotsaContext::Transient);
+    if (ctx.failed()) return;
+    if (pixelBuffer == NULL) {
+      ctx.error(503, "no pixel buffer");
+      return;
+    }
+    if (clear) memset(pixelBuffer, 0, count*IOTSA_NPB_BPP);
+    if (haveData) {
+      JsonArray data = ctx.request()["data"].as<JsonArray>();
+      for(JsonArray::iterator it=data.begin(); it!=data.end(); ++it) {
+        if (start < 0 || start >= count*IOTSA_NPB_BPP) {
+          ctx.error(400, "data: past the last LED");
+          break;
+        }
+        pixelBuffer[start++] = it->as<int>();
+      }
     }
     pixelSourceCallback();
-    return true;
   }
-  return false;
 }
 
 void IotsaPixelstripMod::pixelSourceCallback() {
@@ -238,7 +244,7 @@ void IotsaPixelstripMod::lateSetup() {
   // /pixelstrip (the module page) is auto-registered by this get=true api.setup().
   api.setup("pixelstrip", true, true);
   // /api/pixels is a second data endpoint on the same module -- no separate
-  // web page (webPage=false); getHandler/putHandler dispatch on the path.
+  // web page (webPage=false); getHandler/putHandler dispatch on ctx.path().
   api.setup("pixels", true, true, false, false);
 }
 

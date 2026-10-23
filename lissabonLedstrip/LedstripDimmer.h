@@ -17,13 +17,14 @@ public:
   void identify();
   void loop();
   // Overrides
-  virtual bool getHandler(JsonObject& reply) override;
-  virtual bool putHandler(const JsonVariant& request, JsonObject& reply, bool *changed = nullptr) override;
-  virtual bool formHandler_args(IotsaWebServer *server, const String& f_name, bool includeConfig) override;
+  void getHandler(IotsaApiContext& ctx) override;
+  void putHandler(IotsaApiContext& ctx) override;
   virtual bool configLoad(IotsaConfigFileLoad& cf, const String& name) override;
   virtual void configSave(IotsaConfigFileSave& cf, const String& name) override;
-  virtual void formHandler_fields(String& message, const String& text, const String& f_name, bool includeConfig) override;
-  virtual void formHandler_TD(String& message, bool includeConfig);
+#ifdef IOTSA_WITH_WEB
+  void formHandler_args(IotsaWebContext& ctx) override;
+  void formHandler_fields(IotsaWebContext& ctx) override;
+#endif
 
   void setHandler(uint8_t *_buffer, size_t _count, int bpp, IotsaPixelsourceHandler *handler);
   virtual float applyGamma(float level) override { return level; };
@@ -45,6 +46,8 @@ protected:
   void restoreStatusPixel();
 
   void updateColorspace(float whiteTemperature, float whiteBrightness);
+  // The strip's own settings (white LED, focus), for both contexts.
+  template<class Ctx> bool _stripArgs(Ctx& ctx);
   void clampLevel();
   void calcPixelLevels(float wantedLevel);
   float maxLevelCorrectColor();
