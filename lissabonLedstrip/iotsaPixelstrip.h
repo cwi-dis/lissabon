@@ -86,6 +86,10 @@ protected:
   void setupStrip();
   // pin and count, for both contexts. Returns true if one changed.
   template<class Ctx> bool _stripArgs(Ctx& ctx);
+#ifdef IOTSA_WITH_WEB
+  // "set pixel" and "clear all". Returns true if it was one of those.
+  bool _pixelArgs(IotsaWebContext& ctx);
+#endif
   IotsaPixelsource *source;
   IotsaNeoPixelBus *strip;
   uint8_t *pixelBuffer;

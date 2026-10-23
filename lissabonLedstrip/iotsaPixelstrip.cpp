@@ -7,9 +7,14 @@
 #define IOTSA_NEOPIXEL_TYPE STRINGIFY(IOTSA_NPB_FEATURE)
 #define IOTSA_NEOPIXEL_METHOD STRINGIFY(IOTSA_NPB_METHOD)
 
+// The pin is wiring, a device setting (for lissabon it should be fixed at
+// compile time, cwi-dis/lissabon#39); the length is tuning, per strip.
 template<class Ctx> bool IotsaPixelstripMod::_stripArgs(Ctx& ctx) {
+  IotsaContext::RightsScope rights(ctx);
   bool changed = false;
+  ctx.argsNeedRight("config");
   changed |= ctx.arg("pin", pin, IotsaContext::Saved);
+  ctx.argsNeedRight("lighttuning");
   changed |= ctx.arg("count", count, IotsaContext::Saved);
   if (count < 2) {
     IotsaSerial.println("count set to 2 to workaround bug");
@@ -19,36 +24,49 @@ template<class Ctx> bool IotsaPixelstripMod::_stripArgs(Ctx& ctx) {
 }
 
 #ifdef IOTSA_WITH_WEB
+// Writing pixels directly, past the dimmer, is a tool for testing the strip:
+// "lighttuning", not everyday lighting.
 void IotsaPixelstripMod::formHandler_args(IotsaWebContext& ctx) {
-  if (ctx.argAction("set", IotsaContext::Transient)) {
-    // Note: this sets the value for a single LED, not the value for a single NeoPixel (3/4 leds)
-    int idx = 0;
-    int val = 0;
-    ctx.arg("setIndex", idx, IotsaContext::Transient);
-    ctx.arg("setValue", val, IotsaContext::Transient);
-    if (ctx.failed()) return;
-    if (pixelBuffer && idx >= 0 && idx < count*IOTSA_NPB_BPP) {
-      pixelBuffer[idx] = val;
-      pixelSourceCallback();
-    } else {
-      ctx.error("No such LED.");
-    }
-    return;
-  }
-  if (ctx.argAction("clear", IotsaContext::Transient)) {
-    if (pixelBuffer) {
-      memset(pixelBuffer, 0, count*IOTSA_NPB_BPP);
-      pixelSourceCallback();
-    }
-    return;
+  {
+    IotsaContext::RightsScope rights(ctx);
+    ctx.argsNeedRight("lighttuning");
+    if (_pixelArgs(ctx)) return;
   }
   bool changed = _stripArgs(ctx);
   if (ctx.failed()) return;
   if (changed) setupStrip();
 }
 
+bool IotsaPixelstripMod::_pixelArgs(IotsaWebContext& ctx) {
+  if (ctx.argAction("set", IotsaContext::Transient)) {
+    // Note: this sets the value for a single LED, not the value for a single NeoPixel (3/4 leds)
+    int idx = 0;
+    int val = 0;
+    ctx.arg("setIndex", idx, IotsaContext::Transient);
+    ctx.arg("setValue", val, IotsaContext::Transient);
+    if (ctx.failed()) return true;
+    if (pixelBuffer && idx >= 0 && idx < count*IOTSA_NPB_BPP) {
+      pixelBuffer[idx] = val;
+      pixelSourceCallback();
+    } else {
+      ctx.error("No such LED.");
+    }
+    return true;
+  }
+  if (ctx.argAction("clear", IotsaContext::Transient)) {
+    if (pixelBuffer) {
+      memset(pixelBuffer, 0, count*IOTSA_NPB_BPP);
+      pixelSourceCallback();
+    }
+    return true;
+  }
+  return false;
+}
+
 void IotsaPixelstripMod::formHandler_fields(IotsaWebContext& ctx) {
   if (ctx.includesEveryday()) {
+    IotsaContext::RightsScope rights(ctx);
+    ctx.argsNeedRight("lighttuning");
     {
       IotsaWebContext::Form form(ctx, "Set", "Set pixel", "set");
       ctx.showField("LED", "setIndex", 0, IotsaContext::Transient, "a single LED, not a NeoPixel (3 or 4 LEDs)");
@@ -57,8 +75,11 @@ void IotsaPixelstripMod::formHandler_fields(IotsaWebContext& ctx) {
     ctx.showButton("clear", "Clear all", IotsaContext::Transient);
   }
   if (ctx.includesSettings()) {
+    IotsaContext::RightsScope rights(ctx);
     IotsaWebContext::Form form(ctx);
+    ctx.argsNeedRight("config");
     ctx.showField("GPIO pin", "pin", pin, IotsaContext::Saved);
+    ctx.argsNeedRight("lighttuning");
     ctx.showField("Number of NeoPixels", "count", count, IotsaContext::Saved);
     ctx.showStatus("NeoPixel type", "pixel_type", IOTSA_NEOPIXEL_TYPE);
     ctx.showStatus("Control method", "pixel_method", IOTSA_NEOPIXEL_METHOD);
@@ -174,6 +195,7 @@ void IotsaPixelstripMod::putHandler(IotsaApiContext& ctx) {
     if (ctx.failed()) return;
     if (changed) setupStrip();
   } else if (ctx.path() == "/api/pixels") {
+    ctx.argsNeedRight("lighttuning");
     bool clear = false;
     int start = 0;
     ctx.arg("clear", clear, IotsaContext::Transient);

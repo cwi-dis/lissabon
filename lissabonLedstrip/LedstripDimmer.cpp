@@ -138,6 +138,9 @@ bool LedstripDimmer::available() {
 }
 
 template<class Ctx> bool LedstripDimmer::_stripArgs(Ctx& ctx) {
+  // Tuning, as the dimmer's own settings.
+  IotsaContext::RightsScope rights(ctx);
+  ctx.argsNeedRight("lighttuning");
   float whiteTemperature = rgbwSpace.WTemperature;
   float whiteBrightness = rgbwSpace.WBrightness;
   bool changed = false;
@@ -179,6 +182,7 @@ void LedstripDimmer::getHandler(IotsaApiContext& ctx) {
 void LedstripDimmer::putHandler(IotsaApiContext& ctx) {
   AbstractDimmer::putHandler(ctx);
   if (_stripArgs(ctx)) updateDimmer();
+  ctx.argsNeedRight("lighttuning");
   if (ctx.argAction("calibrationData", IotsaContext::Transient)) {
     JsonArray _calibrationData = ctx.request()["calibrationData"].as<JsonArray>();
     int size = _calibrationData.size();
@@ -213,6 +217,8 @@ void LedstripDimmer::formHandler_fields(IotsaWebContext& ctx) {
   AbstractDimmer::formHandler_fields(ctx);
   if (!ctx.includesSettings()) return;
   {
+    IotsaContext::RightsScope rights(ctx);
+    ctx.argsNeedRight("lighttuning");
     IotsaWebContext::Form form(ctx, "Save", "LED strip");
     ctx.showField("White LED temperature", "whiteTemperature", rgbwSpace.WTemperature, IotsaContext::Saved, "kelvin");
     ctx.showField("White LED brightness", "whiteBrightness", rgbwSpace.WBrightness, IotsaContext::Saved);

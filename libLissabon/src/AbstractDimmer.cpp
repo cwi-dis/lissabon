@@ -120,7 +120,11 @@ template<class Ctx> bool AbstractDimmer::_valueArgs(Ctx& ctx) {
   return changed;
 }
 
+// Tuning a light (how it dims, its curve, the PWM whine) needs the right
+// "lighttuning"; switching it is open to everyone.
 template<class Ctx> bool AbstractDimmer::_settingArgs(Ctx& ctx) {
+  IotsaContext::RightsScope rights(ctx);
+  ctx.argsNeedRight("lighttuning");
   bool changed = false;
 #ifdef DIMMER_WITH_LEVEL
   if (ctx.arg("minLevel", minLevel, IotsaContext::Saved)) {
@@ -144,7 +148,12 @@ template<class Ctx> bool AbstractDimmer::_settingArgs(Ctx& ctx) {
 // called even then.
 template<class Ctx> void AbstractDimmer::_args(Ctx& ctx) {
   String newName = name;
-  bool rename = ctx.arg("name", newName, IotsaContext::Saved);
+  bool rename;
+  {
+    IotsaContext::RightsScope rights(ctx);
+    ctx.argsNeedRight("lighttuning");
+    rename = ctx.arg("name", newName, IotsaContext::Saved);
+  }
   bool changed = _settingArgs(ctx);
   changed |= _valueArgs(ctx);
   if (rename) setName(newName);
@@ -223,6 +232,8 @@ void AbstractDimmer::_valueFields(IotsaWebContext& ctx, const String& heading) {
 }
 
 void AbstractDimmer::_settingFields(IotsaWebContext& ctx, const String& heading, bool withName) {
+  IotsaContext::RightsScope rights(ctx);
+  ctx.argsNeedRight("lighttuning");
   IotsaWebContext::Form form(ctx, "Save", heading);
   if (withName) ctx.showField("Name", "name", name, IotsaContext::Saved);
 #ifdef DIMMER_WITH_LEVEL

@@ -278,6 +278,8 @@ bool LissabonControllerMod::removeDeviceByName(const std::string& _name) {
 #ifdef IOTSA_WITH_WEB
 void LissabonControllerMod::formHandler_args(IotsaWebContext& ctx) {
   IotsaBLEClientManagerMod::formHandler_args(ctx);
+  // Managing the dimmers, as add and remove in the base class.
+  ctx.argsNeedRight("bleclient");
   if (ctx.argConfirmedAction("clearall")) {
     clearAllDimmersAndReboot();
     ctx.feedback("All dimmers removed. Rebooting.");
@@ -286,6 +288,7 @@ void LissabonControllerMod::formHandler_args(IotsaWebContext& ctx) {
 
 void LissabonControllerMod::formHandler_fields(IotsaWebContext& ctx) {
   IotsaBLEClientManagerMod::formHandler_fields(ctx);
+  ctx.argsNeedRight("bleclient");
   if (ctx.includesSettings()) ctx.showConfirmedButton("clearall", "Remove all dimmers", IotsaContext::Saved);
 }
 
@@ -309,6 +312,7 @@ String LissabonControllerMod::info() {
 void LissabonControllerMod::putHandler(IotsaApiContext& ctx) {
   IotsaBLEClientManagerMod::putHandler(ctx);
   bool clearall = false;
+  ctx.argsNeedRight("bleclient");
   ctx.arg("clearall", clearall, IotsaContext::Saved);
   if (ctx.failed()) return;
   if (clearall) clearAllDimmersAndReboot();
