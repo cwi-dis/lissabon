@@ -208,14 +208,15 @@ void LissabonDimmerMod::lateSetup() {
 void LissabonDimmerMod::configLoad() {
   IotsaConfigFileLoad cf("/config/pwmdimmer.cfg");
   dimmer.configLoad(cf, "dimmer");
+#ifdef WITH_DOUBLE_DIMMER
+  dimmer2.configLoad(cf, "dimmer2");
+#endif
 #ifdef TOGGLE_ONOFF_ON_REBOOT
-  // Save the toggled on/off state
+  // Save the toggled on/off state. After loading everything: configSave()
+  // writes all dimmers.
   dimmer.isOn = !dimmer.isOn;
   IFDEBUG IotsaSerial.printf("Saving toggled isOn state: %d\n", dimmer.isOn);
   configSave();
-#endif
-#ifdef WITH_DOUBLE_DIMMER
-  dimmer2.configLoad(cf, "dimmer2");
 #endif
 }
 
