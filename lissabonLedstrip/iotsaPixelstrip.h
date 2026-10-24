@@ -1,3 +1,11 @@
+// Not the same as iotsaDMXLedstrip's iotsaPixelstrip (cwi-dis/iotsaDMXLedstrip),
+// although the hardware is much the same. This one is ambient lighting: the
+// LEDs together give everyday light (a strip on the ceiling), driven through a
+// dimmer. iotsaDMXLedstrip's is for stage effects: each LED feeds a fibre
+// strand, and DMX or REST drives effects many frames a second. So the rights
+// differ: here the look needs "lighttuning"; there the pixel data is open and
+// show setup needs "dmx".
+//
 #ifndef _IOTSAPIXELSTRIP_H_
 #define _IOTSAPIXELSTRIP_H_
 #include "iotsa.h"

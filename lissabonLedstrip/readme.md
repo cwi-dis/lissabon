@@ -3,6 +3,8 @@
 This iotsa application controls led strips.
 It is intended mainly to be used in lighting applications, not signalling applications.
 
+Not to be confused with [iotsaDMXLedstrip](https://github.com/cwi-dis/iotsaDMXLedstrip), which has much the same hardware but a completely different use: there each LED feeds a fibre strand hanging at a stage, and DMX or REST drives effects (rainbow ripples, a VU meter beating to the music) many times a second. Here the LEDs together give ambient, everyday light, for example from a strip on the ceiling. So the rights differ: here changing how the light looks needs `lighttuning`; there the pixel data is open and setting up for a show needs `dmx`.
+
 You can control the number of LEDs in the strip
 and the interval between lit LEDs (to have for 
 example only 1 in every 3 LED light up).
