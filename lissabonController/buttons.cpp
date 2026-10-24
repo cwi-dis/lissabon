@@ -1,7 +1,6 @@
 #include "buttons.h"
 #include "iotsaInput.h"
 
-#define LOG_UI if(1)
 
 
 //
@@ -60,7 +59,7 @@ void Buttons::_tap() {
   if (now >= lastButtonChangeMillis + TAP_DURATION) {
     // Either the first change, or too late. Reset.
     if (lastButtonChangeMillis > 0) {
-      IotsaSerial.println("TapCount: reset");
+      IOTSA_LOG_DEBUG("LissabonController", "TapCount: reset");
     }
     lastButtonChangeMillis = millis();
     buttonChangeCount = 0;
@@ -69,14 +68,14 @@ void Buttons::_tap() {
     // A button change that was quick enough for a tap
     lastButtonChangeMillis = now;
     buttonChangeCount++;
-    IFDEBUG IotsaSerial.printf("TapCount: %d\n", buttonChangeCount);
+    IOTSA_LOG_DEBUG("LissabonController", "TapCount: %d", buttonChangeCount);
     if (buttonChangeCount == TAP_COUNT_MODE_CHANGE) {
-      IotsaSerial.println("TapCount: mode change");
+      IOTSA_LOG("LissabonController", "TapCount: mode change");
       controller->showMessage("mode");
       iotsaController.allowRequestedConfigurationMode();
     }
     if (buttonChangeCount == TAP_COUNT_REBOOT) {
-      IotsaSerial.println("TapCount: reboot");
+      IOTSA_LOG("LissabonController", "TapCount: reboot");
       controller->showMessage("reboot");
       iotsaController.requestReboot(1000);
     }
@@ -88,8 +87,8 @@ Buttons::uiRockerPressed() {
   // The rocker switch controls the selected dimmer
   bool next = rockerUp.pressed && rockerUp.repeatCount == 0;
   bool prev = rockerDown.pressed && rockerDown.repeatCount == 0;
-  LOG_UI IotsaSerial.printf("LissabonController.Buttons.uiRockerPressed: up: state=%d repeatCount=%d duration=%d next=%d\n", rockerUp.pressed, rockerUp.repeatCount, rockerUp.duration, next);
-  LOG_UI IotsaSerial.printf("LissabonController.Buttons.uiRockerPressed: down: state=%d repeatCount=%d duration=%d prev=%d\n", rockerDown.pressed, rockerDown.repeatCount, rockerDown.duration, prev);
+  IOTSA_LOG_DEBUG("LissabonController", "uiRockerPressed: up: state=%d repeatCount=%d duration=%d next=%d", rockerUp.pressed, rockerUp.repeatCount, rockerUp.duration, next);
+  IOTSA_LOG_DEBUG("LissabonController", "uiRockerPressed: down: state=%d repeatCount=%d duration=%d prev=%d", rockerDown.pressed, rockerDown.repeatCount, rockerDown.duration, prev);
   if (next || prev) {
     controller->selectDimmer(next, prev);
   }
@@ -98,9 +97,9 @@ Buttons::uiRockerPressed() {
 
 bool
 Buttons::uiButtonPressed() {
-  LOG_UI IotsaSerial.printf("LissabonController.Buttons.uiButtonPressed: state=%d repeatCount=%d duration=%d\n", button.pressed, button.repeatCount, button.duration);
+  IOTSA_LOG_DEBUG("LissabonController", "uiButtonPressed: state=%d repeatCount=%d duration=%d", button.pressed, button.repeatCount, button.duration);
   if (justWokeFromSleep) {
-    LOG_UI IotsaSerial.println("LissabonController.Buttons.uiButtonPressed: ignoring: wake up press/release");
+    IOTSA_LOG_DEBUG("LissabonController", "uiButtonPressed: ignoring: wake up press/release");
     if (!button.pressed) justWokeFromSleep = false;
     return true;
   }
@@ -109,7 +108,7 @@ Buttons::uiButtonPressed() {
 
   if (!button.pressed && button.repeatCount == 0 && button.duration < SHORT_PRESS_DURATION) {
     // Short press: turn current dimmer on or off
-    LOG_UI IotsaSerial.println("LissabonCOntroller.Buttons.uiButtonPressed: dimmer on/off");
+    IOTSA_LOG_DEBUG("LissabonController", "uiButtonPressed: dimmer on/off");
     controller->toggle();
   } else {
     // Long press: assume rotary will be used for selecting temperature
@@ -119,7 +118,7 @@ Buttons::uiButtonPressed() {
 
 bool
 Buttons::uiEncoderChanged() {
-  LOG_UI IotsaSerial.printf("LissabonController.Buttons.uiEncoderChanged(%d)\n", encoder.value);
+  IOTSA_LOG_DEBUG("LissabonController", "uiEncoderChanged(%d)", encoder.value);
 #ifdef DIMMER_WITH_TEMPERATURE
   if (button.pressed) {
     if (encoder.value < 0) encoder.value = 0;
@@ -133,7 +132,7 @@ Buttons::uiEncoderChanged() {
       f_value = 1.0;
       encoder.value = ENCODER_STEPS;
     }
-    LOG_UI IotsaSerial.printf("LissabonController.Buttons: now temperature=%f (int %d)\n", f_value, encoder.value);
+    IOTSA_LOG_DEBUG("LissabonController", "now temperature=%f (int %d)", f_value, encoder.value);
     controller->setTemperature(f_value);
   } else 
 #endif
@@ -150,7 +149,7 @@ Buttons::uiEncoderChanged() {
       f_value = 1.0;
       encoder.value = ENCODER_STEPS;
     }
-    LOG_UI IotsaSerial.printf("LissabonController.Buttons: now level=%f (int %d)\n", f_value, encoder.value);
+    IOTSA_LOG_DEBUG("LissabonController", "now level=%f (int %d)", f_value, encoder.value);
     controller->setLevel(f_value);
   }
   return true;

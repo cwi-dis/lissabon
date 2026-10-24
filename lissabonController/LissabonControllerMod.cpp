@@ -4,8 +4,6 @@ using namespace Lissabon;
 
 Display *display;
 
-#define LOG_BLE if(0)
-#define LOG_UI if(1)
 
 void
 LissabonControllerMod::setDimmerFollowed(int index, bool follow) {
@@ -57,7 +55,7 @@ LissabonControllerMod::selectDimmer(bool next, bool prev) {
     setDimmerFollowed(oldSelectedDimmerIndex, false);
     setDimmerFollowed(selectedDimmerIndex, true);
   }
-  LOG_UI IotsaSerial.printf("LissabonController: now selectedDimmer=%d\n", selectedDimmerIndex);
+  IOTSA_LOG_DEBUG("LissabonController", "now selectedDimmer=%d", selectedDimmerIndex);
   updateDisplay(false);
   buttons.refreshEncoder();
   // Same bug class as the nudge fix above: only on a genuine rocker-driven
@@ -76,7 +74,7 @@ LissabonControllerMod::selectDimmer(bool next, bool prev) {
     bool mustUpdate = availableNow && !selectedDimmerIsAvailable;
     selectedDimmerIsAvailable = availableNow;
     if (mustUpdate) {
-      LOG_UI IotsaSerial.printf("LissabonController: refresh selectedDimmer=%d\n", selectedDimmerIndex);
+      IOTSA_LOG_DEBUG("LissabonController", "refresh selectedDimmer=%d", selectedDimmerIndex);
       d->refresh();
     }
   }
@@ -108,7 +106,7 @@ void LissabonControllerMod::setTemperature(float temperature) {
   d->temperature = tempKelvin;
   d->updateDimmer();
   updateDisplay(false);
-  LOG_UI IotsaSerial.printf("LissabonController: updated dimmer %d temperature %f\n", selectedDimmerIndex, temperature);
+  IOTSA_LOG_DEBUG("LissabonController", "updated dimmer %d temperature %f", selectedDimmerIndex, temperature);
   iotsaController.postponeSleep(4000);
 #else
   display->flash();
@@ -130,7 +128,7 @@ void LissabonControllerMod::setLevel(float level) {
   d->level = level;
   d->updateDimmer();
   updateDisplay(false);
-  LOG_UI IotsaSerial.printf("LissabonController: updated dimmer %d level %f\n", selectedDimmerIndex, level);
+  IOTSA_LOG_DEBUG("LissabonController", "updated dimmer %d level %f", selectedDimmerIndex, level);
   if (selectedDimmerIndex != savedSelectedDimmerIndex) saveNeeded = true;
   iotsaController.postponeSleep(4000);
 }
@@ -147,7 +145,7 @@ void LissabonControllerMod::toggle() {
 
 void
 LissabonControllerMod::updateDisplay(bool clear) {
-  LOG_BLE IotsaSerial.printf("LissabonController: %d strips:\n", dimmers.size());
+  IOTSA_LOG_DEBUG_BLE("LissabonController", "%d strips:", (int)dimmers.size());
 
   if (true || clear) display->clearStrips();
   int index = 0;
@@ -156,7 +154,7 @@ LissabonControllerMod::updateDisplay(bool clear) {
     // We know that is safe because we supplied the factory function.
     DimmerBLEClient* elem = reinterpret_cast<DimmerBLEClient *>(_elem);
     String name = elem->getUserVisibleName();
-    LOG_BLE IotsaSerial.printf("  device %s, available=%d connected=%d\n", name.c_str(), elem->available(), elem->isConnected());
+    IOTSA_LOG_DEBUG_BLE("LissabonController", "  device %s, available=%d connected=%d", name.c_str(), elem->available(), elem->isConnected());
     StripStatus status = StripStatus::unavailable;
     if (elem->available()) status = StripStatus::seen;
     if (elem->dataValid()) status = StripStatus::synced;
@@ -182,22 +180,22 @@ LissabonControllerMod::updateDisplay(bool clear) {
 DimmerDynamicCollection::ItemType*
 LissabonControllerMod::getDimmerForCommand(int num) {
   if (num < 0) {
-    IotsaSerial.println("LissabonController: No dimmer selected");
+    IOTSA_LOG("LissabonController", "No dimmer selected");
     return nullptr;
   }
   auto d = dimmers.at(num);
   if (d == nullptr) {
-    IotsaSerial.printf("LissabonController: Dimmer %d does not exist\n", num);
+    IOTSA_LOG("LissabonController", "Dimmer %d does not exist", num);
     return nullptr;
   }
   if (!d->available()) {
-    IotsaSerial.printf("LissabonController: Dimmer %d unavailable\n", num);
+    IOTSA_LOG("LissabonController", "Dimmer %d unavailable", num);
     // Ask for it: iotsa only scans for devices with work pending (cwi-dis/iotsa#263).
     d->refresh();
     return nullptr;
   }
   if (!d->dataValid()) {
-    IotsaSerial.printf("LissabonController: Dimmer %d current status unknown\n", num);
+    IOTSA_LOG("LissabonController", "Dimmer %d current status unknown", num);
     return nullptr;
   }
   return d;
@@ -205,7 +203,7 @@ LissabonControllerMod::getDimmerForCommand(int num) {
 
 
 void LissabonControllerMod::dimmerAvailableChanged() {
-  LOG_UI IotsaSerial.println("LissabonController: dimmerAvailableChanged()");
+  IOTSA_LOG_DEBUG("LissabonController", "dimmerAvailableChanged()");
   bool availableChanged = true;
   display->showScanning(isScanning());
   updateDisplay(false);
@@ -224,13 +222,13 @@ void LissabonControllerMod::scanningChanged() {
 }
 
 void LissabonControllerMod::dimmerOnOffChanged() {
-  LOG_UI IotsaSerial.println("LissabonController: dimmerOnOfChanged()");
+  IOTSA_LOG_DEBUG("LissabonController", "dimmerOnOfChanged()");
   updateDisplay(false);
 }
 
 
 void LissabonControllerMod::dimmerValueChanged() {
-  LOG_UI IotsaSerial.println("LissabonController: dimmerValueChanged()");
+  IOTSA_LOG_DEBUG("LissabonController", "dimmerValueChanged()");
   updateDisplay(false);
 }
 
@@ -245,7 +243,7 @@ LissabonControllerMod::dimmerFactory(int num) {
 bool LissabonControllerMod::addDeviceByName(const std::string& _name) {
   String name(_name.c_str());
   if (dimmers.find(name) != nullptr || getDevice(_name) != nullptr) {
-    IotsaSerial.printf("LissabonController: cannot add \"%s\": already known\n", name.c_str());
+    IOTSA_LOG("LissabonController", "cannot add \"%s\": already known", name.c_str());
     return false;
   }
   dimmers.push_back_new(name);  // its setName() registers it with the base class
@@ -336,7 +334,7 @@ void LissabonControllerMod::configLoad() {
 
 void LissabonControllerMod::configSave() {
   IotsaConfigFileSave cf("/config/blecontroller.cfg");
-  IotsaSerial.println("LissabonController: save blecontroller config");
+  IOTSA_LOG("LissabonController", "saved blecontroller config");
   if (clearAllPending) {
     cf.put("selectedDimmerIndex", 0);
     cf.put("n_dimmer", 0);
@@ -368,10 +366,6 @@ void LissabonControllerMod::setup() {
   //
   IotsaBLEClientMod::setup();
   dimmers.setFactory(std::bind(&LissabonControllerMod::dimmerFactory, this, std::placeholders::_1));
-  // Allow switching to iotsa config mode over BLE
-#ifdef IOTSA_WITH_BLE
-  if (IotsaRunmodeMod::instance()) IotsaRunmodeMod::instance()->allowBLEModeSwitch();
-#endif
   //
   // Load configuration
   //
@@ -416,18 +410,18 @@ void LissabonControllerMod::unknownDimmerBLEClientFound(const NimBLEAdvertisedDe
   // Nothing to do here -- IotsaBLEClientManagerMod::onUnknownDeviceSeen()
   // already records this device (name/address/rssi/lastSeen) in
   // unknownDevices before calling us.
-  LOG_BLE IotsaSerial.printf("LissabonController: unknownDeviceFound: device \"%s\"\n", deviceAdvertisement.getName().c_str());
+  IOTSA_LOG_DEBUG_BLE("LissabonController", "unknownDeviceFound: device \"%s\"", deviceAdvertisement.getName().c_str());
 }
 
 void LissabonControllerMod::knownDimmerBLEClientChanged(const NimBLEAdvertisedDevice& deviceAdvertisement) {
   std::string name = deviceAdvertisement.getName();
-  LOG_BLE IotsaSerial.printf("LissabonController: knownDeviceChanged: device \"%s\"\n", name.c_str());
+  IOTSA_LOG_DEBUG_BLE("LissabonController", "knownDeviceChanged: device \"%s\"", name.c_str());
   dimmerAvailableChanged();
 }
 
 void LissabonControllerMod::sleepWakeupNotification(bool sleep)
 {
-  IotsaSerial.printf("LissabonController: sleep %d\n", (int)sleep);
+  IOTSA_LOG_DEBUG("LissabonController", "sleep %d", (int)sleep);
   display->dim(sleep);
   if (!sleep) {
     buttons.justAwake();
@@ -462,7 +456,7 @@ void LissabonControllerMod::loop() {
   }
   if (isIdle) {
     if (saveNeeded) {
-      IotsaSerial.println("LissabonController: save requested");
+      IOTSA_LOG_DEBUG("LissabonController", "save requested");
       saveNeeded = false;
       configSave();
     }
@@ -473,7 +467,7 @@ void LissabonControllerMod::loop() {
     if (selectedDimmerIndex >= 0 && selectedDimmerIndex < n) {
       DimmerBLEClient* d_ble = reinterpret_cast<DimmerBLEClient*>(dimmers.at(selectedDimmerIndex));
       if (d_ble->available() && !d_ble->dataValid()) {
-        IotsaSerial.printf("LissabonController: refresh selected dimmer %d\n", d_ble->num);
+        IOTSA_LOG_DEBUG("LissabonController", "refresh selected dimmer %d", d_ble->num);
         d_ble->refresh();
       }
     }

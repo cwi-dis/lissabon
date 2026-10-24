@@ -26,7 +26,7 @@ void DimmerDynamicCollection::clear() {
 
 bool DimmerDynamicCollection::configLoad(IotsaConfigFileLoad& cf, const String& f_name) {
   if (!factory) {
-    IotsaSerial.println("DimmerDynamicCollection.configLoad requires factory");
+    IOTSA_LOG("DimmerDynamicCollection", "configLoad requires factory");
     return false;
   }
   String ident = "n_dimmer";

@@ -109,11 +109,11 @@ void LissabonDimmerMod::dimmerOnOffChanged() {
     lastButtonChangeMillis = now;
     buttonChangeCount++;
     if (buttonChangeCount == TAP_COUNT_MODE_CHANGE) {
-      IFDEBUG IotsaSerial.println("tap mode change");
+      IOTSA_LOG("lissabonDimmer", "tap mode change");
       iotsaController.allowRequestedConfigurationMode();
     }
     if (buttonChangeCount == TAP_COUNT_REBOOT) {
-      IFDEBUG IotsaSerial.println("tap mode reboot");
+      IOTSA_LOG("lissabonDimmer", "tap mode reboot");
       iotsaController.requestReboot(1000);
     }
   } else {
@@ -198,7 +198,7 @@ void LissabonDimmerMod::configLoad() {
   // Save the toggled on/off state. After loading everything: configSave()
   // writes all dimmers.
   dimmer.isOn = !dimmer.isOn;
-  IFDEBUG IotsaSerial.printf("Saving toggled isOn state: %d\n", dimmer.isOn);
+  IOTSA_LOG("lissabonDimmer", "saving toggled isOn state: %d", dimmer.isOn);
   configSave();
 #endif
 }
@@ -213,10 +213,8 @@ void LissabonDimmerMod::configSave() {
 }
 
 void LissabonDimmerMod::setup() {
-  // Allow switching the dimmer to iotsa config mode over BLE or with taps
-#ifdef IOTSA_WITH_BLE
-  if (IotsaRunmodeMod::instance()) IotsaRunmodeMod::instance()->allowBLEModeSwitch();
-#endif
+  // Switching to iotsa config mode over BLE is the BLE server's promoteAllowed
+  // setting (cwi-dis/iotsa#316); with taps, see below.
 #ifdef IOTSA_WITH_BLE
   // Wires this appliance's identify (blink) into the generic core runmode
   // BLE identify command, so DimmerBLEClient's identify() -- which now goes

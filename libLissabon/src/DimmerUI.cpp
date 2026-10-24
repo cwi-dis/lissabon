@@ -5,9 +5,9 @@ namespace Lissabon {
 bool
 DimmerUI::touchedOnOff() {
 #ifdef DIMMER_WITH_LEVEL
-  IFDEBUG IotsaSerial.printf("touchedOnOff %d: onOff=%d level=%f\n", dimmer.num, dimmer.isOn, dimmer.level);
+  IOTSA_LOG_DEBUG("DimmerUI", "touchedOnOff %d: onOff=%d level=%f", dimmer.num, dimmer.isOn, dimmer.level);
 #else
-  IFDEBUG IotsaSerial.printf("touchedOnOff %d: onOff=%d\n", dimmer.num, dimmer.isOn);
+  IOTSA_LOG_DEBUG("DimmerUI", "touchedOnOff %d: onOff=%d", dimmer.num, dimmer.isOn);
 #endif
   if (dimmer.callbacks) dimmer.callbacks->dimmerOnOffChanged();
   dimmer.updateDimmer();
@@ -18,11 +18,11 @@ bool
 DimmerUI::levelChanged() {
 #ifdef DIMMER_WITH_LEVEL
   dimmer.isOn = true;
-  IFDEBUG IotsaSerial.printf("levelChanged %d: onOff=%d level=%f", dimmer.num, dimmer.isOn, dimmer.level);
 #ifdef DIMMER_WITH_TEMPERATURE
-  IFDEBUG IotsaSerial.printf(" temperature=%f", dimmer.temperature);
+  IOTSA_LOG_DEBUG("DimmerUI", "levelChanged %d: onOff=%d level=%f temperature=%f", dimmer.num, dimmer.isOn, dimmer.level, dimmer.temperature);
+#else
+  IOTSA_LOG_DEBUG("DimmerUI", "levelChanged %d: onOff=%d level=%f", dimmer.num, dimmer.isOn, dimmer.level);
 #endif
-  IFDEBUG IotsaSerial.println();
   dimmer.updateDimmer();
 #endif // DIMMER_WITH_LEVEL
   return true;

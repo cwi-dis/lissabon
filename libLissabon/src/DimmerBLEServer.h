@@ -19,6 +19,8 @@ protected:
   IotsaBleApiService bleApi;
   bool blePutHandler(UUIDstring charUUID) override;
   bool bleGetHandler(UUIDstring charUUID) override;
+  // Not a module, so no module name: "iotsaApi: ble: write dimmer ..." (cwi-dis/iotsa#182).
+  const char *bleLogName() override { return "dimmer"; }
 };
 }
 #endif // IOTSA_WITH_BLE

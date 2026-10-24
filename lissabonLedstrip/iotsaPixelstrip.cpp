@@ -17,7 +17,7 @@ template<class Ctx> bool IotsaPixelstripMod::_stripArgs(Ctx& ctx) {
   ctx.argsNeedRight("lighttuning");
   changed |= ctx.arg("count", count, IotsaContext::Saved);
   if (count < 2) {
-    IotsaSerial.println("count set to 2 to workaround bug");
+    IOTSA_LOG("Pixelstrip", "count set to 2 to workaround bug");
     count = 2;
   }
   return changed;
@@ -99,7 +99,7 @@ void IotsaPixelstripMod::setup() {
 }
 
 void IotsaPixelstripMod::setupStrip() {
-  IFDEBUG IotsaSerial.printf("setup count=%d bpp=%d pin=%d\n", count, IOTSA_NPB_BPP, pin);
+  IOTSA_LOG_DEBUG("Pixelstrip", "setup count=%d bpp=%d pin=%d", count, IOTSA_NPB_BPP, pin);
   if (strip) delete strip;
   strip = NULL;
 #ifdef IOTSA_NPB_POWER_PIN
@@ -112,7 +112,7 @@ void IotsaPixelstripMod::setupStrip() {
   if (pixelBuffer) free(pixelBuffer);
   pixelBuffer = (uint8_t *)malloc(count*IOTSA_NPB_BPP);
   if (pixelBuffer == NULL) {
-    IotsaSerial.println("No memory");
+    IOTSA_LOG("Pixelstrip", "No memory");
   }
   memset(pixelBuffer, 0, count*IOTSA_NPB_BPP);
   pixelSourceCallback();
@@ -124,7 +124,7 @@ void IotsaPixelstripMod::setupStrip() {
 void IotsaPixelstripMod::powerOn(bool force) {
 #ifdef IOTSA_NPB_POWER_PIN
   if (isPowerOn && !force) return;
-  IFDEBUG IotsaSerial.printf("PixelStrip: poweron via pin %d\n", IOTSA_NPB_POWER_PIN);
+  IOTSA_LOG_DEBUG("Pixelstrip", "poweron via pin %d", IOTSA_NPB_POWER_PIN);
   isPowerOn = true;
   //
   // The powerpin should connect to a mosfet or something that enables power to
@@ -151,7 +151,7 @@ void IotsaPixelstripMod::powerOff(bool force) {
 #ifdef IOTSA_NPB_POWER_PIN
   if (!isPowerOn && !force) return;
   delay(1);
-  IFDEBUG IotsaSerial.printf("PixelStrip: poweroff via pin %d\n", IOTSA_NPB_POWER_PIN);
+  IOTSA_LOG_DEBUG("Pixelstrip", "poweroff via pin %d", IOTSA_NPB_POWER_PIN);
   isPowerOn = false;
   //
   // We delete the strip, which should set the pin back to an input
@@ -241,7 +241,7 @@ void IotsaPixelstripMod::pixelSourceCallback() {
   }
   powerOn();
   if (strip == nullptr) {
-    IotsaSerial.println("IotsaPixelStrip: strip is NULL");
+    IOTSA_LOG("Pixelstrip", "strip is NULL");
     return;
   }
   for (int i=0; i < count; i++) {

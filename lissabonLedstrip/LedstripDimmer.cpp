@@ -4,7 +4,13 @@
 //const float PI = atan(1)*4;
 const float SQRT_HALF = sqrt(0.5);
 
-#define DEBUG_LEDSTRIP if(0)
+// The ledstrip's own debug output: every pixel, every frame. Compile-time,
+// like iotsa's subsystems (iotsaLog.h): -DLISSABON_DEBUG_LEDSTRIP.
+#ifdef LISSABON_DEBUG_LEDSTRIP
+#define LOG_LEDSTRIP(fmt, ...) IOTSA_LOG("LedstripDimmer", fmt, ##__VA_ARGS__)
+#else
+#define LOG_LEDSTRIP(fmt, ...) do { if (0) IOTSA_LOG("LedstripDimmer", fmt, ##__VA_ARGS__); } while (0)
+#endif
 
 // Calculating the curve every loop is more cpu-intensitive but animations look much better.
 #define LEDSTRIP_CALCULATE_LEVELS_EVERY_LOOP
@@ -23,7 +29,7 @@ void LedstripDimmer::setup() {
 }
 
 void LedstripDimmer::updateDimmer() {
-  DEBUG_LEDSTRIP IotsaSerial.println("LedstripDimmer.updateDimmer()");
+  LOG_LEDSTRIP("updateDimmer()");
   clampLevel();
 #ifndef LEDSTRIP_CALCULATE_LEVELS_EVERY_LOOP
   // xxxjack calling calcPixelLevels here (in stead of in loop) means the curve
@@ -38,7 +44,7 @@ void LedstripDimmer::clampLevel() {
 #if 0
   float maxOutputLevel = maxLevelCorrectColor();
   if (level > maxOutputLevel) {
-    IotsaSerial.printf("LodstripDimmer.calcLevel: level clamped to %f\n", maxOutputLevel);
+    IOTSA_LOG("LedstripDimmer", "calcLevel: level clamped to %f", maxOutputLevel);
     level = maxOutputLevel;
   }
 #endif
@@ -50,7 +56,7 @@ void LedstripDimmer::calcPixelLevels(float wantedLevel) {
   // Determine how much light we can produce with the preferred curve
   //
   float cumulativeValue = levelFuncCumulative(0, count, 1);
-  DEBUG_LEDSTRIP IotsaSerial.printf("LedstripDimmer.calcPixelLevels: wantedLevel=%f focalSpread=%f focalPoint=%f cumulativeValue=%f\n", wantedLevel, focalSpread, focalPoint, cumulativeValue);
+  LOG_LEDSTRIP("calcPixelLevels: wantedLevel=%f focalSpread=%f focalPoint=%f cumulativeValue=%f", wantedLevel, focalSpread, focalPoint, cumulativeValue);
   //
   // We may need to increase spread, because the current curve may result in brightness > 1 for some
   // pixels.
@@ -60,12 +66,12 @@ void LedstripDimmer::calcPixelLevels(float wantedLevel) {
   if (pixelLevels != NULL) {
     for(int i=0; i<count; i++) {
       float thisValue = levelFuncCumulative(i, i+1, 1) * correction;
-      DEBUG_LEDSTRIP IotsaSerial.printf("LedstripDimmer.calcPixelLevels: uncorrected pixelLevel[%d] = %f\n", i, thisValue);
+      LOG_LEDSTRIP("calcPixelLevels: uncorrected pixelLevel[%d] = %f", i, thisValue);
       if (thisValue*wantedLevel > spreadCorrection) spreadCorrection = thisValue*wantedLevel;
     }
   }
   cumulativeValue = levelFuncCumulative(0, count, spreadCorrection);
-  DEBUG_LEDSTRIP IotsaSerial.printf("LedstripDimmer.calcPixelLevels: spreadCorrection=%f cumulativeValue=%f\n", spreadCorrection, cumulativeValue);
+  LOG_LEDSTRIP("calcPixelLevels: spreadCorrection=%f cumulativeValue=%f", spreadCorrection, cumulativeValue);
   //
   // cumulativeValue is the amount of light produced. We need to
   // correct this so level is what is actually produced.
@@ -79,12 +85,12 @@ void LedstripDimmer::calcPixelLevels(float wantedLevel) {
     for(int i=0; i<count; i++) {
       float thisValue = levelFuncCumulative(i, i+1, spreadCorrection) * correction;
       pixelLevels[i] = thisValue;
-      DEBUG_LEDSTRIP IotsaSerial.printf("LedstripDimmer.calcPixelLevels: pixelLevel[%d] = %f\n", i, thisValue);
+      LOG_LEDSTRIP("calcPixelLevels: pixelLevel[%d] = %f", i, thisValue);
       sumLevel += thisValue;
     }
   }
-  DEBUG_LEDSTRIP IotsaSerial.printf("LedstripDimmer.calcPixelLevels: sum(pixelLevel)=%f avg=%f\n", sumLevel, sumLevel/count);
-  DEBUG_LEDSTRIP IotsaSerial.printf("LedstripDimmer.calcPixelLevels: pixelLevels updated\n");
+  LOG_LEDSTRIP("calcPixelLevels: sum(pixelLevel)=%f avg=%f", sumLevel, sumLevel/count);
+  LOG_LEDSTRIP("calcPixelLevels: pixelLevels updated");
 }
 
 void LedstripDimmer::updateColorspace(float whiteTemperature, float whiteBrightness) {
@@ -98,7 +104,7 @@ float LedstripDimmer::maxLevelCorrectColor() {
   TempFColor maxTFColor(temperature, 1.0);
   RgbwFColor correctRgbwColor = rgbwSpace.toRgbw(maxTFColor);
   float maxLevel = correctRgbwColor.CalculateTrueBrightness(rgbwSpace.WBrightness);
-  DEBUG_LEDSTRIP IotsaSerial.printf("LedstripDimmer.maxLevelCorrectColor: wTemp=%f wBright=%f wtdTemp=%f R=%f G=%f B=%f W=%f maxCorrect=%f\n", rgbwSpace.WTemperature, rgbwSpace.WTemperature, temperature, correctRgbwColor.R, correctRgbwColor.G, correctRgbwColor.B, correctRgbwColor.W, maxLevel);
+  LOG_LEDSTRIP("maxLevelCorrectColor: wTemp=%f wBright=%f wtdTemp=%f R=%f G=%f B=%f W=%f maxCorrect=%f", rgbwSpace.WTemperature, rgbwSpace.WTemperature, temperature, correctRgbwColor.R, correctRgbwColor.G, correctRgbwColor.B, correctRgbwColor.W, maxLevel);
   return maxLevel;
 }
 
@@ -192,16 +198,16 @@ void LedstripDimmer::putHandler(IotsaApiContext& ctx) {
       }
       animationStartMillis = animationEndMillis = millis();
       inCalibrationMode = true;
-      IFDEBUG IotsaSerial.println("Got calibrationData, in calibration mode");
+      IOTSA_LOG_DEBUG("LedstripDimmer", "Got calibrationData, in calibration mode");
     } else if (_calibrationData && size == 0) {
       animationStartMillis = animationEndMillis = millis();
       inCalibrationMode = false;
-      IFDEBUG IotsaSerial.println("Got empty calibrationData, left calibrationMode");
+      IOTSA_LOG_DEBUG("LedstripDimmer", "Got empty calibrationData, left calibrationMode");
     } else {
       ctx.error(400, "calibrationData: 4 or 8 values, or none");
     }
   } else if (inCalibrationMode && !ctx.failed()) {
-    IFDEBUG IotsaSerial.println("No calibrationData, left calibration mode");
+    IOTSA_LOG_DEBUG("LedstripDimmer", "No calibrationData, left calibration mode");
     animationStartMillis = animationEndMillis = millis();
     inCalibrationMode = false;
   }
@@ -331,7 +337,7 @@ void LedstripDimmer::loop() {
   //
   if (inCalibrationMode) {
     statusOverlayActive = false;  // pixel 0 is about to legitimately hold calibration data
-    IotsaSerial.printf("Loop: calibration r1 %f g2 %f b1 %f w1 %f, r1 %f g2 %f b1 %f w1 %f\n",
+    IOTSA_LOG_DEBUG("LedstripDimmer", "loop: calibration r1 %f g2 %f b1 %f w1 %f, r1 %f g2 %f b1 %f w1 %f",
       calibrationData[0], calibrationData[1], calibrationData[2], calibrationData[3],
       calibrationData[4], calibrationData[5], calibrationData[6], calibrationData[7]
     );
@@ -369,7 +375,7 @@ void LedstripDimmer::loop() {
     TempFColor thisTFColor(temperature, thisLevel);
     RgbwFColor thisPixelFColor = rgbwSpace.toRgbw(thisTFColor);
     RgbwColor thisPixelColor = thisPixelFColor;
-    DEBUG_LEDSTRIP IotsaSerial.printf("LedstripDimmer.loop: pixel %d: level=%f r=%d g=%d b=%d w=%d\n", i, thisLevel, thisPixelColor.R, thisPixelColor.G, thisPixelColor.B, thisPixelColor.W);
+    LOG_LEDSTRIP("loop: pixel %d: level=%f r=%d g=%d b=%d w=%d", i, thisLevel, thisPixelColor.R, thisPixelColor.G, thisPixelColor.B, thisPixelColor.W);
     *p++ = thisPixelColor.R;
     *p++ = thisPixelColor.G;
     *p++ = thisPixelColor.B;
@@ -380,7 +386,7 @@ void LedstripDimmer::loop() {
     applyStatusPixel(iotsaStatus.statusColor());
   }
   stripHandler->pixelSourceCallback();
-  DEBUG_LEDSTRIP IotsaSerial.printf("LedstripDimmer.loop: %lu us\n", micros()-loopStart);
+  LOG_LEDSTRIP("loop: %lu us", micros()-loopStart);
 }
 
 }

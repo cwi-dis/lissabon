@@ -118,7 +118,7 @@ void LissabonLedstripMod::_tap() {
   if (now >= lastButtonChangeMillis + TAP_DURATION) {
     // Either the first change, or too late. Reset.
     if (lastButtonChangeMillis > 0) {
-      IotsaSerial.println("TapCount: reset");
+      IOTSA_LOG_DEBUG("lissabonLedstrip", "TapCount: reset");
     }
     lastButtonChangeMillis = millis();
     buttonChangeCount = 0;
@@ -127,14 +127,14 @@ void LissabonLedstripMod::_tap() {
     // A button change that was quick enough for a tap
     lastButtonChangeMillis = now;
     buttonChangeCount++;
-    IFDEBUG IotsaSerial.printf("TapCount: %d\n", buttonChangeCount);
+    IOTSA_LOG_DEBUG("lissabonLedstrip", "TapCount: %d", buttonChangeCount);
     iotsaStatus.setStatusPulse(IotsaStatus::COLOUR_WHITE, 100, 100, 200, "Tap");
     if (buttonChangeCount == TAP_COUNT_MODE_CHANGE) {
-      IotsaSerial.println("TapCount: mode change");
+      IOTSA_LOG("lissabonLedstrip", "TapCount: mode change");
       iotsaController.allowRequestedConfigurationMode();
     }
     if (buttonChangeCount == TAP_COUNT_REBOOT) {
-      IotsaSerial.println("TapCount: reboot");
+      IOTSA_LOG("lissabonLedstrip", "TapCount: reboot");
       iotsaStatus.setStatusPulse(IotsaStatus::COLOUR_WHITE, 500, 0, 500, "Rebooting");
       iotsaController.requestReboot(1000);
     }
@@ -178,10 +178,8 @@ void LissabonLedstripMod::configSave() {
 }
 
 void LissabonLedstripMod::setup() {
-  // Allow switching the dimmer to iotsa config mode over BLE or with taps
-#ifdef IOTSA_WITH_BLE
-  if (IotsaRunmodeMod::instance()) IotsaRunmodeMod::instance()->allowBLEModeSwitch();
-#endif
+  // Switching to iotsa config mode over BLE is the BLE server's promoteAllowed
+  // setting (cwi-dis/iotsa#316); with taps, see below.
 #ifdef IOTSA_WITH_BLE
   // Wires this appliance's identify (blink) into the generic core runmode
   // BLE identify command, so DimmerBLEClient's identify() -- which now goes
@@ -217,7 +215,7 @@ void LissabonLedstripMod::loop() {
   // See if we have a value to save (because the user has been turning the dimmer)
   if (saveAtMillis > 0 && millis() > saveAtMillis) {
     saveAtMillis = 0;
-    IFDEBUG IotsaSerial.println("save ledstrip config");
+    IOTSA_LOG("lissabonLedstrip", "saved ledstrip config");
     configSave();
   }
   dimmer.loop();

@@ -3,8 +3,6 @@
 #include "iotsaBLEClient.h"
 #include "LissabonBLE.h"
 
-#define DIMMERBLECLIENT_DEBUG if(1)
-
 namespace Lissabon {
 
 DimmerBLEClient::DimmerBLEClient(int _num, IotsaBLEClientMod &_bleClientMod, DimmerCallbacks *_callbacks, int _stayConnectedMillis)
@@ -57,7 +55,7 @@ void DimmerBLEClient::_requestSync() {
 // after unreachableGiveUpMillis. iotsa only scans for devices with work pending
 // (cwi-dis/iotsa#263), so a dimmer that never asked would never be found.
 void DimmerBLEClient::updateDimmer() {
-  DIMMERBLECLIENT_DEBUG IotsaSerial.printf("%s.updateDimmer() called%s\n", name.c_str(), available() ? "" : " (not found yet)");
+  IOTSA_LOG_DEBUG("DimmerBLEClient", "%s.updateDimmer() called%s", name.c_str(), available() ? "" : " (not found yet)");
   needSyncToDevice = true;
   _requestSync();
   if (callbacks) callbacks->dimmerValueChanged();
@@ -198,7 +196,8 @@ bool DimmerBLEClient::doWork() {
 }
 
 void DimmerBLEClient::workAbandoned() {
-  IotsaSerial.printf("DimmerBLEClient: giving up on %s\n", name.c_str());
+  // Debug: iotsaBLEClient's result line says it ("-> gave up, not reachable").
+  IOTSA_LOG_DEBUG("DimmerBLEClient", "giving up on %s", name.c_str());
   needSyncToDevice = false;
   needSyncFromDevice = false;
   needIdentify = false;
@@ -221,30 +220,30 @@ void DimmerBLEClient::_syncToDevice() {
   if (level < 0) level = 0;
   if (level > 1) level = 1;
   Lissabon::Type_brightness levelValue = level * ((1<<sizeof(Lissabon::Type_brightness)*8)-1);
-  IFDEBUG IotsaSerial.printf("%s.syncToDevice: Transmit brightness %f (%d)\n", name.c_str(), level, levelValue);
+  IOTSA_LOG_DEBUG("DimmerBLEClient", "%s.syncToDevice: Transmit brightness %f (%d)", name.c_str(), level, levelValue);
   ok = set(Lissabon::serviceUUID, Lissabon::brightnessUUID, levelValue);
   if (ok) {
     _dataValid = true;
   } else {
-    IFDEBUG IotsaSerial.println("DimmerBLEClient: set(brightness) failed");
+    IOTSA_LOG("DimmerBLEClient", "%s: set(brightness) failed", name.c_str());
     _dataValid = false;
   }
 #endif
 #ifdef DIMMER_WITH_TEMPERATURE
   Lissabon::Type_temperature temperatureValue = temperature;
-  IFDEBUG IotsaSerial.printf("DimmerBLEClient: Transmit temperature %d\n", temperatureValue);
+  IOTSA_LOG_DEBUG("DimmerBLEClient", "%s.syncToDevice: Transmit temperature %d", name.c_str(), temperatureValue);
   ok = set(Lissabon::serviceUUID, Lissabon::temperatureUUID, (Lissabon::Type_temperature)temperatureValue);
   if (!ok) {
-    IFDEBUG IotsaSerial.println("DimmerBLEClient: set(temperature) failed");
+    IOTSA_LOG("DimmerBLEClient", "%s: set(temperature) failed", name.c_str());
   }
 #endif // DIMMER_WITH_TEMPERATURE
-  IFDEBUG IotsaSerial.printf("%s.syncToDevice: Transmit ison %d\n", name.c_str(), (int)isOn);
+  IOTSA_LOG_DEBUG("DimmerBLEClient", "%s.syncToDevice: Transmit ison %d", name.c_str(), (int)isOn);
   ok = set(Lissabon::serviceUUID, Lissabon::isOnUUID, (Lissabon::Type_isOn)isOn);
   if (!ok) {
-    IFDEBUG IotsaSerial.println("DimmerBLEClient: set(isOn) failed");
+    IOTSA_LOG("DimmerBLEClient", "%s: set(isOn) failed", name.c_str());
   }
   if (needIdentify) {
-    IFDEBUG IotsaSerial.printf("%s.syncToDevice: Transmit identify\n", name.c_str());
+    IOTSA_LOG_DEBUG("DimmerBLEClient", "%s.syncToDevice: Transmit identify", name.c_str());
     // Generic core runmode identify, not Lissabon's own identifyUUID -- any
     // iotsa BLE device supports this, not just dimmers. Qualified: identify()
     // unqualified would hit DimmerBLEClient's own AbstractDimmer-facing
@@ -252,7 +251,7 @@ void DimmerBLEClient::_syncToDevice() {
     ok = IotsaRunmodeBLEClient::identify();
     needIdentify = false;
     if (!ok) {
-      IFDEBUG IotsaSerial.println("DimmerBLEClient: identify failed");
+      IOTSA_LOG("DimmerBLEClient", "%s: identify failed", name.c_str());
     }
 
   }
@@ -268,9 +267,9 @@ bool DimmerBLEClient::_syncFromDevice() {
   ok = get(Lissabon::serviceUUID, Lissabon::brightnessUUID, levelValue);
   if (ok) {
     level = (float)levelValue / (float)((1<<sizeof(Lissabon::Type_brightness)*8)-1);
-    IFDEBUG IotsaSerial.printf("%s.syncFromDevice: Received brightness %f (%d)\n", name.c_str(), level, levelValue);
+    IOTSA_LOG_DEBUG("DimmerBLEClient", "%s.syncFromDevice: Received brightness %f (%d)", name.c_str(), level, levelValue);
   } else {
-    IFDEBUG IotsaSerial.printf("%s.syncFromDevice: get(brightness) failed\n", name.c_str());
+    IOTSA_LOG("DimmerBLEClient", "%s.syncFromDevice: get(brightness) failed", name.c_str());
     _gotAllData = false;
   }
 #endif
@@ -279,20 +278,20 @@ bool DimmerBLEClient::_syncFromDevice() {
   ok = get(Lissabon::serviceUUID, Lissabon::temperatureUUID, temperatureValue);
   if (ok) {
     temperature = (float)temperatureValue;
-    IFDEBUG IotsaSerial.printf("%s.syncFromDevice: Received temperature %f (%d)\n", name.c_str(), temperature, temperatureValue);
+    IOTSA_LOG_DEBUG("DimmerBLEClient", "%s.syncFromDevice: Received temperature %f (%d)", name.c_str(), temperature, temperatureValue);
   } else {
     // Temperature is optional
-    IFDEBUG IotsaSerial.printf("%s.syncFromDevice: get(temperature) failed\n", name.c_str());
+    IOTSA_LOG_DEBUG("DimmerBLEClient", "%s.syncFromDevice: get(temperature) failed", name.c_str());
   }
 #endif // DIMMER_WITH_TEMPERATURE
   uint8_t isOnValue;
   ok = get(Lissabon::serviceUUID, Lissabon::isOnUUID, isOnValue);
   if (ok) {
-    IFDEBUG IotsaSerial.printf("%s.syncFromDevice: received isOn %d\n", name.c_str(), isOnValue);
+    IOTSA_LOG_DEBUG("DimmerBLEClient", "%s.syncFromDevice: received isOn %d", name.c_str(), isOnValue);
     isOn = isOnValue;
   } else {
     _gotAllData = false;
-    IFDEBUG IotsaSerial.printf("%s.syncFromDevice: get(isOn) failed\n", name.c_str());
+    IOTSA_LOG("DimmerBLEClient", "%s.syncFromDevice: get(isOn) failed", name.c_str());
   }
   _dataValid = _gotAllData;
   needSyncFromDevice = false;

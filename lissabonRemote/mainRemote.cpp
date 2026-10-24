@@ -134,13 +134,13 @@ void LissabonRemoteMod::dimmerOnOffChanged() {
     // A button change that was quick enough for a tap
     lastButtonChangeMillis = now;
     buttonChangeCount++;
-    IFDEBUG IotsaSerial.printf("tap mode count=%d\n", buttonChangeCount);
+    IOTSA_LOG_DEBUG("lissabonRemote", "tap mode count=%d", buttonChangeCount);
     if (buttonChangeCount == TAP_COUNT_MODE_CHANGE) {
-      IFDEBUG IotsaSerial.println("tap mode change");
+      IOTSA_LOG("lissabonRemote", "tap mode change");
       iotsaController.allowRequestedConfigurationMode();
     }
     if (buttonChangeCount == TAP_COUNT_REBOOT) {
-      IFDEBUG IotsaSerial.println("tap mode reboot");
+      IOTSA_LOG("lissabonRemote", "tap mode reboot");
       ledOffUntilMillis = now + 2000;
       iotsaController.requestReboot(1000);
     }
@@ -148,7 +148,7 @@ void LissabonRemoteMod::dimmerOnOffChanged() {
     // Either the first change, or too late. Reset.
     lastButtonChangeMillis = millis();
     buttonChangeCount = 0;
-    IFDEBUG IotsaSerial.println("tap mode 0");
+    IOTSA_LOG_DEBUG("lissabonRemote", "tap mode 0");
   }
 }
 bool LissabonRemoteMod::addDeviceByName(const std::string& _name) {
@@ -253,7 +253,7 @@ void LissabonRemoteMod::unknownDimmerBLEClientFound(const NimBLEAdvertisedDevice
   // Nothing to do here -- IotsaBLEClientManagerMod::onUnknownDeviceSeen()
   // already records this device (name/address/rssi/lastSeen) in
   // unknownDevices before calling us.
-  IFDEBUG IotsaSerial.printf("unknownDimmerBLEClientFound: iotsaLedstrip/iotsaDimmer \"%s\"\n", deviceAdvertisement.getName().c_str());
+  IOTSA_LOG_DEBUG("lissabonRemote", "unknownDimmerBLEClientFound: iotsaLedstrip/iotsaDimmer \"%s\"", deviceAdvertisement.getName().c_str());
 }
 
 // The values aren't saved (they are the dimmer's), so this only lights the

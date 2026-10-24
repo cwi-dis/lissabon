@@ -27,7 +27,7 @@ void AbstractDimmer::updateDimmer() {
   int thisDuration = int(animationDurationMillis * fabs(newLevel-animationPrevLevel));
   animationStartMillis = millis()-1;
   animationEndMillis = millis() + thisDuration;
-  IFDEBUG IotsaSerial.printf("updateDimmer%d: level %f->%f in %d ms\n", num, animationPrevLevel, newLevel, thisDuration);
+  IOTSA_LOG_DEBUG("AbstractDimmer", "dimmer %d: level %f->%f in %d ms", num, animationPrevLevel, newLevel, thisDuration);
   iotsaController.postponeSleep(thisDuration+100);
 #endif
 }
@@ -54,7 +54,7 @@ void AbstractDimmer::calcCurLevel() {
     animationEndMillis = 0;
     curLevel = animationPrevLevel = animationCurLevel = wantedLevel;
 
-    IFDEBUG IotsaSerial.printf("IotsaDimmer%d: wantedLevel=%f level=%f\n", num, wantedLevel, level);
+    IOTSA_LOG_DEBUG("AbstractDimmer", "dimmer %d: animation done, wantedLevel=%f level=%f", num, wantedLevel, level);
     callbacks->dimmerValueChanged();
   }
 #else

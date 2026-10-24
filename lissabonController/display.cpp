@@ -53,7 +53,7 @@ Display::Display()
   Wire.begin(PIN_SDA, PIN_SCL);
   oled = new Adafruit_SSD1306(OLED_WIDTH, OLED_HEIGHT, &Wire, -1);
   if (!oled->begin(SSD1306_SWITCHCAPVCC, 0x3c, false, false)) {
-    IFDEBUG IotsaSerial.println("OLED init failed");
+    IOTSA_LOG("LissabonController", "OLED init failed");
     return;
   }
   oled->clearDisplay();
