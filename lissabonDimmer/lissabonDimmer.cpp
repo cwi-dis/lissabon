@@ -214,7 +214,9 @@ void LissabonDimmerMod::configSave() {
 
 void LissabonDimmerMod::setup() {
   // Allow switching the dimmer to iotsa config mode over BLE or with taps
-  batteryMod.allowBLEConfigModeSwitch();
+#ifdef IOTSA_WITH_BLE
+  if (IotsaRunmodeMod::instance()) IotsaRunmodeMod::instance()->allowBLEModeSwitch();
+#endif
 #ifdef IOTSA_WITH_BLE
   // Wires this appliance's identify (blink) into the generic core runmode
   // BLE identify command, so DimmerBLEClient's identify() -- which now goes
@@ -234,7 +236,9 @@ void LissabonDimmerMod::setup() {
   batteryMod.setPinVBat(PIN_VBAT, VBAT_100_PERCENT);
 #endif
 #ifdef PIN_DISABLESLEEP
-  batteryMod.setPinDisableSleep(PIN_DISABLESLEEP);
+#ifdef IOTSA_HAS_SLEEP
+  if (IotsaRunmodeMod::instance()) IotsaRunmodeMod::instance()->setPinDisableSleep(PIN_DISABLESLEEP);
+#endif
 #endif
   configLoad();
 #if defined(WITH_TOUCHPADS)

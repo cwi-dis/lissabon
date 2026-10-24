@@ -25,6 +25,7 @@
 IotsaApplication application("Lissabon Remote");
 
 #include "iotsaBattery.h"
+#include "iotsaRunmode.h"
 #define PIN_DISABLESLEEP 0
 #define PIN_VBAT 37
 #define VBAT_100_PERCENT (12.0/11.0) // 100K and 1M resistors divide by 11, not 10...
@@ -217,7 +218,9 @@ void LissabonRemoteMod::setup() {
 #endif
   ledOn();
 #ifdef PIN_DISABLESLEEP
-  batteryMod.setPinDisableSleep(PIN_DISABLESLEEP);
+#ifdef IOTSA_HAS_SLEEP
+  if (IotsaRunmodeMod::instance()) IotsaRunmodeMod::instance()->setPinDisableSleep(PIN_DISABLESLEEP);
+#endif
 #endif
   //
   // Setup buttons for first (and optional second) dimmer

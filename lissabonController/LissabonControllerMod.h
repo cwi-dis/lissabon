@@ -7,6 +7,7 @@
 #include "display.h"
 #include "buttons.h"
 #include "iotsaBattery.h"
+#include "iotsaRunmode.h"
 
 extern Display *display;
 extern IotsaBatteryMod batteryMod;

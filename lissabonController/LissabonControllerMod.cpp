@@ -348,18 +348,15 @@ void LissabonControllerMod::configSave() {
 }
 
 void LissabonControllerMod::clearAllDimmersAndReboot() {
-  // Deliberately don't touch the live `dimmers` collection here. Deleting a
-  // DimmerBLEClient whose connectionTask is still blocked inside a BLE connect
-  // attempt calls vTaskDelete() on that task (DimmerBLEClient::~DimmerBLEClient()), which
-  // can crash NimBLE's host task later when an async GAP event tries to
-  // notify the now-deleted task (observed live: a stuck connect to a
-  // just-added, flaky device, followed by "Remove All", panicked ~5s later
-  // inside xTaskGenericNotify). Simplest safe fix: persist zero dimmers and
-  // reboot -- a fresh boot never constructs them, so there's nothing to tear
-  // down. (Since cwi-dis/iotsa#263 DimmerBLEClient has no task of its own
-  // any more, so deleting one live may well be safe now -- not retested,
-  // the reboot stays.) From now on configSave() saves no dimmers, also when
-  // the framework saves after this request.
+  // Deliberately don't touch the live `dimmers` collection here: persist
+  // zero dimmers and reboot, so a fresh boot never constructs them and
+  // there's nothing to tear down. This dates from when each DimmerBLEClient
+  // had a FreeRTOS task of its own: deleting one while that task was stuck
+  // in a BLE connect crashed NimBLE's host task a few seconds later (observed
+  // live after "Remove All" with a flaky, just-added device). Since
+  // cwi-dis/iotsa#263 there is no such task, so deleting one live may well
+  // be safe now -- not retested, the reboot stays. From now on configSave()
+  // saves no dimmers, also when the framework saves after this request.
   clearAllPending = true;
   configSave();
   iotsaController.requestReboot(1000);
@@ -372,14 +369,18 @@ void LissabonControllerMod::setup() {
   IotsaBLEClientMod::setup();
   dimmers.setFactory(std::bind(&LissabonControllerMod::dimmerFactory, this, std::placeholders::_1));
   // Allow switching to iotsa config mode over BLE
-  batteryMod.allowBLEConfigModeSwitch();
+#ifdef IOTSA_WITH_BLE
+  if (IotsaRunmodeMod::instance()) IotsaRunmodeMod::instance()->allowBLEModeSwitch();
+#endif
   //
   // Load configuration
   //
   configLoad();
   setDimmerFollowed(selectedDimmerIndex, true); // only the persisted selection gets a live connection (cwi-dis/lissabon#31)
 #ifdef PIN_DISABLESLEEP
-  batteryMod.setPinDisableSleep(PIN_DISABLESLEEP);
+#ifdef IOTSA_HAS_SLEEP
+  if (IotsaRunmodeMod::instance()) IotsaRunmodeMod::instance()->setPinDisableSleep(PIN_DISABLESLEEP);
+#endif
 #endif
   _setupDisplay();
   buttons.setup();
