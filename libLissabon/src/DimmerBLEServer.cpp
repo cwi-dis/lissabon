@@ -59,6 +59,7 @@ bool DimmerBLEServer::blePutHandler(UUIDstring charUUID) {
     int value = bleApi.getAsInt(Lissabon::isOnUUIDstring);
     dimmer.isOn = (bool)value;
     IOTSA_LOG_DEBUG("DimmerBLEServer", "wrote isOn %s value %d", Lissabon::isOnUUIDstring, dimmer.isOn);
+    // Off also turns off the aux dimmer, on does not: see setAuxDimmer().
     if (!value && auxDimmer != nullptr) {
       auxDimmer->isOn = false;
       auxDimmer->updateDimmer();
@@ -93,8 +94,10 @@ bool DimmerBLEServer::bleGetHandler(UUIDstring charUUID) {
   }
 #endif // DIMMER_WITH_TEMPERATURE
   if (charUUID == Lissabon::isOnUUIDstring) {
-      IOTSA_LOG_DEBUG("DimmerBLEServer", "read isOn %s value %d", Lissabon::isOnUUIDstring, dimmer.isOn);
-      bleApi.set(Lissabon::isOnUUIDstring, (Lissabon::Type_isOn)dimmer.isOn);
+      // On if either dimmer is on, see setAuxDimmer().
+      bool isOn = dimmer.isOn || (auxDimmer != nullptr && auxDimmer->isOn);
+      IOTSA_LOG_DEBUG("DimmerBLEServer", "read isOn %s value %d", Lissabon::isOnUUIDstring, isOn);
+      bleApi.set(Lissabon::isOnUUIDstring, (Lissabon::Type_isOn)isOn);
       return true;
   }
   IOTSA_LOG("DimmerBLEServer", "read unknown uuid %s", charUUID);

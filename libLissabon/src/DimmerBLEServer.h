@@ -12,6 +12,12 @@ class DimmerBLEServer : public IotsaBLEProvider {
 public:
   DimmerBLEServer(AbstractDimmer& _dimmer) : dimmer(_dimmer), auxDimmer(nullptr) {};
   void setup();
+  // The aux dimmer is deliberately not exposed over BLE on its own. Think of a
+  // standing lamp with a big lamp on top and a small reading light at the bottom:
+  // switching it on over BLE should only light the main dimmer, but switching it
+  // off should turn off both. So: writing isOn=0 also turns off the aux dimmer,
+  // and reading isOn reports "on" if either is on (otherwise a remote would see
+  // "off" while the reading light is on, and could not turn it off).
   void setAuxDimmer(AbstractDimmer* _auxDimmer) { auxDimmer = _auxDimmer; }
 protected:
   AbstractDimmer& dimmer;
